@@ -1,0 +1,23 @@
+{
+  "packages": [
+    "packages/*"
+  ],
+  "command": {
+    "publish": {
+      "ignoreChanges": [
+        "*.md"
+      ],
+      "allowBranch": [
+        "master",
+        "next"
+      ],
+      "message": "chore: publish"
+    }
+  },
+  "version": "0.0.1",
+  "npmClient": "yarn",
+  "useWorkspaces": true,
+  "publishConfig": {
+    "access": "public"
+  }
+}

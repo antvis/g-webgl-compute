@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "rootDir": "./",
+    "baseUrl": "./",
+    "paths": {
+      "@antv/g-webgpu-*": ["packages/*/src"],
+      "@antv/g-webgpu": ["packages/g-webgpu/src"],
+      "*": ["node_modules", "packages"]
+    }
+  },
+  "exclude": ["**/*.story.*", "**/__tests__/**/*", "**/*.spec.*", "dist"],
+  "include": []
+}

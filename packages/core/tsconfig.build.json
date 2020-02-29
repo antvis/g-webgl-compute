@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.build.json",
+  "compilerOptions": {
+    "declarationDir": "./es",
+    "rootDir": "./src",
+    "baseUrl": "./",
+    "paths": {
+      "*": ["node_modules", "typings/*"]
+    }
+  },
+  "include": [
+    "./src",
+    "../../node_modules/@webgpu/types",
+  ]
+}
