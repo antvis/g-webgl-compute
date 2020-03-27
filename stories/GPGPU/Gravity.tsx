@@ -2,9 +2,9 @@
 import { World } from '@antv/g-webgpu-core';
 import * as dat from 'dat.gui';
 import * as React from 'react';
-import computeShaderGLSL from './shaders/flocking.comp.glsl';
-import fragmentShaderGLSL from './shaders/flocking.frag.glsl';
-import vertexShaderGLSL from './shaders/flocking.vert.glsl';
+import computeShaderGLSL from './shaders/gravity.comp.glsl';
+import fragmentShaderGLSL from './shaders/gravity.frag.glsl';
+import vertexShaderGLSL from './shaders/gravity.vert.glsl';
 
 let stageDescriptor: any;
 let computeStageDescriptor: any;
@@ -15,10 +15,7 @@ const numParticles = 1500;
 const particleBuffers = new Array(2);
 const particleBindGroups = new Array(2);
 
-/**
- * @see https://github.com/austinEng/Project6-Vulkan-Flocking/blob/master/data/shaders/computeparticles/particle.comp
- */
-export default class Flocking extends React.Component {
+export default class Gravity extends React.Component {
   private gui: dat.GUI;
   private $stats: Node;
   private world: World;
@@ -52,13 +49,8 @@ export default class Flocking extends React.Component {
           verticesBuffer = engine.createVertexBuffer(vertexBufferData);
 
           const simParamData = new Float32Array([
-            0.04, // deltaT;
-            0.1, // rule1Distance;
-            0.025, // rule2Distance;
-            0.025, // rule3Distance;
-            0.02, // rule1Scale;
-            0.05, // rule2Scale;
-            0.005, // rule3Scale;
+            0.01, // deltaT
+            0.1, // noiseSize;
           ]);
           const simParamBuffer = engine.createUniformBuffer(simParamData);
 
@@ -73,7 +65,7 @@ export default class Flocking extends React.Component {
           for (let i = 0; i < 2; ++i) {
             particleBuffers[i] = engine.createVertexBuffer(
               initialParticleData,
-              128, // Storage
+              128,
             );
           }
 

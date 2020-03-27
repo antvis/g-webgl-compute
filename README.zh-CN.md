@@ -1,6 +1,6 @@
 # GWebGPUEngine
 
-A WebGPU Engine for real-time rendering an GPGPU.
+A WebGPU Engine for real-time rendering and GPGPU.
 
 ## 前置条件
 

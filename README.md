@@ -1,6 +1,6 @@
 # [WIP] GWebGPUEngine
 
-A WebGPU Engine for real-time rendering an GPGPU. [中文](./README.zh-CN.md)
+A WebGPU Engine for real-time rendering and GPGPU. [中文](./README.zh-CN.md)
 
 [The current implementation status of the WebGPU API spec](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status)
 
