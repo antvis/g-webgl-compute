@@ -12,7 +12,7 @@ import {
   InitializeSystem,
   TearDownSystem,
 } from './System';
-import { WebGPUEngine } from './WebGPUEngine';
+import { IWebGPUEngineOptions, WebGPUEngine } from './WebGPUEngine';
 
 interface ILifeCycle {
   init(canvas: HTMLCanvasElement): void;
@@ -37,6 +37,7 @@ export class World extends EventEmitter implements ILifeCycle {
     canvas: HTMLCanvasElement,
     options: {
       useRenderBundle?: boolean;
+      engineOptions?: IWebGPUEngineOptions;
       onInit: (engine: WebGPUEngine) => void;
       onUpdate: (engine: WebGPUEngine) => void;
     },
@@ -51,6 +52,7 @@ export class World extends EventEmitter implements ILifeCycle {
     this.engine = new WebGPUEngine(canvas, {
       swapChainFormat: WebGPUConstants.TextureFormat.BGRA8Unorm,
       antialiasing: true,
+      ...options.engineOptions,
     });
 
     this.systems = container.getAll<System>(IDENTIFIER.Systems);

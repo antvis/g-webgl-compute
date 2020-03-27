@@ -38,6 +38,18 @@ const canvas = document.getElementById('application');
 const world = new World(canvas);
 ```
 
+## Resources
+
+- [WebGPU Design](https://github.com/gpuweb/gpuweb/tree/master/design)
+- [WebGPU Samples](https://github.com/austinEng/webgpu-samples)
+- [Raw WebGPU](https://alain.xyz/blog/raw-webgpu)
+- [WebGPU implementation in Rust](https://github.com/gfx-rs/wgpu)
+- [awesome-webgpu](https://github.com/mikbry/awesome-webgpu)
+- [Matrix Compute Online Demo](https://observablehq.com/@yhyddr/gpu-matrix-compute)
+- [From WebGL to WebGPU](https://www.youtube.com/watch?v=A2FxeEl4nWw)
+- [tensorflow.js WebGPU backend](https://github.com/tensorflow/tfjs/tree/master/tfjs-backend-webgpu)
+- [get-started-with-gpu-compute-on-the-web](https://developers.google.com/web/updates/2019/08/get-started-with-gpu-compute-on-the-web#shader_programming)
+
 ## Contributing
 
 Bootstrap with Yarn Workspace.

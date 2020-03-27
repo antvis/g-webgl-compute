@@ -55,6 +55,9 @@ export class WebGPUEngine {
   private pipelines: {
     [pipelineName: string]: GPURenderPipeline;
   } = {};
+  private computePipelines: {
+    [pipelineName: string]: GPUComputePipeline;
+  } = {};
   private mainPassSampleCount: number;
 
   private mainTexture: GPUTexture;
@@ -71,7 +74,7 @@ export class WebGPUEngine {
 
   // Frame Buffer Life Cycle (recreated for each render target pass)
   private currentRenderPass: GPURenderPassEncoder | null = null;
-  private currentComputePass: GPURenderPassEncoder | null = null;
+  private currentComputePass: GPUComputePassEncoder | null = null;
   private bundleEncoder: GPURenderBundleEncoder | null;
   private tempBuffers: GPUBuffer[] = [];
 
@@ -275,6 +278,28 @@ export class WebGPUEngine {
     return this.createPipelineStageDescriptor(vertexShader, fragmentShader);
   }
 
+  public async compileComputePipelineStageDescriptor(
+    computeCode: string,
+    defines: string | null,
+  ): Promise<Pick<GPUComputePipelineDescriptor, 'computeStage'>> {
+    const shaderVersion = '#version 450\n';
+    const computeShader = await this.compileShaderToSpirV(
+      computeCode,
+      'compute',
+      defines,
+      shaderVersion,
+    );
+
+    return {
+      computeStage: {
+        module: this.device.createShaderModule({
+          code: computeShader,
+        }),
+        entryPoint: 'main',
+      },
+    };
+  }
+
   public drawElementsType(
     pipelineName: string,
     descriptor: WithOptional<
@@ -348,6 +373,7 @@ export class WebGPUEngine {
 
   public createVertexBuffer(
     data: number[] | ArrayBuffer | ArrayBufferView,
+    usage: number = 0,
   ): GPUBuffer {
     let view: ArrayBufferView;
 
@@ -361,7 +387,9 @@ export class WebGPUEngine {
 
     const dataBuffer = this.createBuffer(
       view,
-      WebGPUConstants.BufferUsage.Vertex | WebGPUConstants.BufferUsage.CopyDst,
+      WebGPUConstants.BufferUsage.Vertex |
+        WebGPUConstants.BufferUsage.CopyDst |
+        usage,
     );
 
     return dataBuffer;
@@ -392,6 +420,28 @@ export class WebGPUEngine {
     for (let i = 0; i < bindGroups.length; i++) {
       renderPass.setBindGroup(i, bindGroups[i]);
     }
+  }
+
+  public setComputeBindGroups(bindGroups: GPUBindGroup[]) {
+    if (this.currentComputePass) {
+      for (let i = 0; i < bindGroups.length; i++) {
+        this.currentComputePass.setBindGroup(i, bindGroups[i]);
+      }
+    }
+  }
+
+  public setComputePipeline(
+    computePipelineName: string,
+    descriptor: GPUComputePipelineDescriptor,
+  ) {
+    if (!this.computePipelines[computePipelineName]) {
+      const computePipeline = this.device.createComputePipeline(descriptor);
+      this.computePipelines[computePipelineName] = computePipeline;
+    }
+
+    this.currentComputePass?.setPipeline(
+      this.computePipelines[computePipelineName],
+    );
   }
 
   /**
@@ -457,6 +507,12 @@ export class WebGPUEngine {
           vertexInputs.vertexOffsets[i],
         );
       }
+    }
+  }
+
+  public dispatch(num: number) {
+    if (this.currentComputePass) {
+      this.currentComputePass.dispatch(num);
     }
   }
 
@@ -558,9 +614,11 @@ export class WebGPUEngine {
   }
 
   private startComputePass() {
-    if (this.currentRenderPass) {
-      this.endRenderPass();
+    if (this.currentComputePass) {
+      this.endComputePass();
     }
+
+    this.currentComputePass = this.computeEncoder.beginComputePass();
   }
 
   private startMainRenderPass() {

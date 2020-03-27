@@ -1,12 +1,12 @@
 import { storiesOf } from '@storybook/react';
 import * as React from 'react';
-import RotatingCube from './BasicSamples/RotatingCube';
-import RotatingCubeWithRecordBundle from './BasicSamples/RotatingCubeWithRecordBundle';
-import TriangleMSAA from './BasicSamples/TriangleMSAA';
 import Flocking from './GPGPU/Flocking';
+import RotatingCube from './Rendering/RotatingCube';
+import RotatingCubeWithRecordBundle from './Rendering/RotatingCubeWithRecordBundle';
+import TriangleMSAA from './Rendering/TriangleMSAA';
 
 // @ts-ignore
-storiesOf('BasicSamples', module)
+storiesOf('Rendering', module)
   .add('TriangleMSAA', () => <TriangleMSAA />)
   .add('RotatingCube', () => <RotatingCube />)
   .add('RotatingCubeWithRecordBundle', () => <RotatingCubeWithRecordBundle />);
