@@ -9,15 +9,18 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v2
+      - 
+        uses: borales/actions-yarn@v2.0.0
+        with:
+          cmd: install
       -
-        name: Build
-        run: |
-          yarn install
-          yarn build:storybook
+        uses: borales/actions-yarn@v2.0.0
+        with:
+          cmd: build:storybook
       -
         name: Deploy
         if: success()
-        uses: antvis/GWebGPUEngine@master
+        uses: crazy-max/ghaction-github-pages@v1
         with:
           target_branch: gh-pages
           build_dir: docs
