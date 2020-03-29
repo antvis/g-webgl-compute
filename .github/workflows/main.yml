@@ -10,10 +10,17 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
       - 
+        name: Yarn install
         uses: borales/actions-yarn@v2.0.0
         with:
           cmd: install
+      - 
+        name: Build src code
+        uses: borales/actions-yarn@v2.0.0
+        with:
+          cmd: build
       -
+        name: Build storybook
         uses: borales/actions-yarn@v2.0.0
         with:
           cmd: build:storybook

@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.build.json",
   "compilerOptions": {
     "declarationDir": "./es",
-    "rootDir": "./src",
+    // "rootDir": "./src",
     "baseUrl": "./",
     "paths": {
       "*": ["node_modules", "typings/*"]
