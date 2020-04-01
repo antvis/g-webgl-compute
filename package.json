@@ -1,6 +1,6 @@
 {
   "private": true,
-  "repository": "https://github.com/xiaoiver/GWebGPUEngine.git",
+  "repository": "https://github.com/antvis/GWebGPUEngine.git",
   "author": "yuqi.pyq <yuqi.pyq@antfin.com>",
   "license": "MIT",
   "scripts": {

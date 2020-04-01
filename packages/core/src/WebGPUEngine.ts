@@ -415,6 +415,26 @@ export class WebGPUEngine {
     return dataBuffer;
   }
 
+  public createIndexBuffer(
+    data: number[] | ArrayBuffer | ArrayBufferView,
+  ): GPUBuffer {
+    let view: ArrayBufferView;
+
+    if (data instanceof Array) {
+      view = new Uint16Array(data);
+    } else if (data instanceof ArrayBuffer) {
+      view = new Uint8Array(data);
+    } else {
+      view = data;
+    }
+
+    const dataBuffer = this.createBuffer(
+      view,
+      WebGPUConstants.BufferUsage.Index | WebGPUConstants.BufferUsage.CopyDst,
+    );
+    return dataBuffer;
+  }
+
   public setRenderBindGroups(bindGroups: GPUBindGroup[]) {
     const renderPass = this.bundleEncoder || this.currentRenderPass!;
     for (let i = 0; i < bindGroups.length; i++) {

@@ -2,6 +2,7 @@ import { storiesOf } from '@storybook/react';
 import * as React from 'react';
 import Curl from './GPGPU/Curl';
 import Flocking from './GPGPU/Flocking';
+import Fruchterman from './GPGPU/Fruchterman';
 import Gravity from './GPGPU/Gravity';
 import RotatingCube from './Rendering/RotatingCube';
 import RotatingCubeWithRecordBundle from './Rendering/RotatingCubeWithRecordBundle';
@@ -15,4 +16,5 @@ storiesOf('Rendering', module)
 storiesOf('GPGPU', module)
   .add('Flocking', () => <Flocking />)
   .add('Curl', () => <Curl />)
-  .add('Gravity', () => <Gravity />);
+  .add('Gravity', () => <Gravity />)
+  .add('Fruchterman', () => <Fruchterman />);

@@ -8,6 +8,11 @@ A WebGPU Engine for real-time rendering and GPGPU. [中文](./README.zh-CN.md)
 
 Please run in Chrome Canary() behind the flag `--enable-unsafe-webgpu`.The `chrome://flags/#enable-unsafe-webgpu` flag must be enabled.
 
+## Demos
+
+- [Fruchterman](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--fruchterman)
+- [Flocking](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking)
+
 ## Features
 
 - Based on [ECS Architecture](http://entity-systems.wikidot.com/) which has been used in many 3D engines like Unity and PlayCanvas, especially inspired by

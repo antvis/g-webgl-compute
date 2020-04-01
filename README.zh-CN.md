@@ -11,6 +11,11 @@ A WebGPU Engine for real-time rendering and GPGPU.
 
 因此现在网络上的各种 WebGPU 示例，有的只能用 Safari 打开，有的只能用 Chrome / Edge 打开。未来也可能由新着色语言 [Tint](https://docs.google.com/presentation/d/1qHhFq0GJtY_59rNjpiHU--JW4bW4Ji3zWei-gM6cabs/edit#slide=id.p) 统一。
 
+## 示例
+
+- [Fruchterman](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--fruchterman)
+- [Flocking](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking)
+
 ## 特性
 
 - 基于 [ECS 架构](http://entity-systems.wikidot.com/) ，很多 3D 引擎例如 Unity 和 PlayCanvas 也是如此。在使用 TS 实现时还参考了：
