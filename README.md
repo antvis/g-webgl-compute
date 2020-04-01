@@ -2,6 +2,8 @@
 
 A WebGPU Engine for real-time rendering and GPGPU. [中文](./README.zh-CN.md)
 
+Online Demo: [https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking)
+
 [The current implementation status of the WebGPU API spec](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status)
 
 ## Prerequisite
