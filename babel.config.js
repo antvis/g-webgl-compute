@@ -29,6 +29,7 @@ module.exports = api => {
       '@babel/preset-typescript',
     ],
     plugins: [
+      isTest ? '@babel/plugin-transform-runtime' : {},
       // TODO: glslang 目前只能通过 import 在运行时加载
       // [
       //   "module-resolver", {

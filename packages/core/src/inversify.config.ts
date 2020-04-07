@@ -10,7 +10,11 @@ import { System, World } from '.';
 import { ComponentManager } from './ComponentManager';
 import { CameraComponent } from './components/camera/CameraComponent';
 import { CameraSystem } from './components/camera/System';
+import { PassNodeComponent } from './components/framegraph/PassNodeComponent';
+import { ResourceHandleComponent } from './components/framegraph/ResourceHandleComponent';
+import { FrameGraphSystem } from './components/framegraph/System';
 import { HierarchyComponent } from './components/scenegraph/HierarchyComponent';
+import { NameComponent } from './components/scenegraph/NameComponent';
 import { SceneGraphSystem } from './components/scenegraph/System';
 import { TransformComponent } from './components/scenegraph/TransformComponent';
 import { IDENTIFIER } from './identifier';
@@ -78,6 +82,9 @@ export const lazyMultiInject = (
  * bind global component managers in root container
  */
 container
+  .bind<ComponentManager<NameComponent>>(IDENTIFIER.NameComponentManager)
+  .toConstantValue(new ComponentManager(NameComponent));
+container
   .bind<ComponentManager<HierarchyComponent>>(
     IDENTIFIER.HierarchyComponentManager,
   )
@@ -90,6 +97,16 @@ container
 container
   .bind<ComponentManager<CameraComponent>>(IDENTIFIER.CameraComponentManager)
   .toConstantValue(new ComponentManager(CameraComponent));
+container
+  .bind<ComponentManager<ResourceHandleComponent>>(
+    IDENTIFIER.ResourceHandleComponentManager,
+  )
+  .toConstantValue(new ComponentManager(ResourceHandleComponent));
+container
+  .bind<ComponentManager<PassNodeComponent>>(
+    IDENTIFIER.PassNodeComponentManager,
+  )
+  .toConstantValue(new ComponentManager(PassNodeComponent));
 
 container
   .bind<System>(IDENTIFIER.Systems)
@@ -98,4 +115,8 @@ container
 container
   .bind<System>(IDENTIFIER.Systems)
   .to(CameraSystem)
+  .inSingletonScope();
+container
+  .bind<System>(IDENTIFIER.Systems)
+  .to(FrameGraphSystem)
   .inSingletonScope();

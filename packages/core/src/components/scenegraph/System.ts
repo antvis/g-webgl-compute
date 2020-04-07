@@ -8,7 +8,7 @@ import { TransformComponent } from './TransformComponent';
 
 @injectable()
 export class SceneGraphSystem extends ExecuteSystem {
-  public name = 'sceneGraph';
+  public name = IDENTIFIER.SceneGraphSystem;
 
   @inject(IDENTIFIER.HierarchyComponentManager)
   private readonly hierarchy: ComponentManager<HierarchyComponent>;

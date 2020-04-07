@@ -68,7 +68,9 @@ export class World extends EventEmitter implements ILifeCycle {
     angle: number;
     aspect: number;
   }) {
-    const cameraSystem = this.systems.find((s) => s.name === 'camera');
+    const cameraSystem = this.systems.find(
+      (s) => s.name === IDENTIFIER.CameraSystem,
+    );
     if (cameraSystem) {
       return (cameraSystem as CameraSystem).createCamera(cameraParams);
     }

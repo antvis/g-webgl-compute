@@ -8,7 +8,7 @@ import { CameraComponent } from './CameraComponent';
 
 @injectable()
 export class CameraSystem extends ExecuteSystem {
-  public name = 'camera';
+  public name = IDENTIFIER.CameraSystem;
 
   @inject(IDENTIFIER.CameraComponentManager)
   private readonly camera: ComponentManager<CameraComponent>;
@@ -42,12 +42,4 @@ export class CameraSystem extends ExecuteSystem {
   public getTransformComponentManager() {
     return this.transform;
   }
-
-  // public runTransformUpdateSystem() {
-  //   // 原版基于 JobSystem 实现
-  //   for (let i = 0; i < this.transform.getCount(); ++i) {
-  //     const transform = this.transform.getComponent(i);
-  //     transform.updateTransform();
-  //   }
-  // }
 }

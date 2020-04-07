@@ -1,4 +1,4 @@
-import { Entity } from './Entity';
+import { EMPTY, Entity } from './Entity';
 
 type NonFunctionPropertyNames<T> = {
   [K in keyof T]: T[K] extends (args: unknown) => void ? never : K;
@@ -142,5 +142,47 @@ export class ComponentManager<P> {
 
   public getCount() {
     return this.components.length;
+  }
+
+  public getEntityByComponentIndex(componentIdx: number) {
+    for (const entity of Object.keys(this.lookup)) {
+      const entityInNum = Number(entity);
+      if (this.lookup[entityInNum] === componentIdx) {
+        return entityInNum;
+      }
+    }
+    return EMPTY;
+  }
+
+  public find(callback: (component: Component<P> & P, i: number) => boolean) {
+    for (let i = 0; i < this.getCount(); i++) {
+      const component = this.getComponent(i);
+      if (callback(component, i)) {
+        return component;
+      }
+    }
+    return null;
+  }
+
+  public findIndex(
+    callback: (component: Component<P> & P, i: number) => boolean,
+  ) {
+    for (let i = 0; i < this.getCount(); i++) {
+      const component = this.getComponent(i);
+      if (callback(component, i)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  public forEach(
+    callback: (entity: Entity, component: Component<P> & P) => void,
+  ) {
+    for (const entity of Object.keys(this.lookup)) {
+      const entityInNum = Number(entity);
+      const componentIndex = this.lookup[entityInNum];
+      callback(entityInNum, this.getComponent(componentIndex));
+    }
   }
 }

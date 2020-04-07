@@ -1,6 +1,8 @@
 export type Entity = number;
 
-let entitySequence = 0;
+export const EMPTY = -1;
+
+let entitySequence = 1;
 
 /**
  * 类似关系型数据库的主键

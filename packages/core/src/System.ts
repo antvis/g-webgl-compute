@@ -19,7 +19,7 @@ export type System =
 @injectable()
 export abstract class InitializeSystem {
   public static TYPE = 'InitializeSystem';
-  public name: string;
+  public name: symbol;
   public type = InitializeSystem.TYPE;
   public abstract initialize(canvas: HTMLCanvasElement): void;
 }
@@ -31,7 +31,7 @@ export abstract class InitializeSystem {
 @injectable()
 export abstract class ExecuteSystem {
   public static TYPE = 'ExecuteSystem';
-  public name: string;
+  public name: symbol;
   public type = ExecuteSystem.TYPE;
   public abstract execute(): void;
 }
@@ -43,7 +43,7 @@ export abstract class ExecuteSystem {
 @injectable()
 export abstract class CleanupSystem {
   public static TYPE = 'CleanupSystem';
-  public name: string;
+  public name: symbol;
   public type = CleanupSystem.TYPE;
   public abstract cleanup(): void;
 }
@@ -55,7 +55,7 @@ export abstract class CleanupSystem {
 @injectable()
 export abstract class TearDownSystem {
   public static TYPE = 'TearDownSystem';
-  public name: string;
+  public name: symbol;
   public type = TearDownSystem.TYPE;
   public abstract tearDown(): void;
 }

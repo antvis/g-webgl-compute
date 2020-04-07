@@ -1,12 +1,13 @@
 import { mat4, quat, vec3 } from 'gl-matrix';
 import 'reflect-metadata';
-import { container, createEntity, IDENTIFIER } from '../../..';
+import { container, createEntity, IDENTIFIER, System } from '../../..';
 import { SceneGraphSystem } from '../System';
 
 describe('SceneGraph', () => {
-  const sceneGraph = container.get<SceneGraphSystem>(
-    IDENTIFIER.SceneGraphSystem,
-  );
+  const systems = container.getAll<System>(IDENTIFIER.Systems);
+  const sceneGraph = systems.find(
+    (s) => s.name === IDENTIFIER.SceneGraphSystem,
+  ) as SceneGraphSystem;
   const transformComponentManager = sceneGraph.getTransformComponentManager();
   const hierarchyComponentManager = sceneGraph.getHierarchyComponentManager();
 
