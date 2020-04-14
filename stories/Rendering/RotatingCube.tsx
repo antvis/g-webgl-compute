@@ -1,157 +1,85 @@
 // @ts-nocheck
 import { World } from '@antv/g-webgpu-core';
 import * as dat from 'dat.gui';
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4, quat, vec3, vec4 } from 'gl-matrix';
 import * as React from 'react';
-import {
-  cubeColorOffset,
-  cubePositionOffset,
-  cubeVertexArray,
-  cubeVertexSize,
-} from './fixture/cube';
+import Stats from 'stats.js';
 
-let stageDescriptor: any;
-
-let pipelineLayout;
-const projectionMatrix = mat4.create();
-let camera;
-
-let uniformBuffer;
-let uniformBindGroup;
-let verticesBuffer;
+let meshTransform;
 
 export default class RotatingCube extends React.Component {
   private gui: dat.GUI;
+  private stats: Stats;
   private $stats: Node;
   private world: World;
 
   public async componentDidMount() {
     const canvas = document.getElementById('application') as HTMLCanvasElement;
     if (canvas) {
+      this.initStats();
+
       this.world = new World(canvas, {
-        onInit: async (engine) => {
-          const vertexShaderGLSL = `
-            layout(set = 0, binding = 0) uniform Uniforms {
-              mat4 modelViewProjectionMatrix;
-            } uniforms;
+        onUpdate: () => {
+          meshTransform.rotate(quat.fromEuler(quat.create(), 0, 1, 0));
 
-            layout(location = 0) in vec4 position;
-            layout(location = 1) in vec4 color;
-
-            layout(location = 0) out vec4 fragColor;
-
-            void main() {
-              gl_Position = uniforms.modelViewProjectionMatrix * position;
-              fragColor = color;
-            }
-            `;
-
-          const fragmentShaderGLSL = `
-            layout(location = 0) in vec4 fragColor;
-            layout(location = 0) out vec4 outColor;
-
-            void main() {
-              outColor = fragColor;
-            }
-            `;
-          stageDescriptor = await engine.compilePipelineStageDescriptor(
-            vertexShaderGLSL,
-            fragmentShaderGLSL,
-            null,
-          );
-
-          verticesBuffer = engine.createVertexBuffer(cubeVertexArray);
-          const uniformsBindGroupLayout = engine
-            .getDevice()
-            .createBindGroupLayout({
-              bindings: [
-                {
-                  binding: 0,
-                  visibility: 1,
-                  type: 'uniform-buffer',
-                },
-              ],
-            });
-
-          pipelineLayout = engine.getDevice().createPipelineLayout({
-            bindGroupLayouts: [uniformsBindGroupLayout],
-          });
-
-          uniformBuffer = engine.createUniformBuffer(new Float32Array(16));
-
-          uniformBindGroup = engine.getDevice().createBindGroup({
-            layout: uniformsBindGroupLayout,
-            bindings: [
-              {
-                binding: 0,
-                resource: {
-                  buffer: uniformBuffer,
-                },
-              },
-            ],
-          });
-        },
-        onUpdate: async (engine) => {
-          engine.clear({ r: 0.0, g: 0.0, b: 0.0, a: 1.0 }, true, true, true);
-          engine.setSubData(uniformBuffer, 0, this.getTransformationMatrix());
-          engine.bindVertexInputs({
-            indexBuffer: null,
-            vertexStartSlot: 0,
-            vertexBuffers: [verticesBuffer],
-            vertexOffsets: [0],
-          });
-          engine.setRenderBindGroups([uniformBindGroup]);
-          engine.drawArraysType(
-            'render',
-            {
-              layout: pipelineLayout,
-              ...stageDescriptor,
-              primitiveTopology: 'triangle-list',
-              vertexState: {
-                vertexBuffers: [
-                  {
-                    arrayStride: cubeVertexSize,
-                    stepMode: 'vertex',
-                    attributes: [
-                      {
-                        // position
-                        shaderLocation: 0,
-                        offset: cubePositionOffset,
-                        format: 'float4',
-                      },
-                      {
-                        // color
-                        shaderLocation: 1,
-                        offset: cubeColorOffset,
-                        format: 'float4',
-                      },
-                    ],
-                  },
-                ],
-              },
-              rasterizationState: {
-                cullMode: 'back',
-              },
-              depthStencilState: {
-                depthWriteEnabled: true,
-                depthCompare: 'less',
-                format: 'depth24plus-stencil8',
-              },
-            },
-            0,
-            36,
-            1,
-          );
+          if (this.stats) {
+            this.stats.update();
+          }
         },
       });
 
-      camera = this.world.createCamera({
+      const camera = this.world.createCamera({
         aspect: Math.abs(canvas.width / canvas.height),
         angle: 72,
         far: 100,
         near: 1,
       });
-      camera.setPosition(0, -5, -5);
+      this.world.getCamera(camera).setPosition(0, 5, 5);
+
+      const scene = this.world.createScene(camera);
+
+      const boxGeometry = this.world.createBoxGeometry({
+        halfExtents: vec3.fromValues(1, 1, 1),
+      });
+      const material = this.world.createBasicMaterial();
+      const mesh = this.world.createMesh({
+        geometry: boxGeometry,
+        material,
+      });
+      meshTransform = this.world.getTransform(mesh);
+      meshTransform.translate(vec3.fromValues(-2.5, 0, 0));
+
+      const material2 = this.world.createBasicMaterial();
+      const mesh2 = this.world.createMesh({
+        geometry: boxGeometry,
+        material: material2,
+      });
+      const mesh2Transform = this.world.getTransform(mesh2);
+      mesh2Transform.translate(vec3.fromValues(2.5, 0, 0));
+
+      this.world.add(scene, mesh);
+      this.world.add(scene, mesh2);
+
+      const gui = new dat.GUI();
+      this.gui = gui;
+
+      const cubeFolder = gui.addFolder('cube');
+
+      const cube = {
+        scale: 1,
+        color: [255, 255, 255],
+      };
+      cubeFolder.add(cube, 'scale', 0.1, 5.0).onChange((size) => {
+        meshTransform.localScale = vec3.fromValues(1, 1, 1);
+        meshTransform.scale(vec3.fromValues(size, size, size));
+      });
+      cubeFolder.addColor(cube, 'color').onChange((color) => {
+        this.world.setUniform(
+          material,
+          'color',
+          vec4.fromValues(color[0] / 255, color[1] / 255, color[2] / 255, 1),
+        );
+      });
     }
   }
 
@@ -159,28 +87,26 @@ export default class RotatingCube extends React.Component {
     if (this.world) {
       this.world.destroy();
     }
+    if (this.$stats) {
+      document.body.removeChild(this.$stats);
+    }
+    if (this.gui) {
+      this.gui.destroy();
+    }
   }
 
   public render() {
-    return (
-      <canvas
-        id="application"
-        width="600"
-        height="600"
-        style={{
-          pointerEvents: 'none',
-        }}
-      />
-    );
+    return <canvas id="application" width="600" height="600" />;
   }
 
-  private getTransformationMatrix() {
-    camera.rotate(1, 0, 0);
-    const viewMatrix = camera.getViewTransform();
-
-    const modelViewProjectionMatrix = mat4.create();
-    mat4.multiply(modelViewProjectionMatrix, camera.perspective, viewMatrix);
-
-    return modelViewProjectionMatrix;
+  private initStats() {
+    this.stats = new Stats();
+    this.stats.showPanel(0);
+    const $stats = this.stats.dom;
+    $stats.style.position = 'absolute';
+    $stats.style.left = '0px';
+    $stats.style.top = '0px';
+    document.body.appendChild($stats);
+    this.$stats = $stats;
   }
 }

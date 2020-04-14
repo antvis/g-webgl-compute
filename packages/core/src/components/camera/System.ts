@@ -16,7 +16,7 @@ export class CameraSystem extends ExecuteSystem {
   @inject(IDENTIFIER.TransformComponentManager)
   private readonly transform: ComponentManager<TransformComponent>;
 
-  public execute() {
+  public async execute() {
     // this.runTransformUpdateSystem();
   }
 
@@ -35,8 +35,7 @@ export class CameraSystem extends ExecuteSystem {
     const { near, far, angle, aspect } = cameraParams;
     cameraComponent?.setPerspective(near, far, angle, aspect);
 
-    // FIXME: 暂时返回 component
-    return cameraComponent;
+    return entity;
   }
 
   public getTransformComponentManager() {

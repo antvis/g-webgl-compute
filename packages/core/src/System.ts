@@ -4,6 +4,7 @@
  */
 
 import { injectable } from 'inversify';
+import { WebGPUEngine } from './WebGPUEngine';
 
 export type System =
   | InitializeSystem
@@ -33,7 +34,7 @@ export abstract class ExecuteSystem {
   public static TYPE = 'ExecuteSystem';
   public name: symbol;
   public type = ExecuteSystem.TYPE;
-  public abstract execute(): void;
+  public abstract async execute(engine: WebGPUEngine): Promise<void>;
 }
 
 /**

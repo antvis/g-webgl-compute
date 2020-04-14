@@ -5,6 +5,10 @@ export const IDENTIFIER = {
   NameComponentManager: Symbol('NameComponentManager'),
   SceneGraphSystem: Symbol('SceneGraphSystem'),
 
+  // Scene
+  SceneSystem: Symbol('SceneSystem'),
+  SceneComponentManager: Symbol('SceneComponentManager'),
+
   // Camera
   CameraComponentManager: Symbol('CameraComponentManager'),
   CameraSystem: Symbol('CameraSystem'),
@@ -13,6 +17,25 @@ export const IDENTIFIER = {
   FrameGraphSystem: Symbol('FrameGraphSystem'),
   ResourceHandleComponentManager: Symbol('ResourceHandleComponentManager'),
   PassNodeComponentManager: Symbol('PassNodeComponentManager'),
+
+  // Interaction
+  InteractionSystem: Symbol('InteractionSystem'),
+
+  // Mesh
+  MeshSystem: Symbol('MeshSystem'),
+  MeshComponentManager: Symbol('MeshComponentManager'),
+  CullableComponentManager: Symbol('CullableComponentManager'),
+
+  // Geometry
+  GeometrySystem: Symbol('GeometrySystem'),
+  GeometryComponentManager: Symbol('GeometryComponentManager'),
+
+  // Material
+  MaterialSystem: Symbol('MaterialSystem'),
+  MaterialComponentManager: Symbol('MaterialComponentManager'),
+
+  // RenderPath
+  ForwardRenderPath: Symbol('ForwardRenderPath'),
 
   Systems: Symbol('Systems'),
   World: Symbol('World'),

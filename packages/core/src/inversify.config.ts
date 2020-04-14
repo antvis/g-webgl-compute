@@ -13,6 +13,18 @@ import { CameraSystem } from './components/camera/System';
 import { PassNodeComponent } from './components/framegraph/PassNodeComponent';
 import { ResourceHandleComponent } from './components/framegraph/ResourceHandleComponent';
 import { FrameGraphSystem } from './components/framegraph/System';
+import { GeometryComponent } from './components/geometry/GeometryComponent';
+import { GeometrySystem } from './components/geometry/System';
+import { InteractionSystem } from './components/interaction/System';
+import { MaterialComponent } from './components/material/MaterialComponent';
+import { MaterialSystem } from './components/material/System';
+import { CullableComponent } from './components/mesh/CullableComponent';
+import { MeshComponent } from './components/mesh/MeshComponent';
+import { MeshSystem } from './components/mesh/System';
+import { ForwardRenderPath } from './components/renderpath/Forward';
+import { IRenderPath } from './components/renderpath/RenderPath';
+import { SceneComponent } from './components/scene/SceneComponent';
+import { SceneSystem } from './components/scene/System';
 import { HierarchyComponent } from './components/scenegraph/HierarchyComponent';
 import { NameComponent } from './components/scenegraph/NameComponent';
 import { SceneGraphSystem } from './components/scenegraph/System';
@@ -107,10 +119,35 @@ container
     IDENTIFIER.PassNodeComponentManager,
   )
   .toConstantValue(new ComponentManager(PassNodeComponent));
+container
+  .bind<ComponentManager<MeshComponent>>(IDENTIFIER.MeshComponentManager)
+  .toConstantValue(new ComponentManager(MeshComponent));
+container
+  .bind<ComponentManager<CullableComponent>>(
+    IDENTIFIER.CullableComponentManager,
+  )
+  .toConstantValue(new ComponentManager(CullableComponent));
+container
+  .bind<ComponentManager<GeometryComponent>>(
+    IDENTIFIER.GeometryComponentManager,
+  )
+  .toConstantValue(new ComponentManager(GeometryComponent));
+container
+  .bind<ComponentManager<MaterialComponent>>(
+    IDENTIFIER.MaterialComponentManager,
+  )
+  .toConstantValue(new ComponentManager(MaterialComponent));
+container
+  .bind<ComponentManager<SceneComponent>>(IDENTIFIER.SceneComponentManager)
+  .toConstantValue(new ComponentManager(SceneComponent));
 
 container
   .bind<System>(IDENTIFIER.Systems)
   .to(SceneGraphSystem)
+  .inSingletonScope();
+container
+  .bind<System>(IDENTIFIER.Systems)
+  .to(SceneSystem)
   .inSingletonScope();
 container
   .bind<System>(IDENTIFIER.Systems)
@@ -119,4 +156,25 @@ container
 container
   .bind<System>(IDENTIFIER.Systems)
   .to(FrameGraphSystem)
+  .inSingletonScope();
+container
+  .bind<System>(IDENTIFIER.Systems)
+  .to(MeshSystem)
+  .inSingletonScope();
+container
+  .bind<System>(IDENTIFIER.Systems)
+  .to(GeometrySystem)
+  .inSingletonScope();
+container
+  .bind<System>(IDENTIFIER.Systems)
+  .to(MaterialSystem)
+  .inSingletonScope();
+container
+  .bind<System>(IDENTIFIER.Systems)
+  .to(InteractionSystem)
+  .inSingletonScope();
+
+container
+  .bind<IRenderPath>(IDENTIFIER.ForwardRenderPath)
+  .to(ForwardRenderPath)
   .inSingletonScope();

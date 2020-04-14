@@ -6,11 +6,9 @@ import Fruchterman from './GPGPU/Fruchterman';
 import Gravity from './GPGPU/Gravity';
 import RotatingCube from './Rendering/RotatingCube';
 import RotatingCubeWithRecordBundle from './Rendering/RotatingCubeWithRecordBundle';
-import TriangleMSAA from './Rendering/TriangleMSAA';
 
 // @ts-ignore
 storiesOf('Rendering', module)
-  .add('TriangleMSAA', () => <TriangleMSAA />)
   .add('RotatingCube', () => <RotatingCube />)
   .add('RotatingCubeWithRecordBundle', () => <RotatingCubeWithRecordBundle />);
 storiesOf('GPGPU', module)

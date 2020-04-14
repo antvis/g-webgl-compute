@@ -1,6 +1,7 @@
 import { mat3, mat4, quat, vec3, vec4 } from 'gl-matrix';
 import { Component } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
+import { Frustum } from '../../shape/Frustum';
 import { createVec3, getAngle } from '../../utils/math';
 import Landmark from './Landmark';
 
@@ -115,12 +116,25 @@ export class CameraComponent extends Component<CameraComponent> {
   private type = CAMERA_TYPE.EXPLORING;
   private trackingMode = CAMERA_TRACKING_MODE.DEFAULT;
 
+  /**
+   * 视锥
+   */
+  private frustum: Frustum = new Frustum();
+
   // constructor(type: CAMERA_TYPE) {
   //   this.setType(type, undefined);
   // }
 
   constructor(data: Partial<NonFunctionProperties<CameraComponent>>) {
     super(data);
+  }
+
+  public getPerspective() {
+    return this.perspective;
+  }
+
+  public getFrustum() {
+    return this.frustum;
   }
 
   public setType(

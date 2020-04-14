@@ -30,7 +30,7 @@ export class FrameGraphSystem extends ExecuteSystem {
   // 保存 ref 为 0 的 passNodeEntity 列表
   private rootNodes: Entity[] = [];
 
-  public execute() {
+  public async execute() {
     // this.runTransformUpdateSystem();
   }
 
@@ -235,17 +235,25 @@ export class FrameGraphSystem extends ExecuteSystem {
     // 已经添加过
     if (
       inputPassNode.nexts.find((e) => {
-        const { name: inputPassNodeName } =
-          this.nameManager.getComponentByEntity(e) || {};
-        const { name: passNodeName = '' } =
-          this.nameManager.getComponentByEntity(passNodeEntity) || {};
+        const {
+          name: inputPassNodeName,
+        } = this.nameManager.getComponentByEntity(e) || { name: '' };
+        const {
+          name: passNodeName = '',
+        } = this.nameManager.getComponentByEntity(passNodeEntity) || {
+          name: '',
+        };
         return inputPassNodeName === passNodeName;
       }) ||
       passNode.prevs.find((e) => {
-        const { name: inputPassNodeName } =
-          this.nameManager.getComponentByEntity(e) || {};
-        const { name: passNodeName = '' } =
-          this.nameManager.getComponentByEntity(inputPassNodeEntity) || {};
+        const {
+          name: inputPassNodeName,
+        } = this.nameManager.getComponentByEntity(e) || { name: '' };
+        const {
+          name: passNodeName = '',
+        } = this.nameManager.getComponentByEntity(inputPassNodeEntity) || {
+          name: '',
+        };
         return passNodeName === inputPassNodeName;
       })
     ) {

@@ -3,6 +3,7 @@ import { inject, injectable } from 'inversify';
 import { Entity, IDENTIFIER } from '../..';
 import { ComponentManager } from '../../ComponentManager';
 import { ExecuteSystem } from '../../System';
+import { MeshComponent } from '../mesh/MeshComponent';
 import { HierarchyComponent } from './HierarchyComponent';
 import { TransformComponent } from './TransformComponent';
 
@@ -16,7 +17,10 @@ export class SceneGraphSystem extends ExecuteSystem {
   @inject(IDENTIFIER.TransformComponentManager)
   private readonly transform: ComponentManager<TransformComponent>;
 
-  public execute() {
+  @inject(IDENTIFIER.MeshComponentManager)
+  private readonly mesh: ComponentManager<MeshComponent>;
+
+  public async execute() {
     this.runTransformUpdateSystem();
     this.runHierarchyUpdateSystem();
   }
@@ -31,17 +35,20 @@ export class SceneGraphSystem extends ExecuteSystem {
 
   public runTransformUpdateSystem() {
     // 原版基于 JobSystem 实现
-    for (let i = 0; i < this.transform.getCount(); ++i) {
-      const transform = this.transform.getComponent(i);
-      transform.updateTransform();
-    }
+    this.transform.forEach((entity, transform) => {
+      if (transform.isDirty()) {
+        // 需要通知 mesh（如果有）更新 aabb
+        const mesh = this.mesh.getComponentByEntity(entity);
+        if (mesh) {
+          mesh.aabbDirty = true;
+        }
+        transform.updateTransform();
+      }
+    });
   }
 
   public runHierarchyUpdateSystem() {
-    for (let i = 0; i < this.hierarchy.getCount(); ++i) {
-      const parentComponent = this.hierarchy.getComponent(i);
-      const entity = this.hierarchy.getEntity(i);
-
+    this.hierarchy.forEach((entity, parentComponent) => {
       const transformChild = this.transform.getComponentByEntity(entity);
       const transformParent = this.transform.getComponentByEntity(
         parentComponent.parentID,
@@ -49,7 +56,7 @@ export class SceneGraphSystem extends ExecuteSystem {
       if (transformChild !== null && transformParent !== null) {
         transformChild.updateTransformWithParent(transformParent);
       }
-    }
+    });
   }
 
   public attach(
