@@ -34,6 +34,11 @@ export class FrameGraphSystem extends ExecuteSystem {
     // this.runTransformUpdateSystem();
   }
 
+  public destroy() {
+    this.passNodeManager.clear();
+    this.resourceHandleManager.clear();
+  }
+
   public setup() {
     this.passNodeManager.forEach((entity, passNode) => {
       passNode.setup();

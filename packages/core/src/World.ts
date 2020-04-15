@@ -10,6 +10,7 @@ import {
   GeometrySystem,
   IBoxGeometryParams,
 } from './components/geometry/System';
+import { IUniform } from './components/material/MaterialComponent';
 import { MaterialSystem } from './components/material/System';
 import { IMeshParams, MeshSystem } from './components/mesh/System';
 import { ForwardRenderPath } from './components/renderpath/Forward';
@@ -134,6 +135,22 @@ export class World extends EventEmitter implements ILifeCycle {
     return (geometrySystem as GeometrySystem).createBox(params);
   }
 
+  public createBufferGeometry() {
+    const geometrySystem = this.systems.find(
+      (s) => s.name === IDENTIFIER.GeometrySystem,
+    );
+    return (geometrySystem as GeometrySystem).createBufferGeometry();
+  }
+
+  public createInstancedBufferGeometry(params: { maxInstancedCount: number }) {
+    const geometrySystem = this.systems.find(
+      (s) => s.name === IDENTIFIER.GeometrySystem,
+    );
+    return (geometrySystem as GeometrySystem).createInstancedBufferGeometry(
+      params,
+    );
+  }
+
   public createBasicMaterial() {
     const materialSystem = this.systems.find(
       (s) => s.name === IDENTIFIER.MaterialSystem,
@@ -146,6 +163,30 @@ export class World extends EventEmitter implements ILifeCycle {
       (s) => s.name === IDENTIFIER.MaterialSystem,
     );
     return (materialSystem as MaterialSystem).createShaderMaterial(vs, fs);
+  }
+
+  public createAttribute(
+    entity: Entity,
+    name: string,
+    data: ArrayBufferView,
+    descriptor: GPUVertexBufferLayoutDescriptor,
+  ) {
+    const geometrySystem = this.systems.find(
+      (s) => s.name === IDENTIFIER.GeometrySystem,
+    );
+    return (geometrySystem as GeometrySystem).createAttribute(
+      entity,
+      name,
+      data,
+      descriptor,
+    );
+  }
+
+  public addUniform(entity: Entity, uniform: IUniform) {
+    const materialSystem = this.systems.find(
+      (s) => s.name === IDENTIFIER.MaterialSystem,
+    );
+    (materialSystem as MaterialSystem).addUniform(entity, uniform);
   }
 
   public setUniform(
@@ -211,6 +252,7 @@ export class World extends EventEmitter implements ILifeCycle {
     this.off('update');
     this.engine.dispose();
     this.systems.forEach((system) => {
+      system.destroy();
       if (system.type === TearDownSystem.TYPE) {
         (system as TearDownSystem).tearDown();
       }

@@ -29,6 +29,9 @@ export class InteractionSystem extends InitializeSystem {
   private deltaY: number = 0;
   private deltaZ: number = 0;
 
+  private hammertime: HammerManager;
+  private canvas: HTMLCanvasElement;
+
   @inject(IDENTIFIER.SceneComponentManager)
   private readonly scene: ComponentManager<SceneComponent>;
 
@@ -44,8 +47,18 @@ export class InteractionSystem extends InitializeSystem {
     hammertime.on('panmove', this.onPanmove);
     hammertime.on('panend', this.onPanend);
     hammertime.on('pinch', this.onPinch);
+    this.hammertime = hammertime;
 
     canvas.addEventListener('wheel', this.onMousewheel);
+    this.canvas = canvas;
+  }
+
+  public destroy() {
+    this.hammertime.off('panstart', this.onPanstart);
+    this.hammertime.off('panmove', this.onPanmove);
+    this.hammertime.off('panend', this.onPanend);
+    this.hammertime.off('pinch', this.onPinch);
+    this.canvas.removeEventListener('wheel', this.onMousewheel);
   }
 
   private onPanend = (e: HammerInput) => {

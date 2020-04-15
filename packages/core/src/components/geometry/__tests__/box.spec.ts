@@ -86,7 +86,7 @@ describe('Box geometry', () => {
     });
     const geometry = geometryManager.getComponentByEntity(entity);
 
-    expect(geometry?.indices.length).toBe(144);
+    expect(geometry?.indices?.length).toBe(144);
   });
 
   test('should generate a box geometry with halfExtents.', () => {

@@ -20,6 +20,10 @@ export class CameraSystem extends ExecuteSystem {
     // this.runTransformUpdateSystem();
   }
 
+  public destroy() {
+    this.camera.clear();
+  }
+
   public createCamera(cameraParams: {
     near: number;
     far: number;

@@ -18,6 +18,7 @@ export default class RotatingCube extends React.Component {
     if (canvas) {
       this.initStats();
 
+      // create a world
       this.world = new World(canvas, {
         onUpdate: () => {
           meshTransform.rotate(quat.fromEuler(quat.create(), 0, 1, 0));
@@ -28,6 +29,7 @@ export default class RotatingCube extends React.Component {
         },
       });
 
+      // create a camera
       const camera = this.world.createCamera({
         aspect: Math.abs(canvas.width / canvas.height),
         angle: 72,
@@ -36,12 +38,22 @@ export default class RotatingCube extends React.Component {
       });
       this.world.getCamera(camera).setPosition(0, 5, 5);
 
+      // create a scene
       const scene = this.world.createScene(camera);
 
+      // create geometry, material and attach them to mesh
       const boxGeometry = this.world.createBoxGeometry({
         halfExtents: vec3.fromValues(1, 1, 1),
       });
       const material = this.world.createBasicMaterial();
+      this.world.addUniform(material, {
+        binding: 1,
+        name: 'color',
+        format: 'float4',
+        data: null,
+        dirty: true,
+      });
+
       const mesh = this.world.createMesh({
         geometry: boxGeometry,
         material,
@@ -50,6 +62,14 @@ export default class RotatingCube extends React.Component {
       meshTransform.translate(vec3.fromValues(-2.5, 0, 0));
 
       const material2 = this.world.createBasicMaterial();
+      this.world.addUniform(material2, {
+        binding: 1,
+        name: 'color',
+        format: 'float4',
+        data: null,
+        dirty: true,
+      });
+
       const mesh2 = this.world.createMesh({
         geometry: boxGeometry,
         material: material2,
@@ -57,12 +77,13 @@ export default class RotatingCube extends React.Component {
       const mesh2Transform = this.world.getTransform(mesh2);
       mesh2Transform.translate(vec3.fromValues(2.5, 0, 0));
 
+      // add meshes to current scene
       this.world.add(scene, mesh);
       this.world.add(scene, mesh2);
 
+      // GUI
       const gui = new dat.GUI();
       this.gui = gui;
-
       const cubeFolder = gui.addFolder('cube');
 
       const cube = {

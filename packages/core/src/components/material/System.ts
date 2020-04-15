@@ -6,8 +6,8 @@ import { ExecuteSystem } from '../../System';
 import { getLengthFromFormat } from '../../utils/shader';
 import { WebGPUEngine } from '../../WebGPUEngine';
 import { IUniform, MaterialComponent } from './MaterialComponent';
-import fragmentShaderGLSL from './shaders/standard.frag.glsl';
-import vertexShaderGLSL from './shaders/standard.vert.glsl';
+import fragmentShaderGLSL from './shaders/basic.frag.glsl';
+import vertexShaderGLSL from './shaders/basic.vert.glsl';
 
 @injectable()
 export class MaterialSystem extends ExecuteSystem {
@@ -35,6 +35,10 @@ export class MaterialSystem extends ExecuteSystem {
     );
   }
 
+  public destroy() {
+    this.material.clear();
+  }
+
   /**
    * This material is not affected by lights.
    * @see https://threejs.org/docs/#api/en/materials/MeshBasicMaterial
@@ -46,30 +50,21 @@ export class MaterialSystem extends ExecuteSystem {
       fragmentShaderGLSL,
     });
 
-    // TODO: 暂时手动声明，后续可以优化成从 Shader 中自动提取
-    this.addUniform(entity, {
-      binding: 0,
-      name: 'mvpMatrix',
-      format: 'mat4',
-      data: null,
-      dirty: true,
-    });
-    this.addUniform(entity, {
-      binding: 0,
-      name: 'color',
-      format: 'float4',
-      data: null,
-      dirty: true,
-    });
+    this.addBuiltinUniforms(entity);
     return entity;
   }
 
+  /**
+   * @see https://threejs.org/docs/#api/en/materials/ShaderMaterial
+   */
   public createShaderMaterial(vs: string, fs: string) {
     const entity = createEntity();
     this.material.create(entity, {
       vertexShaderGLSL: vs,
       fragmentShaderGLSL: fs,
     });
+
+    this.addBuiltinUniforms(entity);
     return entity;
   }
 
@@ -122,6 +117,36 @@ export class MaterialSystem extends ExecuteSystem {
     }
   }
 
+  /**
+   * 添加内置 uniform，例如 mvp 矩阵
+   *
+   * 在 Shader 中可以通过 Uniform 访问：
+   * @example
+   *
+   * layout(set = 0, binding = 0) uniform Builtin {
+   *   mat4 projectionMatrix;
+   *   mat4 modelViewMatrix;
+   * } builtin;
+   *
+   * 后续可以改成自动添加到用户自定义 Shader 的头部，类似 Three.js chunk
+   */
+  private addBuiltinUniforms(entity: Entity) {
+    this.addUniform(entity, {
+      binding: 0,
+      name: 'projectionMatrix',
+      format: 'mat4',
+      data: null,
+      dirty: true,
+    });
+    this.addUniform(entity, {
+      binding: 0,
+      name: 'modelViewMatrix',
+      format: 'mat4',
+      data: null,
+      dirty: true,
+    });
+  }
+
   private generateUniforms(engine: WebGPUEngine, component: MaterialComponent) {
     const entries: GPUBindGroupLayoutEntry[] = component.uniforms.map(
       (uniform, i) => ({
@@ -130,6 +155,7 @@ export class MaterialSystem extends ExecuteSystem {
         type: 'uniform-buffer',
       }),
     );
+
     component.uniformsBindGroupLayout = engine
       .getDevice()
       .createBindGroupLayout({

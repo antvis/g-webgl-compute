@@ -25,6 +25,11 @@ export class SceneGraphSystem extends ExecuteSystem {
     this.runHierarchyUpdateSystem();
   }
 
+  public destroy() {
+    this.hierarchy.clear();
+    this.transform.clear();
+  }
+
   public getHierarchyComponentManager() {
     return this.hierarchy;
   }

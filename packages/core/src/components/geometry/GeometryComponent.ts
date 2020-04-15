@@ -5,58 +5,19 @@ import { AABB } from '../../shape/AABB';
 export class GeometryComponent extends Component<GeometryComponent> {
   public dirty: boolean = true;
 
-  public vertices: Float32Array;
-  public normals: Float32Array;
-  public uvs: Float32Array;
-  public indices: Uint32Array;
-  public barycentric: Float32Array;
+  public attributes: Array<
+    {
+      name: string;
+      data?: ArrayBufferView;
+      buffer?: GPUBuffer;
+    } & GPUVertexBufferLayoutDescriptor
+  > = [];
 
-  public verticesBuffer: GPUBuffer;
-  public normalsBuffer: GPUBuffer;
-  public uvsBuffer: GPUBuffer;
-  public indicesBuffer: GPUBuffer;
+  public indices: Uint32Array | null;
+  public indicesBuffer: GPUBuffer | null;
 
-  public vertexState: GPUVertexStateDescriptor = {
-    indexFormat: 'uint32',
-    vertexBuffers: [
-      {
-        arrayStride: 4 * 3,
-        stepMode: 'vertex',
-        attributes: [
-          {
-            // position
-            shaderLocation: 0,
-            offset: 0,
-            format: 'float3',
-          },
-        ],
-      },
-      {
-        arrayStride: 4 * 3,
-        stepMode: 'vertex',
-        attributes: [
-          {
-            // normal
-            shaderLocation: 1,
-            offset: 0,
-            format: 'float3',
-          },
-        ],
-      },
-      {
-        arrayStride: 4 * 2,
-        stepMode: 'vertex',
-        attributes: [
-          {
-            // uv
-            shaderLocation: 2,
-            offset: 0,
-            format: 'float2',
-          },
-        ],
-      },
-    ],
-  };
+  // instanced count
+  public maxInstancedCount: number;
 
   public aabb: AABB;
 

@@ -77,20 +77,35 @@ export class ForwardRenderPath implements IRenderPath {
         // get model matrix from mesh
         const transform = this.transform.getComponentByEntity(meshEntity)!;
 
-        const modelViewProjectionMatrix = mat4.multiply(
-          mat4.create(),
-          viewProjectionMatrix,
-          transform.worldTransform,
-        );
+        if (transform) {
+          const modelViewMatrix = mat4.multiply(
+            mat4.create(),
+            viewMatrix,
+            transform.worldTransform,
+          );
+          // const modelViewProjectionMatrix = mat4.multiply(
+          //   mat4.create(),
+          //   viewProjectionMatrix,
+          //   transform.worldTransform,
+          // );
 
-        // set MVP matrix
-        materialSystem.setUniform(
-          engine,
-          mesh.material,
-          'mvpMatrix',
-          // @ts-ignore
-          modelViewProjectionMatrix,
-        );
+          // set MVP matrix
+          materialSystem.setUniform(
+            engine,
+            mesh.material,
+            'projectionMatrix',
+            // @ts-ignore
+            camera.getPerspective(),
+          );
+
+          materialSystem.setUniform(
+            engine,
+            mesh.material,
+            'modelViewMatrix',
+            // @ts-ignore
+            modelViewMatrix,
+          );
+        }
 
         // update other uniforms
         material.uniforms.forEach((binding) => {
@@ -110,39 +125,80 @@ export class ForwardRenderPath implements IRenderPath {
 
         engine.setRenderBindGroups([material.uniformBindGroup]);
 
-        // TODO: use some semantic like POSITION, NORMAL, COLOR etc.
-        engine.bindVertexInputs({
-          indexBuffer: geometry.indicesBuffer,
-          indexOffset: 0,
-          vertexStartSlot: 0,
-          vertexBuffers: [
-            geometry.verticesBuffer,
-            geometry.normalsBuffer,
-            geometry.uvsBuffer,
-          ],
-          vertexOffsets: [0, 0, 0],
-        });
+        // some custom shader doesn't need vertex, like our triangle MSAA example.
+        if (geometry.attributes.length) {
+          // TODO: use some semantic like POSITION, NORMAL, COLOR etc.
+          engine.bindVertexInputs({
+            indexBuffer: geometry.indicesBuffer,
+            indexOffset: 0,
+            vertexStartSlot: 0,
+            vertexBuffers: geometry.attributes
+              .map((attribute) => attribute.buffer!)
+              .filter((a) => a),
+            vertexOffsets: geometry.attributes
+              .map((attribute) => attribute.buffer!)
+              .filter((a) => a)
+              .map(() => 0),
+          });
+        }
 
-        engine.drawElementsType(
-          `render${meshEntity}`,
-          {
-            layout: material.pipelineLayout,
-            ...material.stageDescriptor,
-            primitiveTopology: material.primitiveTopology,
-            vertexState: geometry.vertexState,
-            rasterizationState: {
-              cullMode: 'back',
+        if (geometry.indices && geometry.indices.length) {
+          engine.drawElementsType(
+            `render-${meshEntity}-elements`,
+            {
+              layout: material.pipelineLayout,
+              ...material.stageDescriptor,
+              primitiveTopology: material.primitiveTopology,
+              vertexState: {
+                indexFormat: 'uint32',
+                vertexBuffers: geometry.attributes.map((attribute) => ({
+                  arrayStride: attribute.arrayStride,
+                  stepMode: attribute.stepMode,
+                  attributes: attribute.attributes,
+                })),
+              },
+              rasterizationState: {
+                cullMode: 'back',
+              },
+              depthStencilState: {
+                depthWriteEnabled: true,
+                depthCompare: 'less',
+                format: 'depth24plus-stencil8',
+              },
             },
-            depthStencilState: {
-              depthWriteEnabled: true,
-              depthCompare: 'less',
-              format: 'depth24plus-stencil8',
+            0,
+            geometry.indices.length,
+            // TODO: instanced array
+            geometry.maxInstancedCount || 1,
+          );
+        } else {
+          engine.drawArraysType(
+            `render-${meshEntity}-arrays`,
+            {
+              layout: material.pipelineLayout,
+              ...material.stageDescriptor,
+              primitiveTopology: material.primitiveTopology,
+              vertexState: {
+                vertexBuffers: geometry.attributes.map((attribute) => ({
+                  arrayStride: attribute.arrayStride,
+                  stepMode: attribute.stepMode,
+                  attributes: attribute.attributes,
+                })),
+              },
+              rasterizationState: {
+                cullMode: 'back',
+              },
+              depthStencilState: {
+                depthWriteEnabled: true,
+                depthCompare: 'less',
+                format: 'depth24plus-stencil8',
+              },
             },
-          },
-          0,
-          geometry.indices.length,
-          1,
-        );
+            0,
+            3,
+            geometry.maxInstancedCount || 1,
+          );
+        }
       });
     });
   }

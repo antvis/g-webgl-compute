@@ -34,20 +34,77 @@ export class GeometrySystem extends ExecuteSystem {
     this.geometry.forEach((entity, component) => {
       // build buffers for each geometry
       if (component.dirty) {
-        component.verticesBuffer = engine.createVertexBuffer(
-          component.vertices,
-        );
-        component.normalsBuffer = engine.createVertexBuffer(component.normals);
-        component.uvsBuffer = engine.createVertexBuffer(component.uvs);
-        component.indicesBuffer = engine.createIndexBuffer(component.indices);
+        component.attributes.forEach((attribute) => {
+          if (attribute.data) {
+            attribute.buffer = engine.createVertexBuffer(attribute.data);
+          }
+        });
+
+        // create index buffer if needed
+        if (component.indices) {
+          component.indicesBuffer = engine.createIndexBuffer(component.indices);
+        }
         component.dirty = false;
       }
     });
   }
 
-  public createGeometry() {
+  public destroy() {
+    this.geometry.forEach((_, geometry) => {
+      if (geometry.indicesBuffer) {
+        geometry.indicesBuffer.destroy();
+      }
+
+      geometry.attributes.forEach((attribute) => {
+        if (attribute.buffer) {
+          attribute.buffer.destroy();
+        }
+      });
+    });
+    this.geometry.clear();
+  }
+
+  /**
+   * @see https://threejs.org/docs/#api/en/core/BufferAttribute
+   */
+  public createAttribute(
+    entity: Entity,
+    name: string,
+    data: ArrayBufferView,
+    descriptor: GPUVertexBufferLayoutDescriptor,
+  ) {
+    const geometry = this.geometry.getComponentByEntity(entity);
+
+    if (geometry) {
+      geometry.attributes.push({
+        name,
+        data,
+        ...descriptor,
+      });
+    }
+  }
+
+  /**
+   * @see https://threejs.org/docs/#api/en/core/BufferGeometry
+   */
+  public createBufferGeometry() {
     const entity = createEntity();
     this.geometry.create(entity);
+    return entity;
+  }
+
+  /**
+   * @see https://threejs.org/docs/#api/en/core/InstancedBufferGeometry
+   */
+  public createInstancedBufferGeometry({
+    maxInstancedCount,
+  }: {
+    maxInstancedCount: number;
+  }) {
+    const entity = createEntity();
+    this.geometry.create(entity, {
+      maxInstancedCount,
+    });
     return entity;
   }
 
@@ -185,11 +242,49 @@ export class GeometrySystem extends ExecuteSystem {
 
     const entity = createEntity();
     this.geometry.create(entity, {
-      vertices: Float32Array.from(positions),
-      normals: Float32Array.from(normals),
-      uvs: Float32Array.from(uvs),
       indices: Uint32Array.from(indices),
       aabb,
+      attributes: [
+        {
+          name: 'position',
+          data: Float32Array.from(positions),
+          arrayStride: 4 * 3,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              shaderLocation: 0,
+              offset: 0,
+              format: 'float3',
+            },
+          ],
+        },
+        {
+          name: 'normal',
+          data: Float32Array.from(normals),
+          arrayStride: 4 * 3,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              shaderLocation: 1,
+              offset: 0,
+              format: 'float3',
+            },
+          ],
+        },
+        {
+          name: 'uv',
+          data: Float32Array.from(uvs),
+          arrayStride: 4 * 2,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              shaderLocation: 2,
+              offset: 0,
+              format: 'float2',
+            },
+          ],
+        },
+      ],
     });
 
     // TODO: barycentric & tangent

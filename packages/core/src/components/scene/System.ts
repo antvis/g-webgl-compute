@@ -16,6 +16,10 @@ export class SceneSystem extends ExecuteSystem {
     // this.runTransformUpdateSystem();
   }
 
+  public destroy() {
+    this.scene.clear();
+  }
+
   public createScene(camera: Entity) {
     const entity = createEntity();
     this.scene.create(entity, {

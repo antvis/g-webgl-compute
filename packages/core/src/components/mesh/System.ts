@@ -74,7 +74,12 @@ export class MeshSystem extends ExecuteSystem {
         const meshTransform = this.transform.getComponentByEntity(entity);
 
         // update mesh.aabb
-        if (geometryComponent && meshTransform && component.aabbDirty) {
+        if (
+          geometryComponent &&
+          geometryComponent.aabb &&
+          meshTransform &&
+          component.aabbDirty
+        ) {
           const { worldTransform } = meshTransform;
 
           // apply transform to geometry.aabb
@@ -111,6 +116,11 @@ export class MeshSystem extends ExecuteSystem {
         }
       });
     });
+  }
+
+  public destroy() {
+    this.cullable.clear();
+    this.mesh.clear();
   }
 
   public createMesh(params: IMeshParams) {

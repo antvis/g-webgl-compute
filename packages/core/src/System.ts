@@ -23,6 +23,7 @@ export abstract class InitializeSystem {
   public name: symbol;
   public type = InitializeSystem.TYPE;
   public abstract initialize(canvas: HTMLCanvasElement): void;
+  public abstract destroy(): void;
 }
 
 /**
@@ -35,6 +36,7 @@ export abstract class ExecuteSystem {
   public name: symbol;
   public type = ExecuteSystem.TYPE;
   public abstract async execute(engine: WebGPUEngine): Promise<void>;
+  public abstract destroy(): void;
 }
 
 /**
@@ -47,6 +49,7 @@ export abstract class CleanupSystem {
   public name: symbol;
   public type = CleanupSystem.TYPE;
   public abstract cleanup(): void;
+  public abstract destroy(): void;
 }
 
 /**
@@ -59,4 +62,5 @@ export abstract class TearDownSystem {
   public name: symbol;
   public type = TearDownSystem.TYPE;
   public abstract tearDown(): void;
+  public abstract destroy(): void;
 }
