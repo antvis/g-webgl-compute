@@ -74,6 +74,7 @@ world.add(scene, mesh);
 
 对于一些可并行的计算密集型任务，例如布局计算和粒子运动特效，可以使用 GPGPU 技术完成。
 我们提供了一些内置的计算模型，你可以使用任何渲染技术对于计算结果进行展示（当然也可以用我们的渲染 API）。
+
 ```typescript
 import { World } from '@antv/g-webgpu';
 
@@ -104,12 +105,13 @@ this.world.addBinding(compute, 'simParams', simParamData, {
 ### 计算模型
 
 目前我们提供了两种计算模型：
-* `layout` 针对布局计算场景：
-  * 每一帧需要 dispatch 多次，直至达到最大迭代次数，以便尽快完成计算
-  * 通常需要设置最大迭代次数，完成后返回最终 GPUBuffer 数据，供用户渲染结果
-* `particle` 针对粒子运动特效场景：
-  * 每一帧只需要 dispatch 一次
-  * 通常不需要设置最大迭代次数
+
+- `layout` 针对布局计算场景：
+  - 每一帧需要 dispatch 多次，直至达到最大迭代次数，以便尽快完成计算
+  - 通常需要设置最大迭代次数，完成后返回最终 GPUBuffer 数据，供用户渲染结果
+- `particle` 针对粒子运动特效场景：
+  - 每一帧只需要 dispatch 一次
+  - 通常不需要设置最大迭代次数
 
 ## Resources
 

@@ -28,6 +28,7 @@ Please run in Chrome Canary() behind the flag `--enable-unsafe-webgpu`.The `chro
 ## Getting started
 
 rendering with Three.js-styled API:
+
 ```typescript
 const canvas = document.getElementById('application');
 
@@ -64,6 +65,7 @@ world.add(scene, mesh);
 
 You can try to solve some compute-intensive tasks like layout & particle effects with GPGPU technique.
 Use any rendering techniques(d3, g, Three.js or ours' rendering API if you like) when calculation is completed.
+
 ```typescript
 import { World } from '@antv/g-webgpu';
 

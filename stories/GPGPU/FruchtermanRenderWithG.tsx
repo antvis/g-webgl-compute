@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { Canvas } from '@antv/g-canvas';
 import { World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
 import * as React from 'react';
@@ -10,7 +11,7 @@ let numParticles = 0;
 let numEdges = 0;
 
 /**
- * ported from G6
+ * ported from G6 and render with g-canvas
  * @see https://github.com/antvis/G6/blob/master/src/layout/fruchterman.ts
  *
  * WebGL/Unity implements
@@ -67,7 +68,11 @@ export default class Fruchterman extends React.Component {
         particleData: nodesEdgesArray,
         maxIteration: MAX_ITERATION,
         onCompleted: (finalParticleData) => {
-          console.log(finalParticleData);
+          // draw with G
+          this.renderCircles(finalParticleData);
+
+          // 计算完成后销毁相关 GPU 资源
+          this.world.destroy();
         },
       });
 
@@ -85,7 +90,60 @@ export default class Fruchterman extends React.Component {
   }
 
   public render() {
-    return <canvas id="application" width="600" height="600" />;
+    return (
+      <>
+        <canvas id="application" style={{ display: 'none' }} />
+        <div id="container" />
+      </>
+    );
+  }
+
+  private renderCircles(finalParticleData) {
+    const canvas = new Canvas({
+      container: 'container',
+      width: 600,
+      height: 600,
+    });
+
+    // draw edges
+    for (let i = 0; i < this.lineIndexBufferData.length; i += 2) {
+      const x1 = finalParticleData[this.lineIndexBufferData[i] * 4];
+      const y1 = finalParticleData[this.lineIndexBufferData[i] * 4 + 1];
+      const x2 = finalParticleData[this.lineIndexBufferData[i + 1] * 4];
+      const y2 = finalParticleData[this.lineIndexBufferData[i + 1] * 4 + 1];
+      const group = canvas.addGroup();
+      group.addShape('line', {
+        attrs: {
+          x1: this.convertWebGLCoord2Canvas(x1, 600),
+          y1: this.convertWebGLCoord2Canvas(y1, 600),
+          x2: this.convertWebGLCoord2Canvas(x2, 600),
+          y2: this.convertWebGLCoord2Canvas(y2, 600),
+          stroke: '#1890FF',
+          lineWidth: 1,
+        },
+      });
+    }
+
+    // draw nodes
+    for (let i = 0; i < numParticles * 4; i += 4) {
+      const x = finalParticleData[i];
+      const y = finalParticleData[i + 1];
+      const group = canvas.addGroup();
+      group.addShape('circle', {
+        attrs: {
+          x: this.convertWebGLCoord2Canvas(x, 600),
+          y: this.convertWebGLCoord2Canvas(y, 600),
+          r: 5,
+          fill: 'red',
+          stroke: 'blue',
+          lineWidth: 2,
+        },
+      });
+    }
+  }
+
+  private convertWebGLCoord2Canvas(c: number, size: number) {
+    return ((c + 1) / 2) * size;
   }
 
   // @see https://github.com/nblintao/ParaGraphL/blob/master/sigma.layout.paragraphl.js#L192-L229
