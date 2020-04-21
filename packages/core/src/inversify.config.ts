@@ -6,10 +6,15 @@ import 'reflect-metadata';
 
 import { Container, decorate, injectable, interfaces } from 'inversify';
 import getDecorators from 'inversify-inject-decorators';
-import { System, World } from '.';
+import { ISystem } from '.';
 import { ComponentManager } from './ComponentManager';
 import { CameraComponent } from './components/camera/CameraComponent';
 import { CameraSystem } from './components/camera/System';
+import { ComputeComponent } from './components/compute/ComputeComponent';
+import { IComputeStrategy } from './components/compute/IComputeStrategy';
+import { LayoutComputeStrategy } from './components/compute/LayoutComputeStrategy';
+import { ParticleComputeStrategy } from './components/compute/ParticleComputeStrategy';
+import { ComputeSystem } from './components/compute/System';
 import { PassNodeComponent } from './components/framegraph/PassNodeComponent';
 import { ResourceHandleComponent } from './components/framegraph/ResourceHandleComponent';
 import { FrameGraphSystem } from './components/framegraph/System';
@@ -30,6 +35,7 @@ import { NameComponent } from './components/scenegraph/NameComponent';
 import { SceneGraphSystem } from './components/scenegraph/System';
 import { TransformComponent } from './components/scenegraph/TransformComponent';
 import { IDENTIFIER } from './identifier';
+import { IRenderEngine } from './IRenderEngine';
 
 // @see https://github.com/inversify/InversifyJS/blob/master/wiki/container_api.md#defaultscope
 export const container = new Container();
@@ -140,41 +146,71 @@ container
 container
   .bind<ComponentManager<SceneComponent>>(IDENTIFIER.SceneComponentManager)
   .toConstantValue(new ComponentManager(SceneComponent));
+container
+  .bind<ComponentManager<ComputeComponent>>(IDENTIFIER.ComputeComponentManager)
+  .toConstantValue(new ComponentManager(ComputeComponent));
+
+/**
+ * bind systems
+ */
+container
+  .bind<ISystem>(IDENTIFIER.Systems)
+  .to(SceneGraphSystem)
+  .whenTargetNamed(IDENTIFIER.SceneGraphSystem);
 
 container
-  .bind<System>(IDENTIFIER.Systems)
-  .to(SceneGraphSystem)
-  .inSingletonScope();
-container
-  .bind<System>(IDENTIFIER.Systems)
+  .bind<ISystem>(IDENTIFIER.Systems)
   .to(SceneSystem)
-  .inSingletonScope();
+  .whenTargetNamed(IDENTIFIER.SceneSystem);
+
 container
-  .bind<System>(IDENTIFIER.Systems)
+  .bind<ISystem>(IDENTIFIER.Systems)
   .to(CameraSystem)
-  .inSingletonScope();
+  .whenTargetNamed(IDENTIFIER.CameraSystem);
+
 container
-  .bind<System>(IDENTIFIER.Systems)
+  .bind<ISystem>(IDENTIFIER.Systems)
   .to(FrameGraphSystem)
-  .inSingletonScope();
+  .whenTargetNamed(IDENTIFIER.FrameGraphSystem);
+
 container
-  .bind<System>(IDENTIFIER.Systems)
+  .bind<ISystem>(IDENTIFIER.Systems)
   .to(MeshSystem)
-  .inSingletonScope();
+  .whenTargetNamed(IDENTIFIER.MeshSystem);
+
 container
-  .bind<System>(IDENTIFIER.Systems)
+  .bind<ISystem>(IDENTIFIER.Systems)
   .to(GeometrySystem)
-  .inSingletonScope();
+  .whenTargetNamed(IDENTIFIER.GeometrySystem);
+
 container
-  .bind<System>(IDENTIFIER.Systems)
+  .bind<ISystem>(IDENTIFIER.Systems)
   .to(MaterialSystem)
-  .inSingletonScope();
+  .whenTargetNamed(IDENTIFIER.MaterialSystem);
+
 container
-  .bind<System>(IDENTIFIER.Systems)
+  .bind<ISystem>(IDENTIFIER.Systems)
   .to(InteractionSystem)
-  .inSingletonScope();
+  .whenTargetNamed(IDENTIFIER.InteractionSystem);
+
+container
+  .bind<ISystem>(IDENTIFIER.Systems)
+  .to(ComputeSystem)
+  .whenTargetNamed(IDENTIFIER.ComputeSystem);
 
 container
   .bind<IRenderPath>(IDENTIFIER.ForwardRenderPath)
   .to(ForwardRenderPath)
   .inSingletonScope();
+
+/**
+ * bind compute strategy
+ */
+container
+  .bind<IComputeStrategy>(IDENTIFIER.ComputeStrategy)
+  .to(ParticleComputeStrategy)
+  .whenTargetNamed('particle');
+container
+  .bind<IComputeStrategy>(IDENTIFIER.ComputeStrategy)
+  .to(LayoutComputeStrategy)
+  .whenTargetNamed('layout');

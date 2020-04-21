@@ -10,11 +10,15 @@ export class GeometryComponent extends Component<GeometryComponent> {
       name: string;
       data?: ArrayBufferView;
       buffer?: GPUBuffer;
+      // 结合 Compute Pipeline 时，需要在运行时获取 PingPong buffer
+      bufferGetter?: () => GPUBuffer;
     } & GPUVertexBufferLayoutDescriptor
   > = [];
 
   public indices: Uint32Array | null;
   public indicesBuffer: GPUBuffer | null;
+
+  public vertexCount: number;
 
   // instanced count
   public maxInstancedCount: number;

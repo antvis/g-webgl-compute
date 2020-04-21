@@ -1,16 +1,10 @@
 import { vec3 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { Component, createEntity, Entity, IDENTIFIER } from '../..';
+import { Component, createEntity, Entity, IRenderEngine } from '../..';
 import { ComponentManager } from '../../ComponentManager';
-import { EMPTY } from '../../Entity';
-import { AABB } from '../../shape/AABB';
-import { Mask } from '../../shape/Frustum';
-import { Plane } from '../../shape/Plane';
-import { ExecuteSystem } from '../../System';
+import { IDENTIFIER } from '../../identifier';
+import { ISystem } from '../../ISystem';
 import { generateAABBFromVertices } from '../../utils/aabb';
-import { WebGPUEngine } from '../../WebGPUEngine';
-import { HierarchyComponent } from '../scenegraph/HierarchyComponent';
-import { NameComponent } from '../scenegraph/NameComponent';
 import { GeometryComponent } from './GeometryComponent';
 
 const primitiveUv1Padding = 4.0 / 64;
@@ -24,32 +18,35 @@ export interface IBoxGeometryParams {
 }
 
 @injectable()
-export class GeometrySystem extends ExecuteSystem {
-  public name = IDENTIFIER.GeometrySystem;
-
+export class GeometrySystem implements ISystem {
   @inject(IDENTIFIER.GeometryComponentManager)
   private readonly geometry: ComponentManager<GeometryComponent>;
 
-  public async execute(engine: WebGPUEngine) {
+  @inject(IDENTIFIER.RenderEngine)
+  private readonly engine: IRenderEngine;
+
+  public async execute() {
     this.geometry.forEach((entity, component) => {
       // build buffers for each geometry
       if (component.dirty) {
         component.attributes.forEach((attribute) => {
           if (attribute.data) {
-            attribute.buffer = engine.createVertexBuffer(attribute.data);
+            attribute.buffer = this.engine.createVertexBuffer(attribute.data);
           }
         });
 
         // create index buffer if needed
         if (component.indices) {
-          component.indicesBuffer = engine.createIndexBuffer(component.indices);
+          component.indicesBuffer = this.engine.createIndexBuffer(
+            component.indices,
+          );
         }
         component.dirty = false;
       }
     });
   }
 
-  public destroy() {
+  public tearDown() {
     this.geometry.forEach((_, geometry) => {
       if (geometry.indicesBuffer) {
         geometry.indicesBuffer.destroy();
@@ -67,11 +64,12 @@ export class GeometrySystem extends ExecuteSystem {
   /**
    * @see https://threejs.org/docs/#api/en/core/BufferAttribute
    */
-  public createAttribute(
+  public setAttribute(
     entity: Entity,
     name: string,
     data: ArrayBufferView,
     descriptor: GPUVertexBufferLayoutDescriptor,
+    bufferGetter?: () => GPUBuffer,
   ) {
     const geometry = this.geometry.getComponentByEntity(entity);
 
@@ -80,16 +78,29 @@ export class GeometrySystem extends ExecuteSystem {
         name,
         data,
         ...descriptor,
+        bufferGetter,
       });
+    }
+  }
+
+  public setIndex(entity: Entity, data: ArrayBufferView) {
+    const geometry = this.geometry.getComponentByEntity(entity);
+
+    if (geometry) {
+      geometry.indices = new Uint32Array(data.buffer);
     }
   }
 
   /**
    * @see https://threejs.org/docs/#api/en/core/BufferGeometry
    */
-  public createBufferGeometry() {
+  public createBufferGeometry(
+    { vertexCount }: { vertexCount: number } = { vertexCount: 3 },
+  ) {
     const entity = createEntity();
-    this.geometry.create(entity);
+    this.geometry.create(entity, {
+      vertexCount,
+    });
     return entity;
   }
 
@@ -98,12 +109,15 @@ export class GeometrySystem extends ExecuteSystem {
    */
   public createInstancedBufferGeometry({
     maxInstancedCount,
+    vertexCount,
   }: {
     maxInstancedCount: number;
+    vertexCount: number;
   }) {
     const entity = createEntity();
     this.geometry.create(entity, {
       maxInstancedCount,
+      vertexCount,
     });
     return entity;
   }

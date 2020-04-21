@@ -1,15 +1,15 @@
 import { mat3, mat4, vec3 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { Component, createEntity, Entity, IDENTIFIER } from '../..';
+import { Component, createEntity, Entity } from '../..';
 import {
   ComponentManager,
   NonFunctionProperties,
 } from '../../ComponentManager';
-import { EMPTY } from '../../Entity';
+import { IDENTIFIER } from '../../identifier';
+import { ISystem } from '../../ISystem';
 import { AABB } from '../../shape/AABB';
 import { Mask } from '../../shape/Frustum';
 import { Plane } from '../../shape/Plane';
-import { ExecuteSystem } from '../../System';
 import { getRotationScale } from '../../utils/math';
 import { CameraComponent } from '../camera/CameraComponent';
 import { GeometryComponent } from '../geometry/GeometryComponent';
@@ -25,9 +25,7 @@ export interface IMeshParams
   extends Partial<NonFunctionProperties<MeshComponent>> {}
 
 @injectable()
-export class MeshSystem extends ExecuteSystem {
-  public name = IDENTIFIER.MeshSystem;
-
+export class MeshSystem implements ISystem {
   @inject(IDENTIFIER.SceneComponentManager)
   private readonly scene: ComponentManager<SceneComponent>;
 
@@ -118,7 +116,7 @@ export class MeshSystem extends ExecuteSystem {
     });
   }
 
-  public destroy() {
+  public tearDown() {
     this.cullable.clear();
     this.mesh.clear();
   }

@@ -37,6 +37,16 @@ export const IDENTIFIER = {
   // RenderPath
   ForwardRenderPath: Symbol('ForwardRenderPath'),
 
+  // ComputeSystem
+  ComputeSystem: Symbol('ComputeSystem'),
+  ComputeComponentManager: Symbol('ComputeComponentManager'),
+  ComputeStrategy: Symbol('ComputeStrategy'),
+
   Systems: Symbol('Systems'),
   World: Symbol('World'),
+
+  // RenderEngine
+  RenderEngine: Symbol('RenderEngine'),
+  WebGPUEngine: Symbol('WebGPUEngine'),
+  WebGLEngine: Symbol('WebGLEngine'),
 };

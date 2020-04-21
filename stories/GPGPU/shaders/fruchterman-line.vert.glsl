@@ -1,5 +1,12 @@
 layout(location = 0) in vec4 a_particlePos;
 
+layout(set = 0, binding = 0) uniform Builtin {
+  mat4 projectionMatrix;
+  mat4 modelViewMatrix;
+} builtin;
+
 void main() {
-  gl_Position = vec4(a_particlePos.xy, 0, 1);
+  gl_Position = builtin.projectionMatrix
+    * builtin.modelViewMatrix
+    * vec4(a_particlePos.xy, 0, 1);
 }

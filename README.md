@@ -27,9 +27,68 @@ Please run in Chrome Canary() behind the flag `--enable-unsafe-webgpu`.The `chro
 
 ## Getting started
 
+rendering with Three.js-styled API:
 ```typescript
 const canvas = document.getElementById('application');
+
+// create a world
 const world = new World(canvas);
+
+// create a camera
+const camera = world.createCamera({
+  aspect: Math.abs(canvas.width / canvas.height),
+  angle: 72,
+  far: 100,
+  near: 1,
+});
+world.getCamera(camera).setPosition(0, 5, 5);
+
+// create a scene
+const scene = world.createScene({ camera });
+
+// create geometry, material and attach them to mesh
+const boxGeometry = world.createBoxGeometry({
+  halfExtents: vec3.fromValues(1, 1, 1),
+});
+const material = world.createBasicMaterial();
+const mesh = world.createMesh({
+  geometry: boxGeometry,
+  material,
+});
+
+// add meshes to current scene
+world.add(scene, mesh);
+```
+
+## GPGPU
+
+You can try to solve some compute-intensive tasks like layout & particle effects with GPGPU technique.
+Use any rendering techniques(d3, g, Three.js or ours' rendering API if you like) when calculation is completed.
+```typescript
+import { World } from '@antv/g-webgpu';
+
+const world = new World(canvas, {
+  engineOptions: {
+    supportCompute: true,
+  },
+});
+
+const compute = this.world.createComputePipeline({
+  type: 'layout', // 'layout' | 'particle'
+  shader: computeShaderGLSL, // your compute shader code
+  particleCount: numParticles, // particle num, dispatch once for each particle
+  particleData: data, // initial data
+  maxIteration: MAX_ITERATION, // break loop with iteration
+  onCompleted: (finalParticleData) => {
+    // rendering with final calculated data
+  },
+});
+
+// add params used in ComputeShader
+this.world.addBinding(compute, 'simParams', simParamData, {
+  binding: 1,
+  type: 'uniform-buffer',
+});
 ```
 
 ## Resources

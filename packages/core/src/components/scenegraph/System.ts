@@ -1,16 +1,15 @@
 import { mat4 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { Entity, IDENTIFIER } from '../..';
+import { Entity } from '../..';
 import { ComponentManager } from '../../ComponentManager';
-import { ExecuteSystem } from '../../System';
+import { IDENTIFIER } from '../../identifier';
+import { ISystem } from '../../ISystem';
 import { MeshComponent } from '../mesh/MeshComponent';
 import { HierarchyComponent } from './HierarchyComponent';
 import { TransformComponent } from './TransformComponent';
 
 @injectable()
-export class SceneGraphSystem extends ExecuteSystem {
-  public name = IDENTIFIER.SceneGraphSystem;
-
+export class SceneGraphSystem implements ISystem {
   @inject(IDENTIFIER.HierarchyComponentManager)
   private readonly hierarchy: ComponentManager<HierarchyComponent>;
 
@@ -25,7 +24,7 @@ export class SceneGraphSystem extends ExecuteSystem {
     this.runHierarchyUpdateSystem();
   }
 
-  public destroy() {
+  public tearDown() {
     this.hierarchy.clear();
     this.transform.clear();
   }

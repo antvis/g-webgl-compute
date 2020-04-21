@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { World } from '@antv/g-webgpu-core';
+import { World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
 import { mat4, quat, vec3, vec4 } from 'gl-matrix';
 import * as React from 'react';
@@ -103,14 +103,14 @@ export default class Instanced extends React.Component {
       this.world.getCamera(camera).setPosition(0, 0, 2);
 
       // create a scene
-      const scene = this.world.createScene(camera);
+      const scene = this.world.createScene({ camera });
 
       // create geometry, material and attach them to mesh
       const geometry = this.world.createInstancedBufferGeometry({
         maxInstancedCount: instances,
       });
 
-      this.world.createAttribute(
+      this.world.setAttribute(
         geometry,
         'position',
         Float32Array.from(positions),
@@ -127,24 +127,19 @@ export default class Instanced extends React.Component {
         },
       );
 
-      this.world.createAttribute(
-        geometry,
-        'offset',
-        Float32Array.from(offsets),
-        {
-          arrayStride: 4 * 3,
-          stepMode: 'instance',
-          attributes: [
-            {
-              shaderLocation: 1,
-              offset: 0,
-              format: 'float3',
-            },
-          ],
-        },
-      );
+      this.world.setAttribute(geometry, 'offset', Float32Array.from(offsets), {
+        arrayStride: 4 * 3,
+        stepMode: 'instance',
+        attributes: [
+          {
+            shaderLocation: 1,
+            offset: 0,
+            format: 'float3',
+          },
+        ],
+      });
 
-      this.world.createAttribute(geometry, 'color', Float32Array.from(colors), {
+      this.world.setAttribute(geometry, 'color', Float32Array.from(colors), {
         arrayStride: 4 * 4,
         stepMode: 'instance',
         attributes: [
@@ -156,7 +151,7 @@ export default class Instanced extends React.Component {
         ],
       });
 
-      this.world.createAttribute(
+      this.world.setAttribute(
         geometry,
         'orientationsStart',
         Float32Array.from(orientationsStart),
@@ -173,7 +168,7 @@ export default class Instanced extends React.Component {
         },
       );
 
-      this.world.createAttribute(
+      this.world.setAttribute(
         geometry,
         'orientationsEnd',
         Float32Array.from(orientationsEnd),
@@ -190,10 +185,10 @@ export default class Instanced extends React.Component {
         },
       );
 
-      const material = this.world.createShaderMaterial(
-        vertexShaderGLSL,
-        fragmentShaderGLSL,
-      );
+      const material = this.world.createShaderMaterial({
+        vertexShader: vertexShaderGLSL,
+        fragmentShader: fragmentShaderGLSL,
+      });
 
       this.world.addUniform(material, {
         binding: 1,

@@ -1,8 +1,8 @@
 import Hammer from 'hammerjs';
 import { inject, injectable } from 'inversify';
-import { IDENTIFIER } from '../..';
 import { ComponentManager } from '../../ComponentManager';
-import { InitializeSystem } from '../../System';
+import { IDENTIFIER } from '../../identifier';
+import { ISystem } from '../../ISystem';
 import { CameraComponent } from '../camera/CameraComponent';
 import { SceneComponent } from '../scene/SceneComponent';
 
@@ -13,14 +13,12 @@ export interface IMouseData {
 }
 
 @injectable()
-export class InteractionSystem extends InitializeSystem {
+export class InteractionSystem implements ISystem {
   public static UP_EVENT = 'mouseup';
   public static MOVE_EVENT = 'mousemove';
   public static DOWN_EVENT = 'mousedown';
   public static OUT_EVENT = 'mouseout';
   public static WHEEL_EVENT = 'mousewheel';
-
-  public name = IDENTIFIER.InteractionSystem;
 
   private isMoving: boolean = false;
   private lastX: number = -1;
@@ -53,7 +51,7 @@ export class InteractionSystem extends InitializeSystem {
     this.canvas = canvas;
   }
 
-  public destroy() {
+  public tearDown() {
     this.hammertime.off('panstart', this.onPanstart);
     this.hammertime.off('panmove', this.onPanmove);
     this.hammertime.off('panend', this.onPanend);

@@ -1,8 +1,9 @@
 import { inject, injectable } from 'inversify';
-import { Component, createEntity, Entity, IDENTIFIER } from '../..';
+import { Component, createEntity, Entity } from '../..';
 import { ComponentManager } from '../../ComponentManager';
 import { EMPTY } from '../../Entity';
-import { ExecuteSystem } from '../../System';
+import { IDENTIFIER } from '../../identifier';
+import { ISystem } from '../../ISystem';
 import { NameComponent } from '../scenegraph/NameComponent';
 import { PassNodeComponent } from './PassNodeComponent';
 import { ResourceHandleComponent } from './ResourceHandleComponent';
@@ -13,9 +14,7 @@ import { ResourceHandleComponent } from './ResourceHandleComponent';
  * @see https://github.com/SaeruHikari/Sakura/blob/RenderGraph/SakuraCore/Source/Framework/GraphicTypes/FrameGraph/SakuraFrameGraph.cpp
  */
 @injectable()
-export class FrameGraphSystem extends ExecuteSystem {
-  public name = IDENTIFIER.FrameGraphSystem;
-
+export class FrameGraphSystem implements ISystem {
   @inject(IDENTIFIER.NameComponentManager)
   private readonly nameManager: ComponentManager<NameComponent>;
 
@@ -34,7 +33,7 @@ export class FrameGraphSystem extends ExecuteSystem {
     // this.runTransformUpdateSystem();
   }
 
-  public destroy() {
+  public tearDown() {
     this.passNodeManager.clear();
     this.resourceHandleManager.clear();
   }

@@ -1,15 +1,14 @@
 import { mat4 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { createEntity, Entity, IDENTIFIER } from '../..';
+import { createEntity, Entity } from '../..';
 import { ComponentManager } from '../../ComponentManager';
-import { ExecuteSystem } from '../../System';
+import { IDENTIFIER } from '../../identifier';
+import { ISystem } from '../../ISystem';
 import { TransformComponent } from '../scenegraph/TransformComponent';
 import { CameraComponent } from './CameraComponent';
 
 @injectable()
-export class CameraSystem extends ExecuteSystem {
-  public name = IDENTIFIER.CameraSystem;
-
+export class CameraSystem implements ISystem {
   @inject(IDENTIFIER.CameraComponentManager)
   private readonly camera: ComponentManager<CameraComponent>;
 
@@ -20,7 +19,7 @@ export class CameraSystem extends ExecuteSystem {
     // this.runTransformUpdateSystem();
   }
 
-  public destroy() {
+  public tearDown() {
     this.camera.clear();
   }
 

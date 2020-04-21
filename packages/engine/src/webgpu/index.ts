@@ -4,45 +4,28 @@
  * * 使用最新 GPUBuffer API
  * * ComputePipeline
  */
+import { IRenderEngine, IWebGPUEngineOptions } from '@antv/g-webgpu-core';
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
-import glslang from './utils/glslang';
+import { injectable } from 'inversify';
+import glslang from './glslang';
 
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
-/**
- * Options to create the WebGPU engine
- */
-export interface IWebGPUEngineOptions extends GPURequestAdapterOptions {
-  /**
-   * Defines the category of adapter to use.
-   * Is it the discrete or integrated device.
-   */
-  powerPreference?: GPUPowerPreference;
+type TypedArrayConstructor =
+  | Int8ArrayConstructor
+  | Uint8ArrayConstructor
+  | Uint8ClampedArrayConstructor
+  | Int16ArrayConstructor
+  | Uint16ArrayConstructor
+  | Int32ArrayConstructor
+  | Uint32ArrayConstructor
+  | Float32ArrayConstructor
+  | Float64ArrayConstructor;
 
-  /**
-   * Defines the device descriptor used to create a device.
-   */
-  deviceDescriptor?: GPUDeviceDescriptor;
-
-  /**
-   * Defines the requested Swap Chain Format.
-   */
-  swapChainFormat?: GPUTextureFormat;
-
-  /**
-   * Defines wether MSAA is enabled on the canvas.
-   */
-  antialiasing?: boolean;
-
-  /**
-   * Whether to support ComputePipeline.
-   */
-  supportCompute?: boolean;
-}
-
-export class WebGPUEngine {
+@injectable()
+export class WebGPUEngine implements IRenderEngine {
   private canvas: HTMLCanvasElement;
   private context: GPUCanvasContext;
   private glslang: any;
@@ -87,17 +70,6 @@ export class WebGPUEngine {
   private readonly renderEncoderDescriptor = { label: 'render' };
   private readonly computeEncoderDescriptor = { label: 'compute' };
 
-  public constructor(
-    canvas: HTMLCanvasElement,
-    options: IWebGPUEngineOptions = {},
-  ) {
-    this.canvas = canvas;
-    this.options = options;
-    this.mainPassSampleCount = options.antialiasing
-      ? this.defaultSampleCount
-      : 1;
-  }
-
   public getDevice() {
     return this.device;
   }
@@ -106,7 +78,16 @@ export class WebGPUEngine {
     return this.swapChain;
   }
 
-  public async init() {
+  public async init(
+    canvas: HTMLCanvasElement,
+    options: IWebGPUEngineOptions = {},
+  ) {
+    this.canvas = canvas;
+    this.options = options;
+    this.mainPassSampleCount = options.antialiasing
+      ? this.defaultSampleCount
+      : 1;
+
     await this.initGlslang();
     this.initContextAndSwapChain();
     this.initMainAttachments();
@@ -366,11 +347,6 @@ export class WebGPUEngine {
     renderPass.draw(verticesCount, instancesCount, verticesStart, 0);
   }
 
-  // public bindBuffers(vertexBuffers: { [key: string]: GPUv }, indexBuffer: Nullable<DataBuffer>) {
-  //   this.currentIndexBuffer = indexBuffer;
-  //   this.currentVertexBuffers = vertexBuffers;
-  // }
-
   public createVertexBuffer(
     data: number[] | ArrayBuffer | ArrayBufferView,
     usage: number = 0,
@@ -389,6 +365,7 @@ export class WebGPUEngine {
       view,
       WebGPUConstants.BufferUsage.Vertex |
         WebGPUConstants.BufferUsage.CopyDst |
+        WebGPUConstants.BufferUsage.CopySrc |
         usage,
     );
 
@@ -500,6 +477,38 @@ export class WebGPUEngine {
     // 会报 'Destroyed buffer used in a submit'，因此只能在 encoder 提交后统一进行销毁
     // srcBuffer.destroy();
     this.tempBuffers.push(srcBuffer);
+  }
+
+  public async readData(
+    srcBuffer: GPUBuffer,
+    byteCount: number,
+    arrayClazz: TypedArrayConstructor,
+  ) {
+    const gpuReadBuffer = this.device.createBuffer({
+      size: byteCount,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+
+    this.uploadEncoder.copyBufferToBuffer(
+      srcBuffer,
+      0,
+      gpuReadBuffer,
+      0,
+      byteCount,
+    );
+
+    // submit copy command
+    this.commandBuffers[0] = this.uploadEncoder.finish();
+    this.device.defaultQueue.submit(this.commandBuffers);
+    this.uploadEncoder = this.device.createCommandEncoder(
+      this.uploadEncoderDescriptor,
+    );
+
+    const arraybuffer = await gpuReadBuffer.mapReadAsync();
+
+    // destroy read buffer later
+    this.tempBuffers.push(gpuReadBuffer);
+    return new arrayClazz(arraybuffer);
   }
 
   public bindVertexInputs(vertexInputs: {

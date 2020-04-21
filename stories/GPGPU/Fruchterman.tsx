@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { World } from '@antv/g-webgpu-core';
+import { World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
 import * as React from 'react';
 import lineFragmentShaderGLSL from './shaders/fruchterman-line.frag.glsl';
@@ -10,20 +10,8 @@ import vertexShaderGLSL from './shaders/fruchterman.vert.glsl';
 
 const MAX_ITERATION = 8000;
 
-let stageDescriptor;
-let lineStageDescriptor;
-let computeStageDescriptor;
-let computePipelineLayout;
-let renderPipelineLayout;
-let uniformBindGroup;
 let numParticles = 0;
 let numEdges = 0;
-let particleBuffer;
-let particleBindGroup;
-let extrudeBuffer;
-let colorBuffer;
-let sizeBuffer;
-let lineIndexBuffer;
 
 /**
  * ported from G6
@@ -37,8 +25,6 @@ export default class Fruchterman extends React.Component {
   private gui: dat.GUI;
   private $stats: Node;
   private world: World;
-  private computed = false;
-  private iteration = 0;
   // index buffer or edges
   private lineIndexBufferData = [];
 
@@ -55,56 +41,45 @@ export default class Fruchterman extends React.Component {
       y: (Math.random() * 2 - 1) / 10,
       id: n.id,
     }));
+    const edges = data.edges;
 
     const canvas = document.getElementById('application') as HTMLCanvasElement;
     if (canvas) {
+      numParticles = nodes.length;
+      numEdges = edges.length;
+      const nodesEdgesArray = this.buildTextureData(nodes, edges);
+
+      const simParamData = new Float32Array([
+        (numParticles * numParticles) / (numParticles + 1) / 300 / 300, // k^2
+        Math.sqrt((numParticles * numParticles) / (numParticles + 1) / 300), // k
+        this.maxEdgePerVetex, // maxEdgePerVetex
+        50, // gravity
+        0.1, // speed
+        Math.sqrt(numParticles * numParticles) / 10, // maxDisplace
+      ]);
+
       this.world = new World(canvas, {
         engineOptions: {
           supportCompute: true,
         },
-        onInit: async (engine) => {
-          stageDescriptor = await engine.compilePipelineStageDescriptor(
-            vertexShaderGLSL,
-            fragmentShaderGLSL,
-            null,
-          );
-          lineStageDescriptor = await engine.compilePipelineStageDescriptor(
-            lineVertexShaderGLSL,
-            lineFragmentShaderGLSL,
-            null,
-          );
-          computeStageDescriptor = await engine.compileComputePipelineStageDescriptor(
-            computeShaderGLSL,
-            null,
-          );
+      });
 
-          this.createComputePipelineLayout(engine, nodes, data.edges);
-          this.createRenderPipelineLayout(engine);
-          this.createCircleBuffers(engine, nodes);
-
-          lineIndexBuffer = engine.createIndexBuffer(this.lineIndexBufferData);
+      const compute = this.world.createComputePipeline({
+        type: 'layout',
+        shader: computeShaderGLSL,
+        particleCount: numParticles,
+        particleData: nodesEdgesArray,
+        maxIteration: MAX_ITERATION,
+        onCompleted: (finalParticleData) => {
+          const scene = this.createScene(canvas);
+          this.renderLines(scene, finalParticleData, nodes);
+          this.renderCircles(scene, finalParticleData, nodes);
         },
-        onUpdate: async (engine) => {
-          engine.clear({ r: 1.0, g: 1.0, b: 1.0, a: 1.0 }, true, true, true);
+      });
 
-          if (!this.computed) {
-            engine.setComputePipeline('compute', {
-              layout: computePipelineLayout,
-              ...computeStageDescriptor,
-            });
-            engine.setComputeBindGroups([particleBindGroup]);
-
-            while (this.iteration < MAX_ITERATION) {
-              engine.dispatch(numParticles);
-              this.iteration++;
-            }
-
-            this.computed = true;
-          }
-
-          this.drawLines(engine);
-          this.drawCircles(engine);
-        },
+      this.world.addBinding(compute, 'simParams', simParamData, {
+        binding: 1,
+        type: 'uniform-buffer',
       });
     }
   }
@@ -112,129 +87,33 @@ export default class Fruchterman extends React.Component {
   public componentWillUnmount() {
     if (this.world) {
       this.world.destroy();
-
-      extrudeBuffer.destroy();
-      sizeBuffer.destroy();
-      particleBuffer.destroy();
-      colorBuffer.destroy();
     }
   }
 
   public render() {
-    return (
-      <canvas
-        id="application"
-        width="600"
-        height="600"
-        style={{
-          pointerEvents: 'none',
-        }}
-      />
-    );
+    return <canvas id="application" width="600" height="600" />;
   }
 
-  private createComputePipelineLayout(engine, nodes, edges) {
-    numParticles = nodes.length;
-    numEdges = edges.length;
-    const nodesEdgesArray = this.buildTextureData(nodes, edges);
-
-    particleBuffer = engine.createVertexBuffer(
-      nodesEdgesArray,
-      128, // Storage
-    );
-
-    const simParamData = new Float32Array([
-      numParticles, // nodeNum
-      (numParticles * numParticles) / (numParticles + 1) / 300 / 300, // k^2
-      Math.sqrt((numParticles * numParticles) / (numParticles + 1) / 300), // k
-      this.maxEdgePerVetex, // maxEdgePerVetex
-      50, // gravity
-      0.1, // speed
-      Math.sqrt(numParticles * numParticles) / 10, // maxDisplace
-    ]);
-    const simParamBuffer = engine.createUniformBuffer(simParamData);
-
-    const computeBindGroupLayout = engine.getDevice().createBindGroupLayout({
-      bindings: [
-        {
-          binding: 0,
-          visibility: 4, // ShaderStage.Compute
-          type: 'uniform-buffer',
-        },
-        {
-          binding: 1,
-          visibility: 4,
-          type: 'storage-buffer',
-        },
-      ],
+  private createScene(canvas) {
+    // create a camera
+    const camera = this.world.createCamera({
+      aspect: Math.abs(canvas.width / canvas.height),
+      angle: 50,
+      far: 1000,
+      near: 0.1,
     });
-    computePipelineLayout = engine.getDevice().createPipelineLayout({
-      bindGroupLayouts: [computeBindGroupLayout],
-    });
+    this.world.getCamera(camera).setPosition(0, 0, 2);
 
-    particleBindGroup = engine.getDevice().createBindGroup({
-      layout: computeBindGroupLayout,
-      bindings: [
-        {
-          binding: 0,
-          resource: {
-            buffer: simParamBuffer,
-            offset: 0,
-            size: simParamData.byteLength,
-          },
-        },
-        {
-          binding: 1,
-          resource: {
-            buffer: particleBuffer,
-            offset: 0,
-            size: nodesEdgesArray.byteLength,
-          },
-        },
-      ],
-    });
+    // create a scene
+    return this.world.createScene({ camera });
   }
 
-  private createRenderPipelineLayout(engine) {
-    const circleParamData = new Float32Array([
-      1.0, // opacity
-      2, // strokeWidth
-      1.0,
-      1.0,
-      0.0,
-      1.0, // strokeColor
-      0.8, // strokeOpacity
-    ]);
-    const circleParamBuffer = engine.createUniformBuffer(circleParamData);
-
-    const renderBindGroupLayout = engine.getDevice().createBindGroupLayout({
-      bindings: [
-        {
-          binding: 0,
-          visibility: 1 | 2,
-          type: 'uniform-buffer',
-        },
-      ],
+  private renderCircles(scene, particleData, nodes) {
+    const geometry = this.world.createInstancedBufferGeometry({
+      maxInstancedCount: numParticles,
+      vertexCount: numParticles * 6,
     });
 
-    renderPipelineLayout = engine
-      .getDevice()
-      .createPipelineLayout({ bindGroupLayouts: [renderBindGroupLayout] });
-
-    uniformBindGroup = engine.getDevice().createBindGroup({
-      layout: renderBindGroupLayout,
-      bindings: [
-        {
-          binding: 0,
-          resource: {
-            buffer: circleParamBuffer,
-          },
-        },
-      ],
-    });
-  }
-
-  private createCircleBuffers(engine, nodes) {
     const extrudeData = [];
     const colorData = [];
     const sizeData = [];
@@ -245,134 +124,157 @@ export default class Fruchterman extends React.Component {
       extrudeData.push(1, 1, -1, 1, -1, -1, 1, 1, -1, -1, 1, -1);
     });
 
-    extrudeBuffer = engine.createVertexBuffer(new Float32Array(extrudeData));
-    sizeBuffer = engine.createVertexBuffer(new Float32Array(sizeData));
-    colorBuffer = engine.createVertexBuffer(new Float32Array(colorData));
-  }
-
-  private drawCircles(engine) {
-    engine.bindVertexInputs({
-      indexBuffer: null,
-      vertexStartSlot: 0,
-      vertexBuffers: [particleBuffer, extrudeBuffer, colorBuffer, sizeBuffer],
-      vertexOffsets: [0, 0, 0, 0],
-    });
-    engine.setRenderBindGroups([uniformBindGroup]);
-
-    // draw circles
-    engine.drawArraysType(
-      'renderCircles',
-      {
-        layout: renderPipelineLayout,
-        ...stageDescriptor,
-        primitiveTopology: 'triangle-list',
-        vertexState: {
-          vertexBuffers: [
-            {
-              arrayStride: 4 * 4,
-              stepMode: 'instance',
-              attributes: [
-                {
-                  shaderLocation: 0,
-                  offset: 0,
-                  format: 'float4',
-                },
-              ],
-            },
-            // extrude
-            {
-              arrayStride: 2 * 4,
-              stepMode: 'vertex',
-              attributes: [
-                {
-                  shaderLocation: 1,
-                  offset: 0,
-                  format: 'float2',
-                },
-              ],
-            },
-            // color
-            {
-              arrayStride: 4 * 4,
-              stepMode: 'instance',
-              attributes: [
-                {
-                  shaderLocation: 2,
-                  offset: 0,
-                  format: 'float4',
-                },
-              ],
-            },
-            // size/radius
-            {
-              arrayStride: 4,
-              stepMode: 'instance',
-              attributes: [
-                {
-                  shaderLocation: 3,
-                  offset: 0,
-                  format: 'float',
-                },
-              ],
-            },
-          ],
+    this.world.setAttribute(geometry, 'particle', particleData, {
+      // instanced particles buffer
+      arrayStride: 4 * 4,
+      stepMode: 'instance',
+      attributes: [
+        {
+          shaderLocation: 0,
+          offset: 0,
+          format: 'float4',
         },
-        colorStates: [
+      ],
+    });
+
+    this.world.setAttribute(
+      geometry,
+      'extrude',
+      new Float32Array(extrudeData),
+      {
+        arrayStride: 2 * 4,
+        stepMode: 'vertex',
+        attributes: [
           {
-            format: 'bgra8unorm',
-            colorBlend: {
-              srcFactor: 'src-alpha',
-              dstFactor: 'one-minus-src-alpha',
-              operation: 'add',
-            },
-            alphaBlend: {
-              srcFactor: 'one',
-              dstFactor: 'one',
-              operation: 'add',
-            },
+            shaderLocation: 1,
+            offset: 0,
+            format: 'float2',
           },
         ],
       },
-      0, // verticesStart
-      numParticles * 6, // verticesCount
-      numParticles, // instancesCount
     );
+
+    this.world.setAttribute(geometry, 'color', new Float32Array(colorData), {
+      arrayStride: 4 * 4,
+      stepMode: 'instance',
+      attributes: [
+        {
+          shaderLocation: 2,
+          offset: 0,
+          format: 'float4',
+        },
+      ],
+    });
+
+    this.world.setAttribute(geometry, 'size', new Float32Array(sizeData), {
+      arrayStride: 4,
+      stepMode: 'instance',
+      attributes: [
+        {
+          shaderLocation: 3,
+          offset: 0,
+          format: 'float',
+        },
+      ],
+    });
+
+    const material = this.world.createShaderMaterial({
+      vertexShader: vertexShaderGLSL,
+      fragmentShader: fragmentShaderGLSL,
+      rasterizationState: {
+        cullMode: 'none',
+      },
+      depthStencilState: {
+        depthWriteEnabled: false,
+      },
+      colorStates: [
+        {
+          format: 'bgra8unorm',
+          colorBlend: {
+            srcFactor: 'src-alpha',
+            dstFactor: 'one-minus-src-alpha',
+            operation: 'add',
+          },
+          alphaBlend: {
+            srcFactor: 'one',
+            dstFactor: 'one',
+            operation: 'add',
+          },
+        },
+      ],
+    });
+
+    this.world.addUniform(material, {
+      binding: 1,
+      name: 'opacity',
+      format: 'float',
+      data: Float32Array.from([1]),
+      dirty: true,
+    });
+
+    this.world.addUniform(material, {
+      binding: 1,
+      name: 'strokeWidth',
+      format: 'float',
+      data: Float32Array.from([2]),
+      dirty: true,
+    });
+
+    this.world.addUniform(material, {
+      binding: 1,
+      name: 'strokeColor',
+      format: 'float4',
+      data: Float32Array.from([1, 1, 0, 1]),
+      dirty: true,
+    });
+
+    this.world.addUniform(material, {
+      binding: 1,
+      name: 'strokeOpacity',
+      format: 'float',
+      data: Float32Array.from([0.8]),
+      dirty: true,
+    });
+
+    const mesh = this.world.createMesh({
+      geometry,
+      material,
+    });
+
+    this.world.add(scene, mesh);
   }
 
-  private drawLines(engine) {
-    engine.bindVertexInputs({
-      indexBuffer: lineIndexBuffer,
-      indexOffset: 0,
-      vertexStartSlot: 0,
-      vertexBuffers: [particleBuffer],
-      vertexOffsets: [0],
+  private renderLines(scene, particleData, nodes) {
+    const geometry = this.world.createInstancedBufferGeometry({
+      maxInstancedCount: 1,
+      vertexCount: numEdges * 2,
     });
-    engine.drawElementsType(
-      'renderLines',
-      {
-        ...lineStageDescriptor,
-        primitiveTopology: 'line-list',
-        vertexState: {
-          indexFormat: 'uint16',
-          vertexBuffers: [
-            {
-              arrayStride: 4 * 4,
-              stepMode: 'vertex',
-              attributes: [
-                {
-                  shaderLocation: 0,
-                  offset: 0,
-                  format: 'float4',
-                },
-              ],
-            },
-          ],
+
+    this.world.setAttribute(geometry, 'particle', particleData, {
+      arrayStride: 4 * 4,
+      stepMode: 'vertex',
+      attributes: [
+        {
+          shaderLocation: 0,
+          offset: 0,
+          format: 'float4',
         },
-      },
-      0, // indexStart
-      numEdges * 2, // indexCount
-      1, // instancesCount
-    );
+      ],
+    });
+
+    this.world.setIndex(geometry, new Uint32Array(this.lineIndexBufferData));
+
+    const material = this.world.createShaderMaterial({
+      vertexShader: lineVertexShaderGLSL,
+      fragmentShader: lineFragmentShaderGLSL,
+      primitiveTopology: 'line-list',
+    });
+
+    const mesh = this.world.createMesh({
+      geometry,
+      material,
+    });
+    this.world.add(scene, mesh);
   }
 
   // @see https://github.com/nblintao/ParaGraphL/blob/master/sigma.layout.paragraphl.js#L192-L229

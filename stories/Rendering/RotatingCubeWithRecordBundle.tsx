@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { World } from '@antv/g-webgpu-core';
+import { World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
 import { mat4, vec3 } from 'gl-matrix';
 import * as React from 'react';

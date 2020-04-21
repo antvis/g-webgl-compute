@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { World } from '@antv/g-webgpu-core';
+import { World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
 import { mat4, quat, vec3, vec4 } from 'gl-matrix';
 import * as React from 'react';
@@ -39,7 +39,7 @@ export default class RotatingCube extends React.Component {
       this.world.getCamera(camera).setPosition(0, 5, 5);
 
       // create a scene
-      const scene = this.world.createScene(camera);
+      const scene = this.world.createScene({ camera });
 
       // create geometry, material and attach them to mesh
       const boxGeometry = this.world.createBoxGeometry({

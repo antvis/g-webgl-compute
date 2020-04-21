@@ -1,14 +1,13 @@
 import { mat4 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { createEntity, Entity, IDENTIFIER } from '../..';
+import { createEntity, Entity } from '../..';
 import { ComponentManager } from '../../ComponentManager';
-import { ExecuteSystem } from '../../System';
+import { IDENTIFIER } from '../../identifier';
+import { ISystem } from '../../ISystem';
 import { SceneComponent } from './SceneComponent';
 
 @injectable()
-export class SceneSystem extends ExecuteSystem {
-  public name = IDENTIFIER.SceneSystem;
-
+export class SceneSystem implements ISystem {
   @inject(IDENTIFIER.SceneComponentManager)
   private readonly scene: ComponentManager<SceneComponent>;
 
@@ -16,11 +15,11 @@ export class SceneSystem extends ExecuteSystem {
     // this.runTransformUpdateSystem();
   }
 
-  public destroy() {
+  public tearDown() {
     this.scene.clear();
   }
 
-  public createScene(camera: Entity) {
+  public createScene({ camera }: { camera: Entity }) {
     const entity = createEntity();
     this.scene.create(entity, {
       camera,

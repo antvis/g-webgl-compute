@@ -3,6 +3,7 @@ import * as React from 'react';
 import Curl from './GPGPU/Curl';
 import Flocking from './GPGPU/Flocking';
 import Fruchterman from './GPGPU/Fruchterman';
+import FruchtermanWithD3 from './GPGPU/FruchtermanWithD3';
 import Gravity from './GPGPU/Gravity';
 import Instanced from './Rendering/Instanced';
 import RotatingCube from './Rendering/RotatingCube';
@@ -19,4 +20,5 @@ storiesOf('GPGPU', module)
   .add('Flocking', () => <Flocking />)
   .add('Curl', () => <Curl />)
   .add('Gravity', () => <Gravity />)
-  .add('Fruchterman', () => <Fruchterman />);
+  .add('Fruchterman', () => <Fruchterman />)
+  .add('FruchtermanWithD3', () => <FruchtermanWithD3 />);

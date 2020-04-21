@@ -1,33 +1,47 @@
 import { mat4 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { createEntity, Entity, IDENTIFIER } from '../..';
+import { createEntity, Entity, IRenderEngine } from '../..';
 import { ComponentManager } from '../../ComponentManager';
-import { ExecuteSystem } from '../../System';
+import { IDENTIFIER } from '../../identifier';
+import { ISystem } from '../../ISystem';
 import { getLengthFromFormat } from '../../utils/shader';
-import { WebGPUEngine } from '../../WebGPUEngine';
 import { IUniform, MaterialComponent } from './MaterialComponent';
 import fragmentShaderGLSL from './shaders/basic.frag.glsl';
 import vertexShaderGLSL from './shaders/basic.vert.glsl';
 
-@injectable()
-export class MaterialSystem extends ExecuteSystem {
-  public name = IDENTIFIER.MaterialSystem;
+export interface IMaterialParams {
+  colorStates: Pick<GPURenderPipelineDescriptor, 'colorStates'>;
+  primitiveTopology:
+    | 'point-list'
+    | 'line-list'
+    | 'line-strip'
+    | 'triangle-list'
+    | 'triangle-strip'
+    | undefined;
+  depthStencilState: GPUDepthStencilStateDescriptor;
+  rasterizationState: GPURasterizationStateDescriptor;
+}
 
+@injectable()
+export class MaterialSystem implements ISystem {
   @inject(IDENTIFIER.MaterialComponentManager)
   private readonly material: ComponentManager<MaterialComponent>;
 
-  public async execute(engine: WebGPUEngine) {
+  @inject(IDENTIFIER.RenderEngine)
+  private readonly engine: IRenderEngine;
+
+  public async execute() {
     await Promise.all(
       this.material.map(async (entity, component) => {
         if (component.dirty) {
           // TODO: 使用 cache 避免同类材质的重复编译
-          component.stageDescriptor = await engine.compilePipelineStageDescriptor(
+          component.stageDescriptor = await this.engine.compilePipelineStageDescriptor(
             component.vertexShaderGLSL,
             component.fragmentShaderGLSL,
             null,
           );
 
-          this.generateUniforms(engine, component);
+          this.generateUniforms(component);
 
           component.dirty = false;
         }
@@ -35,7 +49,7 @@ export class MaterialSystem extends ExecuteSystem {
     );
   }
 
-  public destroy() {
+  public tearDown() {
     this.material.clear();
   }
 
@@ -43,11 +57,12 @@ export class MaterialSystem extends ExecuteSystem {
    * This material is not affected by lights.
    * @see https://threejs.org/docs/#api/en/materials/MeshBasicMaterial
    */
-  public createBasicMaterial() {
+  public createBasicMaterial(params?: IMaterialParams) {
     const entity = createEntity();
     this.material.create(entity, {
       vertexShaderGLSL,
       fragmentShaderGLSL,
+      ...params,
     });
 
     this.addBuiltinUniforms(entity);
@@ -57,11 +72,14 @@ export class MaterialSystem extends ExecuteSystem {
   /**
    * @see https://threejs.org/docs/#api/en/materials/ShaderMaterial
    */
-  public createShaderMaterial(vs: string, fs: string) {
+  public createShaderMaterial(
+    params: { vertexShader: string; fragmentShader: string } & IMaterialParams,
+  ) {
     const entity = createEntity();
     this.material.create(entity, {
-      vertexShaderGLSL: vs,
-      fragmentShaderGLSL: fs,
+      vertexShaderGLSL: params.vertexShader,
+      fragmentShaderGLSL: params.fragmentShader,
+      ...params,
     });
 
     this.addBuiltinUniforms(entity);
@@ -94,7 +112,6 @@ export class MaterialSystem extends ExecuteSystem {
   }
 
   public setUniform(
-    engine: WebGPUEngine,
     entity: Entity,
     name: string,
     data: ArrayBufferView,
@@ -109,7 +126,11 @@ export class MaterialSystem extends ExecuteSystem {
           targetUniform.dirty = true;
           targetUniform.data = data;
         } else if (binding.buffer && data) {
-          engine.setSubData(binding.buffer, targetUniform.offset || 0, data);
+          this.engine.setSubData(
+            binding.buffer,
+            targetUniform.offset || 0,
+            data,
+          );
           targetUniform.dirty = false;
         }
         return;
@@ -147,7 +168,7 @@ export class MaterialSystem extends ExecuteSystem {
     });
   }
 
-  private generateUniforms(engine: WebGPUEngine, component: MaterialComponent) {
+  private generateUniforms(component: MaterialComponent) {
     const entries: GPUBindGroupLayoutEntry[] = component.uniforms.map(
       (uniform, i) => ({
         binding: i,
@@ -156,7 +177,7 @@ export class MaterialSystem extends ExecuteSystem {
       }),
     );
 
-    component.uniformsBindGroupLayout = engine
+    component.uniformsBindGroupLayout = this.engine
       .getDevice()
       .createBindGroupLayout({
         // 最新 API 0.0.22 版本使用 entries。Chrome Canary 84.0.4110.0 已实现。
@@ -165,12 +186,12 @@ export class MaterialSystem extends ExecuteSystem {
         entries,
       });
 
-    component.pipelineLayout = engine.getDevice().createPipelineLayout({
+    component.pipelineLayout = this.engine.getDevice().createPipelineLayout({
       bindGroupLayouts: [component.uniformsBindGroupLayout],
     });
 
     const bindGroupBindings = component.uniforms.map((uniform, i) => {
-      const uniformBuffer = engine.createUniformBuffer(
+      const uniformBuffer = this.engine.createUniformBuffer(
         new Float32Array(uniform.length),
       );
 
@@ -184,7 +205,7 @@ export class MaterialSystem extends ExecuteSystem {
       };
     });
 
-    component.uniformBindGroup = engine.getDevice().createBindGroup({
+    component.uniformBindGroup = this.engine.getDevice().createBindGroup({
       layout: component.uniformsBindGroupLayout,
       entries: bindGroupBindings,
     });

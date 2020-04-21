@@ -40,8 +40,76 @@ A WebGPU Engine for real-time rendering and GPGPU.
 
 ```typescript
 const canvas = document.getElementById('application');
+
+// create a world
 const world = new World(canvas);
+
+// create a camera
+const camera = world.createCamera({
+  aspect: Math.abs(canvas.width / canvas.height),
+  angle: 72,
+  far: 100,
+  near: 1,
+});
+world.getCamera(camera).setPosition(0, 5, 5);
+
+// create a scene
+const scene = world.createScene({ camera });
+
+// create geometry, material and attach them to mesh
+const boxGeometry = world.createBoxGeometry({
+  halfExtents: vec3.fromValues(1, 1, 1),
+});
+const material = world.createBasicMaterial();
+const mesh = world.createMesh({
+  geometry: boxGeometry,
+  material,
+});
+
+// add meshes to current scene
+world.add(scene, mesh);
 ```
+
+## GPGPU
+
+对于一些可并行的计算密集型任务，例如布局计算和粒子运动特效，可以使用 GPGPU 技术完成。
+我们提供了一些内置的计算模型，你可以使用任何渲染技术对于计算结果进行展示（当然也可以用我们的渲染 API）。
+```typescript
+import { World } from '@antv/g-webgpu';
+
+const world = new World(canvas, {
+  engineOptions: {
+    supportCompute: true,
+  },
+});
+
+const compute = this.world.createComputePipeline({
+  type: 'layout', // 'layout' | 'particle'
+  shader: computeShaderGLSL, // Compute Shader
+  particleCount: 1500, // dispatch 数目
+  particleData: data, // 初始数据
+  maxIteration: 8000, // 迭代次数，到达后结束触发 onCompleted 回调
+  onCompleted: (finalParticleData) => {
+    // 使用最终计算结果渲染
+  },
+});
+
+// 传入 ComputeShader 的参数
+this.world.addBinding(compute, 'simParams', simParamData, {
+  binding: 1,
+  type: 'uniform-buffer',
+});
+```
+
+### 计算模型
+
+目前我们提供了两种计算模型：
+* `layout` 针对布局计算场景：
+  * 每一帧需要 dispatch 多次，直至达到最大迭代次数，以便尽快完成计算
+  * 通常需要设置最大迭代次数，完成后返回最终 GPUBuffer 数据，供用户渲染结果
+* `particle` 针对粒子运动特效场景：
+  * 每一帧只需要 dispatch 一次
+  * 通常不需要设置最大迭代次数
 
 ## Resources
 

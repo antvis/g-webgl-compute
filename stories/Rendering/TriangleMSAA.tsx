@@ -1,4 +1,5 @@
-import { World } from '@antv/g-webgpu-core';
+// @ts-ignore
+import { World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
 import * as React from 'react';
 
@@ -34,13 +35,13 @@ export default class TriangleMSAA extends React.Component {
       this.world.getCamera(camera)!.setPosition(0, 5, 5);
 
       // create a scene
-      const scene = this.world.createScene(camera);
+      const scene = this.world.createScene({ camera });
 
       // create custom material
-      const material = this.world.createShaderMaterial(
-        vertexShaderGLSL,
-        fragmentShaderGLSL,
-      );
+      const material = this.world.createShaderMaterial({
+        vertexShader: vertexShaderGLSL,
+        fragmentShader: fragmentShaderGLSL,
+      });
 
       const geometry = this.world.createBufferGeometry();
 

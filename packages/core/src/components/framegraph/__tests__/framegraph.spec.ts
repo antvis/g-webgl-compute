@@ -5,7 +5,6 @@ import {
   container,
   createEntity,
   IDENTIFIER,
-  System,
 } from '../../..';
 import { NameComponent } from '../../scenegraph/NameComponent';
 import { PassNodeComponent } from '../PassNodeComponent';
@@ -13,10 +12,10 @@ import { ResourceHandleComponent } from '../ResourceHandleComponent';
 import { FrameGraphSystem } from '../System';
 
 describe('FrameGraph', () => {
-  const systems = container.getAll<System>(IDENTIFIER.Systems);
-  const frameGraph = systems.find(
-    (s) => s.name === IDENTIFIER.FrameGraphSystem,
-  ) as FrameGraphSystem;
+  const frameGraph = container.getNamed<FrameGraphSystem>(
+    IDENTIFIER.Systems,
+    IDENTIFIER.FrameGraphSystem,
+  );
   const passNodeManager = container.get<ComponentManager<PassNodeComponent>>(
     IDENTIFIER.PassNodeComponentManager,
   );

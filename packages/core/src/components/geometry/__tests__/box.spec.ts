@@ -5,16 +5,15 @@ import {
   container,
   createEntity,
   IDENTIFIER,
-  System,
 } from '../../..';
 import { GeometryComponent } from '../GeometryComponent';
 import { GeometrySystem } from '../System';
 
 describe('Box geometry', () => {
-  const systems = container.getAll<System>(IDENTIFIER.Systems);
-  const geometrySystem = systems.find(
-    (s) => s.name === IDENTIFIER.GeometrySystem,
-  ) as GeometrySystem;
+  const geometrySystem = container.getNamed<GeometrySystem>(
+    IDENTIFIER.Systems,
+    IDENTIFIER.GeometrySystem,
+  );
 
   const geometryManager = container.get<ComponentManager<GeometryComponent>>(
     IDENTIFIER.GeometryComponentManager,

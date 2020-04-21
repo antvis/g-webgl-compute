@@ -4,8 +4,11 @@
 
 #define SPEED_DIVISOR 800.0
 
-layout(std140, set = 0, binding = 0) uniform SimParams {
-  float nodeNum;
+layout(std140, set = 0, binding = 0) buffer NodesEdges {
+  vec4 nodesEdges[];
+} nodesEdges;
+
+layout(std140, set = 0, binding = 1) uniform SimParams {
   float k2;
   float k;
   float maxEdgePerVetex;
@@ -14,20 +17,15 @@ layout(std140, set = 0, binding = 0) uniform SimParams {
   float maxDisplace;
 } params;
 
-layout(std140, set = 0, binding = 1) buffer NodesEdges {
-  vec4 nodesEdges[];
-} nodesEdges;
-
-
 void main() {
   uint index = gl_GlobalInvocationID.x;
-  if (index >= params.nodeNum) { return; }
+  if (index >= PARTICLE_NUM) { return; }
 
   vec4 currentNode = nodesEdges.nodesEdges[index];
   float dx = 0.0, dy = 0.0;
 
   // repulsive
-  for (int i = 0; i < params.nodeNum; ++i) {
+  for (int i = 0; i < PARTICLE_NUM; ++i) {
     if (i == index) { continue; }
     vec4 node = nodesEdges.nodesEdges[i];
 

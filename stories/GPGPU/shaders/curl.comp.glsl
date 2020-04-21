@@ -291,22 +291,22 @@ struct Particle {
   vec2 vel;
 };
 
-layout(std140, set = 0, binding = 0) uniform SimParams {
+layout(std140, set = 0, binding = 0) buffer ParticlesA {
+  Particle particles[PARTICLE_NUM];
+} particlesA;
+
+layout(std140, set = 0, binding = 1) buffer ParticlesB {
+  Particle particles[PARTICLE_NUM];
+} particlesB;
+
+layout(std140, set = 0, binding = 2) uniform SimParams {
   float deltaT;
   float noiseSize;
 } params;
 
-layout(std140, set = 0, binding = 1) buffer ParticlesA {
-  Particle particles[1500];
-} particlesA;
-
-layout(std140, set = 0, binding = 2) buffer ParticlesB {
-  Particle particles[1500];
-} particlesB;
-
 void main() {
   uint index = gl_GlobalInvocationID.x;
-  if (index >= 1500) { return; }
+  if (index >= PARTICLE_NUM) { return; }
 
   vec2 vPos = particlesA.particles[index].pos;
   vec2 vVel = particlesA.particles[index].vel;

@@ -1,15 +1,14 @@
 import { mat4, vec4 } from 'gl-matrix';
-import { inject, injectable } from 'inversify';
-import { Component, createEntity, Entity, IDENTIFIER, System } from '../..';
+import { inject, injectable, named } from 'inversify';
+import { IRenderEngine } from '../..';
 import { ComponentManager } from '../../ComponentManager';
-import { WebGPUEngine } from '../../WebGPUEngine';
+import { IDENTIFIER } from '../../identifier';
 import { CameraComponent } from '../camera/CameraComponent';
 import { GeometryComponent } from '../geometry/GeometryComponent';
 import { MaterialComponent } from '../material/MaterialComponent';
 import { MaterialSystem } from '../material/System';
 import { CullableComponent } from '../mesh/CullableComponent';
 import { MeshComponent } from '../mesh/MeshComponent';
-import { MeshSystem } from '../mesh/System';
 import { SceneComponent } from '../scene/SceneComponent';
 import { TransformComponent } from '../scenegraph/TransformComponent';
 import { IRenderPath } from './RenderPath';
@@ -40,14 +39,14 @@ export class ForwardRenderPath implements IRenderPath {
   @inject(IDENTIFIER.TransformComponentManager)
   private readonly transform: ComponentManager<TransformComponent>;
 
-  public render(engine: WebGPUEngine, systems: System[]) {
-    const materialSystem = systems.find(
-      (s) => s.name === IDENTIFIER.MaterialSystem,
-    ) as MaterialSystem;
+  @inject(IDENTIFIER.Systems)
+  @named(IDENTIFIER.MaterialSystem)
+  private readonly materialSystem: MaterialSystem;
 
-    // clear first
-    engine.clear({ r: 0.0, g: 0.0, b: 0.0, a: 1.0 }, true, true, true);
+  @inject(IDENTIFIER.RenderEngine)
+  private readonly engine: IRenderEngine;
 
+  public render() {
     this.scene.forEach((sceneEntity, scene) => {
       // get VP matrix from camera
       const camera = this.camera.getComponentByEntity(scene.camera)!;
@@ -90,16 +89,14 @@ export class ForwardRenderPath implements IRenderPath {
           // );
 
           // set MVP matrix
-          materialSystem.setUniform(
-            engine,
+          this.materialSystem.setUniform(
             mesh.material,
             'projectionMatrix',
             // @ts-ignore
             camera.getPerspective(),
           );
 
-          materialSystem.setUniform(
-            engine,
+          this.materialSystem.setUniform(
             mesh.material,
             'modelViewMatrix',
             // @ts-ignore
@@ -111,8 +108,7 @@ export class ForwardRenderPath implements IRenderPath {
         material.uniforms.forEach((binding) => {
           binding.uniforms.forEach((uniform) => {
             if (uniform.dirty) {
-              materialSystem.setUniform(
-                engine,
+              this.materialSystem.setUniform(
                 mesh.material,
                 uniform.name,
                 // @ts-ignore
@@ -123,32 +119,38 @@ export class ForwardRenderPath implements IRenderPath {
           });
         });
 
-        engine.setRenderBindGroups([material.uniformBindGroup]);
+        this.engine.setRenderBindGroups([material.uniformBindGroup]);
 
         // some custom shader doesn't need vertex, like our triangle MSAA example.
         if (geometry.attributes.length) {
+          const vertexBuffers = geometry.attributes
+            .map((attribute) => {
+              if (attribute.buffer) {
+                return attribute.buffer;
+              } else if (attribute.bufferGetter) {
+                return attribute.bufferGetter();
+              }
+              return null;
+            })
+            .filter((v) => v) as GPUBuffer[];
+
           // TODO: use some semantic like POSITION, NORMAL, COLOR etc.
-          engine.bindVertexInputs({
+          this.engine.bindVertexInputs({
             indexBuffer: geometry.indicesBuffer,
             indexOffset: 0,
             vertexStartSlot: 0,
-            vertexBuffers: geometry.attributes
-              .map((attribute) => attribute.buffer!)
-              .filter((a) => a),
-            vertexOffsets: geometry.attributes
-              .map((attribute) => attribute.buffer!)
-              .filter((a) => a)
-              .map(() => 0),
+            vertexBuffers,
+            vertexOffsets: new Array(vertexBuffers.length).fill(0),
           });
         }
 
         if (geometry.indices && geometry.indices.length) {
-          engine.drawElementsType(
+          this.engine.drawElementsType(
             `render-${meshEntity}-elements`,
             {
               layout: material.pipelineLayout,
               ...material.stageDescriptor,
-              primitiveTopology: material.primitiveTopology,
+              primitiveTopology: material.primitiveTopology || 'triangle-list',
               vertexState: {
                 indexFormat: 'uint32',
                 vertexBuffers: geometry.attributes.map((attribute) => ({
@@ -157,27 +159,28 @@ export class ForwardRenderPath implements IRenderPath {
                   attributes: attribute.attributes,
                 })),
               },
-              rasterizationState: {
+              rasterizationState: material.rasterizationState || {
                 cullMode: 'back',
               },
-              depthStencilState: {
+              depthStencilState: material.depthStencilState || {
                 depthWriteEnabled: true,
                 depthCompare: 'less',
                 format: 'depth24plus-stencil8',
               },
+              // @ts-ignore
+              colorStates: material.colorStates,
             },
             0,
             geometry.indices.length,
-            // TODO: instanced array
             geometry.maxInstancedCount || 1,
           );
         } else {
-          engine.drawArraysType(
+          this.engine.drawArraysType(
             `render-${meshEntity}-arrays`,
             {
               layout: material.pipelineLayout,
               ...material.stageDescriptor,
-              primitiveTopology: material.primitiveTopology,
+              primitiveTopology: material.primitiveTopology || 'triangle-list',
               vertexState: {
                 vertexBuffers: geometry.attributes.map((attribute) => ({
                   arrayStride: attribute.arrayStride,
@@ -185,17 +188,19 @@ export class ForwardRenderPath implements IRenderPath {
                   attributes: attribute.attributes,
                 })),
               },
-              rasterizationState: {
+              rasterizationState: material.rasterizationState || {
                 cullMode: 'back',
               },
-              depthStencilState: {
+              depthStencilState: material.depthStencilState || {
                 depthWriteEnabled: true,
                 depthCompare: 'less',
                 format: 'depth24plus-stencil8',
               },
+              // @ts-ignore
+              colorStates: material.colorStates,
             },
             0,
-            3,
+            geometry.vertexCount || 3,
             geometry.maxInstancedCount || 1,
           );
         }

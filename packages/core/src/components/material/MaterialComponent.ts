@@ -39,6 +39,12 @@ export class MaterialComponent extends Component<MaterialComponent> {
 
   public uniformBindGroup: GPUBindGroup;
 
+  public colorStates?: Pick<GPURenderPipelineDescriptor, 'colorStates'>;
+
+  public depthStencilState?: GPUDepthStencilStateDescriptor;
+
+  public rasterizationState?: GPURasterizationStateDescriptor;
+
   constructor(data: Partial<NonFunctionProperties<MaterialComponent>>) {
     super(data);
 
