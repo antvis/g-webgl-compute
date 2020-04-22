@@ -52,7 +52,7 @@ export default class Gravity extends React.Component {
         particleData: initialParticleData,
       });
 
-      this.world.addBinding(compute, 'simParams', simParamData, {
+      this.world.setBinding(compute, 'simParams', simParamData, {
         binding: 2,
         type: 'uniform-buffer',
       });

@@ -63,18 +63,12 @@ export class World extends EventEmitter implements ILifeCycle {
     super();
 
     // TODO: fallback to WebGL
-    let engineClazz;
-    if (!navigator.gpu) {
-      window.alert('WebGPU is not supported by your browser.');
-      engineClazz = WebGLEngine;
-      return;
-    } else {
-      engineClazz = WebGPUEngine;
-    }
+    const engineClazz = !navigator.gpu ? WebGLEngine : WebGPUEngine;
 
     if (!container.isBound(IDENTIFIER.RenderEngine)) {
       container
         .bind<IRenderEngine>(IDENTIFIER.RenderEngine)
+        // @ts-ignore
         .to(engineClazz)
         .inSingletonScope();
     }
@@ -211,6 +205,7 @@ export class World extends EventEmitter implements ILifeCycle {
   public createComputePipeline(params: {
     type: ComputeType;
     shader: string;
+    shaderInWebGL?: string;
     particleCount: number;
     particleData: ArrayBufferView;
     maxIteration?: number;
@@ -257,7 +252,7 @@ export class World extends EventEmitter implements ILifeCycle {
     geometrySystem.setIndex(entity, data);
   }
 
-  public addBinding(
+  public setBinding(
     entity: Entity,
     name: string,
     data: ArrayBufferView,
@@ -268,7 +263,7 @@ export class World extends EventEmitter implements ILifeCycle {
       IDENTIFIER.ComputeSystem,
     );
 
-    return computeSystem.addBinding(entity, name, data, descriptor);
+    return computeSystem.setBinding(entity, name, data, descriptor);
   }
 
   public getParticleBuffer(entity: Entity) {

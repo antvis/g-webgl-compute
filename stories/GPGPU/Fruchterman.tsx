@@ -77,7 +77,7 @@ export default class Fruchterman extends React.Component {
         },
       });
 
-      this.world.addBinding(compute, 'simParams', simParamData, {
+      this.world.setBinding(compute, 'simParams', simParamData, {
         binding: 1,
         type: 'uniform-buffer',
       });

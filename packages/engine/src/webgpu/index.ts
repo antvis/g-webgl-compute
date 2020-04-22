@@ -26,6 +26,7 @@ type TypedArrayConstructor =
 
 @injectable()
 export class WebGPUEngine implements IRenderEngine {
+  public supportWebGPU = true;
   private canvas: HTMLCanvasElement;
   private context: GPUCanvasContext;
   private glslang: any;

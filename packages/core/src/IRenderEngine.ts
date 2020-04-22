@@ -47,6 +47,7 @@ export interface IWebGPUEngineOptions extends GPURequestAdapterOptions {
 }
 
 export interface IRenderEngine {
+  supportWebGPU: boolean;
   /**
    * create GPU command encoders
    */
@@ -92,6 +93,7 @@ export interface IRenderEngine {
   compileComputePipelineStageDescriptor(
     computeCode: string,
     defines: string | null,
+    data?: ArrayBufferView,
   ): Promise<Pick<GPUComputePipelineDescriptor, 'computeStage'>>;
 
   drawElementsType(

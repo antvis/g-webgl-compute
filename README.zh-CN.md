@@ -87,6 +87,7 @@ const world = new World(canvas, {
 const compute = this.world.createComputePipeline({
   type: 'layout', // 'layout' | 'particle'
   shader: computeShaderGLSL, // Compute Shader
+  shaderInWebGL: computeShaderGLSLInWebGL // Fragment Shader in WebGL
   particleCount: 1500, // dispatch 数目
   particleData: data, // 初始数据
   maxIteration: 8000, // 迭代次数，到达后结束触发 onCompleted 回调
@@ -96,7 +97,7 @@ const compute = this.world.createComputePipeline({
 });
 
 // 传入 ComputeShader 的参数
-this.world.addBinding(compute, 'simParams', simParamData, {
+this.world.setBinding(compute, 'simParams', simParamData, {
   binding: 1,
   type: 'uniform-buffer',
 });
@@ -109,9 +110,11 @@ this.world.addBinding(compute, 'simParams', simParamData, {
 - `layout` 针对布局计算场景：
   - 每一帧需要 dispatch 多次，直至达到最大迭代次数，以便尽快完成计算
   - 通常需要设置最大迭代次数，完成后返回最终 GPUBuffer 数据，供用户渲染结果
+  - [Flocking DEMO](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking)
 - `particle` 针对粒子运动特效场景：
   - 每一帧只需要 dispatch 一次
   - 通常不需要设置最大迭代次数
+  - [Fruchterman DEMO](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--fruchtermanrenderwithg)
 
 ## Resources
 

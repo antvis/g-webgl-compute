@@ -4,8 +4,11 @@ import { World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
 import * as React from 'react';
 import computeShaderGLSL from './shaders/fruchterman.comp.glsl';
+import computeShaderGLSLInWebGL from './shaders/fruchterman.webgl.comp.glsl';
 
 const MAX_ITERATION = 8000;
+const CANVAS_HEIGHT = 600;
+const CANVAS_WIDTH = 600;
 
 let numParticles = 0;
 let numEdges = 0;
@@ -64,6 +67,7 @@ export default class Fruchterman extends React.Component {
       const compute = this.world.createComputePipeline({
         type: 'layout',
         shader: computeShaderGLSL,
+        shaderInWebGL: computeShaderGLSLInWebGL,
         particleCount: numParticles,
         particleData: nodesEdgesArray,
         maxIteration: MAX_ITERATION,
@@ -76,7 +80,7 @@ export default class Fruchterman extends React.Component {
         },
       });
 
-      this.world.addBinding(compute, 'simParams', simParamData, {
+      this.world.setBinding(compute, 'simParams', simParamData, {
         binding: 1,
         type: 'uniform-buffer',
       });
@@ -101,8 +105,8 @@ export default class Fruchterman extends React.Component {
   private renderCircles(finalParticleData) {
     const canvas = new Canvas({
       container: 'container',
-      width: 600,
-      height: 600,
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
     });
 
     // draw edges
@@ -114,10 +118,10 @@ export default class Fruchterman extends React.Component {
       const group = canvas.addGroup();
       group.addShape('line', {
         attrs: {
-          x1: this.convertWebGLCoord2Canvas(x1, 600),
-          y1: this.convertWebGLCoord2Canvas(y1, 600),
-          x2: this.convertWebGLCoord2Canvas(x2, 600),
-          y2: this.convertWebGLCoord2Canvas(y2, 600),
+          x1: this.convertWebGLCoord2Canvas(x1, CANVAS_WIDTH),
+          y1: this.convertWebGLCoord2Canvas(y1, CANVAS_HEIGHT),
+          x2: this.convertWebGLCoord2Canvas(x2, CANVAS_WIDTH),
+          y2: this.convertWebGLCoord2Canvas(y2, CANVAS_HEIGHT),
           stroke: '#1890FF',
           lineWidth: 1,
         },
@@ -131,8 +135,8 @@ export default class Fruchterman extends React.Component {
       const group = canvas.addGroup();
       group.addShape('circle', {
         attrs: {
-          x: this.convertWebGLCoord2Canvas(x, 600),
-          y: this.convertWebGLCoord2Canvas(y, 600),
+          x: this.convertWebGLCoord2Canvas(x, CANVAS_WIDTH),
+          y: this.convertWebGLCoord2Canvas(y, CANVAS_HEIGHT),
           r: 5,
           fill: 'red',
           stroke: 'blue',

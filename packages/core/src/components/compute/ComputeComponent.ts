@@ -22,6 +22,7 @@ export class ComputeComponent extends Component<ComputeComponent> {
   public dirty: boolean = true;
 
   public shaderGLSL: string;
+  public shaderInWebGL: string;
 
   public stageDescriptor: Pick<GPUComputePipelineDescriptor, 'computeStage'>;
 

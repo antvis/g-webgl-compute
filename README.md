@@ -87,7 +87,7 @@ const compute = this.world.createComputePipeline({
 });
 
 // add params used in ComputeShader
-this.world.addBinding(compute, 'simParams', simParamData, {
+this.world.setBinding(compute, 'simParams', simParamData, {
   binding: 1,
   type: 'uniform-buffer',
 });

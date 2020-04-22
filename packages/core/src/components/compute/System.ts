@@ -73,6 +73,7 @@ export class ComputeSystem implements ISystem {
   public createComputePipeline({
     type,
     shader,
+    shaderInWebGL,
     particleCount,
     particleData,
     maxIteration = Number.MAX_VALUE,
@@ -80,6 +81,7 @@ export class ComputeSystem implements ISystem {
   }: {
     type: ComputeType;
     shader: string;
+    shaderInWebGL?: string;
     particleCount: number;
     particleData: ArrayBufferView;
     maxIteration?: number;
@@ -96,6 +98,7 @@ export class ComputeSystem implements ISystem {
       strategy,
       // 在头部加上 #define PARTICLE_NUM particleCount
       shaderGLSL: `#define PARTICLE_NUM ${particleCount} \n ${shader}`,
+      shaderInWebGL: `#define PARTICLE_NUM ${particleCount} \n ${shaderInWebGL}`,
       particleCount,
       particleData,
       // @ts-ignore
@@ -109,7 +112,7 @@ export class ComputeSystem implements ISystem {
     return entity;
   }
 
-  public addBinding(
+  public setBinding(
     entity: Entity,
     name: string,
     data: ArrayBufferView,
@@ -135,8 +138,11 @@ export class ComputeSystem implements ISystem {
     component: Component<ComputeComponent> & ComputeComponent,
   ) {
     component.stageDescriptor = await this.engine.compileComputePipelineStageDescriptor(
-      component.shaderGLSL,
+      this.engine.supportWebGPU
+        ? component.shaderGLSL
+        : component.shaderInWebGL,
       null,
+      component.particleData,
     );
   }
 }
