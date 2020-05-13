@@ -21,10 +21,10 @@ export class ParticleComputeStrategy implements IComputeStrategy {
     const component = this.component;
 
     // create particleBuffers
-    component.particleBuffers = [
-      this.engine.createVertexBuffer(component.particleData, 128),
-      this.engine.createVertexBuffer(component.particleData, 128),
-    ];
+    // component.particleBuffers = [
+    //   this.engine.createVertexBuffer(component.particleData, 128),
+    //   this.engine.createVertexBuffer(component.particleData, 128),
+    // ];
 
     // create GPUBuffers for uniform & storeage buffers
     component.bindings.forEach((binding) => {
@@ -61,43 +61,43 @@ export class ParticleComputeStrategy implements IComputeStrategy {
       bindGroupLayouts: [computeBindGroupLayout],
     });
 
-    for (let i = 0; i < 2; i++) {
-      component.particleBindGroups[i] = this.engine
-        .getDevice()
-        .createBindGroup({
-          layout: computeBindGroupLayout,
-          entries: [
-            {
-              binding: 0,
-              resource: {
-                buffer: component.particleBuffers[i],
-                offset: 0,
-                size: component.particleData.byteLength,
-              },
-            },
-            {
-              binding: 1,
-              resource: {
-                buffer: component.particleBuffers[(i + 1) % 2],
-                offset: 0,
-                size: component.particleData.byteLength,
-              },
-            },
-            ...component.bindings.map((binding) => ({
-              binding: binding.binding,
-              resource: {
-                buffer: binding.buffer!,
-                offset: 0,
-                size: binding.data?.byteLength || 0,
-              },
-            })),
-          ],
-        });
-    }
+    // for (let i = 0; i < 2; i++) {
+    //   component.particleBindGroups[i] = this.engine
+    //     .getDevice()
+    //     .createBindGroup({
+    //       layout: computeBindGroupLayout,
+    //       entries: [
+    //         {
+    //           binding: 0,
+    //           resource: {
+    //             buffer: component.particleBuffers[i],
+    //             offset: 0,
+    //             size: component.particleData.byteLength,
+    //           },
+    //         },
+    //         {
+    //           binding: 1,
+    //           resource: {
+    //             buffer: component.particleBuffers[(i + 1) % 2],
+    //             offset: 0,
+    //             size: component.particleData.byteLength,
+    //           },
+    //         },
+    //         ...component.bindings.map((binding) => ({
+    //           binding: binding.binding,
+    //           resource: {
+    //             buffer: binding.buffer!,
+    //             offset: 0,
+    //             size: binding.data?.byteLength || 0,
+    //           },
+    //         })),
+    //       ],
+    //     });
+    // }
   }
 
   public run() {
-    this.engine.dispatch(this.component.particleCount);
+    this.engine.dispatch(this.component.compiledBundle.context);
     this.component.iteration++;
   }
 

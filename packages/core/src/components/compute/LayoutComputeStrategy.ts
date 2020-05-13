@@ -1,4 +1,6 @@
+import { GLSLContext } from '@antv/g-webgpu-compiler';
 import { inject, injectable } from 'inversify';
+import { concat } from 'lodash';
 import { IRenderEngine } from '../..';
 import { IDENTIFIER } from '../../identifier';
 import { ComputeComponent } from './ComputeComponent';
@@ -17,41 +19,85 @@ export class LayoutComputeStrategy implements IComputeStrategy {
   @inject(IDENTIFIER.RenderEngine)
   private readonly engine: IRenderEngine;
 
-  public init() {
+  public init(context: GLSLContext) {
     const component = this.component;
 
     if (this.engine.supportWebGPU) {
-      // create particleBuffers
-      component.particleBuffers = [
-        this.engine.createVertexBuffer(component.particleData, 128),
-      ];
+      const buffers = context.uniforms.filter(
+        (uniform) => uniform.type === 'sampler2D',
+      );
+      const uniforms = context.uniforms.filter(
+        (uniform) => uniform.type !== 'sampler2D',
+      );
 
-      // create GPUBuffers for uniform & storeage buffers
-      component.bindings.forEach((binding) => {
-        if (binding.type === 'uniform-buffer' && binding.data) {
-          binding.buffer = this.engine.createUniformBuffer(binding.data);
-        } else if (binding.type === 'storage-buffer' && binding.data) {
-          binding.buffer = this.engine.createVertexBuffer(binding.data, 128);
+      const bufferBindingIndex = uniforms.length ? 1 : 0;
+      const bindGroupLayoutEntries = [];
+      const bindGroupEntries = [];
+      if (bufferBindingIndex) {
+        const mergedUniformData = concat(
+          uniforms.map((uniform) => uniform.data),
+        );
+        const mergedUniformGPUBuffer = this.engine.createUniformBuffer(
+          // @ts-ignore
+          mergedUniformData,
+        );
+
+        bindGroupLayoutEntries.push({
+          binding: 0,
+          visibility: 4,
+          type: 'uniform-buffer',
+        });
+
+        bindGroupEntries.push({
+          binding: 0,
+          resource: {
+            buffer: mergedUniformGPUBuffer,
+            offset: 0,
+            size: mergedUniformData.length * 4, // 默认 Float32Array
+          },
+        });
+      }
+
+      // create GPUBuffers for storeage buffers
+      buffers.forEach((buffer, i) => {
+        if (buffer.data) {
+          // @ts-ignore
+          const gpuBuffer = this.engine.createVertexBuffer(
+            // @ts-ignore
+            isFinite(Number(buffer.data)) ? [buffer.data] : buffer.data,
+            128,
+          );
+          if (!context.output) {
+            context.output = {
+              // @ts-ignore
+              length: isFinite(Number(buffer.data)) ? 1 : buffer.data.length,
+              typedArrayConstructor: Float32Array,
+              gpuBuffer,
+            };
+          }
+          bindGroupEntries.push({
+            binding: bufferBindingIndex + i,
+            resource: {
+              buffer: gpuBuffer,
+              offset: 0,
+              size:
+                // @ts-ignore
+                (isFinite(Number(buffer.data)) ? 1 : buffer.data.length) * 4, // 默认 Float32Array
+            },
+          });
         }
+        bindGroupLayoutEntries.push({
+          binding: bufferBindingIndex + i,
+          visibility: 4,
+          type: 'storage-buffer',
+        });
       });
 
       // create compute pipeline layout
       const computeBindGroupLayout = this.engine
         .getDevice()
-        .createBindGroupLayout({
-          entries: [
-            {
-              binding: 0,
-              visibility: 4, // ShaderStage.Compute
-              type: 'storage-buffer',
-            },
-            ...component.bindings.map((binding) => ({
-              binding: binding.binding,
-              visibility: 4,
-              type: binding.type,
-            })),
-          ],
-        });
+        // @ts-ignore
+        .createBindGroupLayout({ entries: bindGroupLayoutEntries });
       component.pipelineLayout = this.engine.getDevice().createPipelineLayout({
         bindGroupLayouts: [computeBindGroupLayout],
       });
@@ -60,32 +106,15 @@ export class LayoutComputeStrategy implements IComputeStrategy {
         .getDevice()
         .createBindGroup({
           layout: computeBindGroupLayout,
-          entries: [
-            {
-              binding: 0,
-              resource: {
-                buffer: component.particleBuffers[0],
-                offset: 0,
-                size: component.particleData.byteLength,
-              },
-            },
-            ...component.bindings.map((binding) => ({
-              binding: binding.binding,
-              resource: {
-                buffer: binding.buffer!,
-                offset: 0,
-                size: binding.data?.byteLength || 0,
-              },
-            })),
-          ],
+          entries: bindGroupEntries,
         });
     }
   }
 
   public run() {
     // finish asap
-    while (this.component.iteration <= this.component.maxIteration) {
-      this.engine.dispatch(this.component.particleCount);
+    while (this.component.iteration <= this.component.maxIteration - 1) {
+      this.engine.dispatch(this.component.compiledBundle.context);
       this.component.iteration++;
     }
   }

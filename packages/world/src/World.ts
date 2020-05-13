@@ -204,10 +204,9 @@ export class World extends EventEmitter implements ILifeCycle {
 
   public createComputePipeline(params: {
     type: ComputeType;
+    precompiled: boolean;
     shader: string;
-    shaderInWebGL?: string;
-    particleCount: number;
-    particleData: ArrayBufferView;
+    threadNum: number;
     maxIteration?: number;
     onCompleted?: ((particleData: ArrayBufferView) => void) | null;
   }) {
@@ -215,8 +214,15 @@ export class World extends EventEmitter implements ILifeCycle {
       IDENTIFIER.Systems,
       IDENTIFIER.ComputeSystem,
     );
-
     return computeSystem.createComputePipeline(params);
+  }
+
+  public getPrecompiledBundle(entity: Entity): string {
+    const computeSystem = container.getNamed<ComputeSystem>(
+      IDENTIFIER.Systems,
+      IDENTIFIER.ComputeSystem,
+    );
+    return computeSystem.getPrecompiledBundle(entity);
   }
 
   public addUniform(entity: Entity, uniform: IUniform) {

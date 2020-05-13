@@ -22,6 +22,7 @@
   "author": "xiaoiver",
   "license": "ISC",
   "dependencies": {
+    "@antv/g-webgpu-compiler": "^0.0.1",
     "@webgpu/glslang": "^0.0.15",
     "@webgpu/types": "^0.0.22",
     "eventemitter3": "^4.0.0",

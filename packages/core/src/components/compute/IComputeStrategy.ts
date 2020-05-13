@@ -1,3 +1,4 @@
+import { GLSLContext } from '@antv/g-webgpu-compiler';
 import { ComputeComponent } from './ComputeComponent';
 
 export interface IComputeStrategy {
@@ -6,7 +7,7 @@ export interface IComputeStrategy {
   /**
    * create binding group, buffers
    */
-  init(): void;
+  init(context: GLSLContext): void;
 
   /**
    * dispatch with different frequencies

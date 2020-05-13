@@ -2,6 +2,12 @@
 
 A WebGPU Engine for real-time rendering and GPGPU. [中文](./README.zh-CN.md)
 
+Wiki
+
+- [How to use Compute Pipeline API](https://github.com/antvis/GWebGPUEngine/wiki/Compute-Pipeline-API)
+- [How to write Compute Shader with Typescript](https://github.com/antvis/GWebGPUEngine/wiki/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8-TS-%E8%AF%AD%E6%B3%95%E5%86%99-Compute-Shader)
+- [Use case: add 2 vectors](https://github.com/antvis/GWebGPUEngine/wiki/%E5%AE%9E%E7%8E%B0%E5%90%91%E9%87%8F%E5%8A%A0%E6%B3%95)
+
 Online Demo: [https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking)
 
 [The current implementation status of the WebGPU API spec](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status)
@@ -22,8 +28,9 @@ Please run in Chrome Canary() behind the flag `--enable-unsafe-webgpu`.The `chro
   - [perform-ecs](https://github.com/fireveined/perform-ecs/)
   - [WickedEngine](https://github.com/turanszkij/WickedEngine).
 - Based on [inversify](https://github.com/inversify/InversifyJS/), an IoC container implemented by TS.
+- Use WebGPU by default and fallback to WebGL if not supported.
 - We try to port some parallelizable algorithms to GPU side with **ComputeShader** implemented in WebGPU API. These algorithms are written with GLSL syntax now, but we hope using some TS-like languages in the future.
-  StarBust has already done a lot of work.
+  [stardustjs](https://github.com/stardustjs/stardust/tree/dev/packages/stardust-core/src/compiler) has already done a lot of work.
 
 ## Getting started
 
@@ -67,7 +74,7 @@ You can try to solve some compute-intensive tasks like layout & particle effects
 Use any rendering techniques(d3, g, Three.js or ours' rendering API if you like) when calculation is completed.
 
 ```typescript
-import { World } from '@antv/g-webgpu';
+const canvas = document.getElementById('application');
 
 const world = new World(canvas, {
   engineOptions: {
@@ -75,22 +82,35 @@ const world = new World(canvas, {
   },
 });
 
-const compute = this.world.createComputePipeline({
-  type: 'layout', // 'layout' | 'particle'
-  shader: computeShaderGLSL, // your compute shader code
-  particleCount: numParticles, // particle num, dispatch once for each particle
-  particleData: data, // initial data
-  maxIteration: MAX_ITERATION, // break loop with iteration
-  onCompleted: (finalParticleData) => {
-    // rendering with final calculated data
+const compute = world.createComputePipeline({
+  shader: `
+    //...
+  `,
+  onCompleted: (result) => {
+    console.log(result); // [2, 4, 6, 8, 10, 12, 14, 16]
+    world.destroy();
   },
 });
 
-// add params used in ComputeShader
-this.world.setBinding(compute, 'simParams', simParamData, {
-  binding: 1,
-  type: 'uniform-buffer',
-});
+// bind 2 params to Compute Shader
+world.setBinding(compute, 'vectorA', [1, 2, 3, 4, 5, 6, 7, 8]);
+world.setBinding(compute, 'vectorB', [1, 2, 3, 4, 5, 6, 7, 8]);
+```
+
+Our Compute Shader using Typescript syntax：
+
+```typescript
+const vectorA: vec4[];
+const vectorB: vec4[];
+
+export function compute(threadId: int) {
+  // get data of current thread by threadId
+  const a = vectorA[threadId];
+  const b = vectorB[threadId];
+
+  // output result
+  vectorA[threadId] = a + b;
+}
 ```
 
 ## Resources

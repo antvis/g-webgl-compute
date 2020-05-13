@@ -16,9 +16,7 @@
     ],
     "no-bitwise": false,
     "object-literal-sort-keys": false,
-    "no-implicit-dependencies": false
-  },
-  "globals": {
-    "AMap": true
+    "no-implicit-dependencies": false,
+    "interface-name": [false, "never-prefix"]
   }
 }

@@ -1,3 +1,5 @@
+import { GLSLContext } from '@antv/g-webgpu-compiler';
+
 /**
  * We try to use WebGPU first and fallback to WebGL1 if not supported.
  * So we use WebGPU-styled API here.
@@ -92,8 +94,7 @@ export interface IRenderEngine {
 
   compileComputePipelineStageDescriptor(
     computeCode: string,
-    defines: string | null,
-    data?: ArrayBufferView,
+    context: GLSLContext,
   ): Promise<Pick<GPUComputePipelineDescriptor, 'computeStage'>>;
 
   drawElementsType(
@@ -174,11 +175,7 @@ export interface IRenderEngine {
     srcArrayBuffer: ArrayBufferView,
   ): void;
 
-  readData(
-    destBuffer: GPUBuffer,
-    byteCount: number,
-    arrayClazz: TypedArrayConstructor,
-  ): Promise<ArrayBufferView>;
+  readData(context: GLSLContext): Promise<ArrayBufferView>;
 
   bindVertexInputs(vertexInputs: {
     indexBuffer: GPUBuffer | null;
@@ -188,7 +185,7 @@ export interface IRenderEngine {
     vertexOffsets: number[];
   }): void;
 
-  dispatch(num: number): void;
+  dispatch(context: GLSLContext): void;
 
   getDevice(): GPUDevice;
 

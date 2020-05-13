@@ -1,10 +1,12 @@
 import { mat4, quat, vec3 } from 'gl-matrix';
+import { injectable } from 'inversify';
 import 'reflect-metadata';
 import {
   ComponentManager,
   container,
   createEntity,
   IDENTIFIER,
+  IRenderEngine,
 } from '../../..';
 import { AABB } from '../../../shape/AABB';
 import { Frustum, Mask } from '../../../shape/Frustum';
@@ -16,7 +18,15 @@ import { CullableComponent } from '../CullableComponent';
 import { MeshComponent } from '../MeshComponent';
 import { MeshSystem } from '../System';
 
+@injectable()
+class MockRenderEngine {}
+
 describe('Frustum Culling', () => {
+  container
+    .bind<IRenderEngine>(IDENTIFIER.RenderEngine)
+    // @ts-ignore
+    .to(MockRenderEngine)
+    .inSingletonScope();
   const meshSystem = container.getNamed<MeshSystem>(
     IDENTIFIER.Systems,
     IDENTIFIER.MeshSystem,
@@ -51,6 +61,10 @@ describe('Frustum Culling', () => {
     hierarchyComponentManager.clear();
     cullableManager.clear();
     meshManager.clear();
+  });
+
+  afterAll(() => {
+    container.unbind(IDENTIFIER.RenderEngine);
   });
 
   test('should do frustum culling correctly.', () => {

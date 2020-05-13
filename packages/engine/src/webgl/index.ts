@@ -1,6 +1,8 @@
 // @ts-nocheck
+import { GLSLContext } from '@antv/g-webgpu-compiler';
 import { IRenderEngine, IWebGPUEngineOptions } from '@antv/g-webgpu-core';
 import { injectable } from 'inversify';
+import { flatten, isFinite, isTypedArray } from 'lodash';
 import regl from 'regl';
 import quadVert from './shaders/quad.vert.glsl';
 
@@ -14,10 +16,6 @@ export class WebGLEngine implements IRenderEngine {
   private canvas: HTMLCanvasElement;
   private options: IWebGPUEngineOptions;
   private gl: regl.Regl;
-
-  private computeCommand: regl.DrawCommand;
-  private texInput: regl.Texture2D;
-  private texOutput: regl.Texture2D;
 
   public async init(
     canvas: HTMLCanvasElement,
@@ -60,19 +58,70 @@ export class WebGLEngine implements IRenderEngine {
 
   public async compileComputePipelineStageDescriptor(
     computeCode: string,
-    defines: string | null,
-    data?: ArrayBufferView,
+    context: GLSLContext,
   ): Promise<Pick<GPUComputePipelineDescriptor, 'computeStage'>> {
-    this.texInput = this.gl.texture({
-      width: 960,
-      height: 1,
-      data,
+    const paddingDataTextureSize = context.threadNum * 4;
+    const uniforms = {};
+
+    let inputTextureName;
+    let inputTextureSize;
+    let inputTextureData;
+    let inputTextureTypedArrayConstructor;
+    context.uniforms.forEach(({ name, type, data }) => {
+      // 使用纹理存储
+      if (type === 'sampler2D') {
+        if (!inputTextureName) {
+          inputTextureName = name;
+          inputTextureSize = data.length;
+          inputTextureData = data;
+          if (isTypedArray(data)) {
+            inputTextureTypedArrayConstructor = data.constructor;
+          }
+        }
+        if (data.length < paddingDataTextureSize) {
+          data.push(...new Array(paddingDataTextureSize - data.length).fill(0));
+        } else {
+          context.threadNum = Math.ceil(data.length / 4);
+        }
+        uniforms[name] = this.gl.texture({
+          width: context.threadNum,
+          height: 1,
+          data,
+        });
+      } else {
+        if (
+          data &&
+          (Array.isArray(data) || isTypedArray(data)) &&
+          data.length > 16
+        ) {
+          // 最多支持到 mat4 包含 16 个元素
+          throw new Error(`invalid data type ${type}`);
+        }
+        uniforms[name] = data;
+      }
     });
-    this.texOutput = this.gl.texture({
-      width: 960,
-      height: 1,
-      data,
-    });
+
+    uniforms.u_TexSize = context.threadNum;
+
+    // 大于一次认为需要 pingpong
+    if (context.maxIteration > 1) {
+      context.texInput = uniforms[inputTextureName];
+      uniforms[inputTextureName] = () => context.texInput;
+      context.texOutput = this.gl.texture({
+        width: context.threadNum,
+        height: 1,
+        data: inputTextureData,
+      });
+    } else {
+      context.texOutput = this.gl.texture({
+        width: context.threadNum,
+        height: 1,
+      });
+    }
+    context.output = {
+      length: inputTextureSize,
+      typedArrayConstructor: inputTextureTypedArrayConstructor,
+    };
 
     const drawParams: regl.DrawConfig = {
       attributes: {
@@ -89,24 +138,15 @@ export class WebGLEngine implements IRenderEngine {
           [1, 0],
         ],
       },
-      frag: (defines ? defines + '\n' : '') + computeCode,
-      uniforms: {
-        u_Data: () => this.texInput,
-        u_TexSize: 960,
-        u_K: 0.8504989743232727,
-        u_K2: 0.002411161782220006,
-        u_MaxEdgePerVetex: 50,
-        u_Gravity: 50,
-        u_Speed: 0.1,
-        u_MaxDisplace: 21.799999237060547,
-      },
+      frag: computeCode,
+      uniforms,
       vert: quadVert,
       // TODO: use a fullscreen triangle instead.
       primitive: 'triangle strip',
       count: 4,
     };
 
-    this.computeCommand = this.gl(drawParams);
+    context.computeCommand = this.gl(drawParams);
 
     return {
       computeStage: {
@@ -118,31 +158,34 @@ export class WebGLEngine implements IRenderEngine {
     };
   }
 
-  public dispatch(numX: number) {
-    this.texFBO = this.gl.framebuffer({
-      color: this.texOutput,
+  public dispatch(context: GLSLContext) {
+    context.texFBO = this.gl.framebuffer({
+      color: context.texOutput,
     });
-    this.texFBO.use(() => {
-      this.computeCommand();
+    context.texFBO.use(() => {
+      context.computeCommand();
     });
 
-    const tmp = this.texOutput;
-    this.texOutput = this.texInput;
-    this.texInput = tmp;
+    // 需要 swap
+    if (context.maxIteration > 1) {
+      const tmp = context.texOutput;
+      context.texOutput = context.texInput;
+      context.texInput = tmp;
+    }
   }
 
-  public async readData(
-    srcBuffer: GPUBuffer,
-    byteCount: number,
-    arrayClazz: TypedArrayConstructor,
-  ) {
+  public async readData(context: GLSLContext) {
     let pixels;
     this.gl({
-      framebuffer: this.texFBO,
+      framebuffer: context.texFBO,
     })(() => {
       pixels = this.gl.read();
     });
-    return new arrayClazz(pixels);
+    const {
+      output: { length, typedArrayConstructor = Float32Array },
+    } = context;
+
+    return new typedArrayConstructor(pixels.slice(0, length));
   }
 
   public setComputePipeline(
@@ -183,6 +226,6 @@ export class WebGLEngine implements IRenderEngine {
    * Dispose and release all associated resources
    */
   public dispose() {
-    //
+    // this.dataTextures.forEach((d) => d.destroy());
   }
 }

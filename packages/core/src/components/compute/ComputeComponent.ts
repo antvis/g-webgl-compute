@@ -1,3 +1,4 @@
+import { GLSLContext, Target } from '@antv/g-webgpu-compiler';
 import { Component } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
 import { IComputeStrategy } from './IComputeStrategy';
@@ -21,8 +22,16 @@ export class ComputeComponent extends Component<ComputeComponent> {
 
   public dirty: boolean = true;
 
-  public shaderGLSL: string;
-  public shaderInWebGL: string;
+  public rawShaderCode: string;
+
+  public precompiled: boolean = false;
+  public compiledBundle: {
+    shaders: {
+      [Target.WebGL]: string;
+      [Target.WebGPU]: string;
+    };
+    context: GLSLContext;
+  };
 
   public stageDescriptor: Pick<GPUComputePipelineDescriptor, 'computeStage'>;
 
@@ -39,14 +48,7 @@ export class ComputeComponent extends Component<ComputeComponent> {
   /**
    * particle num to dispatch
    */
-  public particleCount: number;
-
-  /**
-   * initial data of particles
-   */
-  public particleData: ArrayBufferView;
-
-  public particleDataConstructor: TypedArrayConstructor;
+  public threadNum: number;
 
   public particleBuffers: GPUBuffer[] = new Array(2);
   public particleBindGroups = new Array(2);

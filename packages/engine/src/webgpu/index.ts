@@ -4,6 +4,7 @@
  * * 使用最新 GPUBuffer API
  * * ComputePipeline
  */
+import { GLSLContext } from '@antv/g-webgpu-compiler';
 import { IRenderEngine, IWebGPUEngineOptions } from '@antv/g-webgpu-core';
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
@@ -107,10 +108,12 @@ export class WebGPUEngine implements IRenderEngine {
   }
 
   public endFrame() {
-    this.endRenderPass();
+    // this.endRenderPass();
 
     if (this.options.supportCompute) {
       this.endComputePass();
+    } else {
+      this.endRenderPass();
     }
 
     this.commandBuffers[0] = this.uploadEncoder.finish();
@@ -199,10 +202,12 @@ export class WebGPUEngine implements IRenderEngine {
       ? this.clearStencilValue
       : WebGPUConstants.LoadOp.Load;
 
-    this.startMainRenderPass();
+    // this.startMainRenderPass();
 
     if (this.options.supportCompute) {
       this.startComputePass();
+    } else {
+      this.startMainRenderPass();
     }
   }
 
@@ -247,13 +252,11 @@ export class WebGPUEngine implements IRenderEngine {
     const vertexShader = await this.compileShaderToSpirV(
       vertexCode,
       'vertex',
-      defines,
       shaderVersion,
     );
     const fragmentShader = await this.compileShaderToSpirV(
       fragmentCode,
       'fragment',
-      defines,
       shaderVersion,
     );
 
@@ -262,13 +265,12 @@ export class WebGPUEngine implements IRenderEngine {
 
   public async compileComputePipelineStageDescriptor(
     computeCode: string,
-    defines: string | null,
+    context: GLSLContext,
   ): Promise<Pick<GPUComputePipelineDescriptor, 'computeStage'>> {
     const shaderVersion = '#version 450\n';
     const computeShader = await this.compileShaderToSpirV(
       computeCode,
       'compute',
-      defines,
       shaderVersion,
     );
 
@@ -480,36 +482,40 @@ export class WebGPUEngine implements IRenderEngine {
     this.tempBuffers.push(srcBuffer);
   }
 
-  public async readData(
-    srcBuffer: GPUBuffer,
-    byteCount: number,
-    arrayClazz: TypedArrayConstructor,
-  ) {
-    const gpuReadBuffer = this.device.createBuffer({
-      size: byteCount,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    });
+  public async readData(context: GLSLContext) {
+    const { output } = context;
+    if (output) {
+      const { length, typedArrayConstructor, gpuBuffer } = output;
+      if (gpuBuffer) {
+        const byteCount = length * typedArrayConstructor.BYTES_PER_ELEMENT;
+        const gpuReadBuffer = this.device.createBuffer({
+          size: byteCount,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
 
-    this.uploadEncoder.copyBufferToBuffer(
-      srcBuffer,
-      0,
-      gpuReadBuffer,
-      0,
-      byteCount,
-    );
+        this.uploadEncoder.copyBufferToBuffer(
+          gpuBuffer,
+          0,
+          gpuReadBuffer,
+          0,
+          byteCount,
+        );
 
-    // submit copy command
-    this.commandBuffers[0] = this.uploadEncoder.finish();
-    this.device.defaultQueue.submit(this.commandBuffers);
-    this.uploadEncoder = this.device.createCommandEncoder(
-      this.uploadEncoderDescriptor,
-    );
+        // submit copy command
+        this.commandBuffers[0] = this.uploadEncoder.finish();
+        this.device.defaultQueue.submit(this.commandBuffers);
+        this.uploadEncoder = this.device.createCommandEncoder(
+          this.uploadEncoderDescriptor,
+        );
 
-    const arraybuffer = await gpuReadBuffer.mapReadAsync();
+        const arraybuffer = await gpuReadBuffer.mapReadAsync();
 
-    // destroy read buffer later
-    this.tempBuffers.push(gpuReadBuffer);
-    return new arrayClazz(arraybuffer);
+        // destroy read buffer later
+        this.tempBuffers.push(gpuReadBuffer);
+        return new typedArrayConstructor(arraybuffer);
+      }
+    }
+    return new Float32Array();
   }
 
   public bindVertexInputs(vertexInputs: {
@@ -540,9 +546,9 @@ export class WebGPUEngine implements IRenderEngine {
     }
   }
 
-  public dispatch(num: number) {
+  public dispatch(context: GLSLContext) {
     if (this.currentComputePass) {
-      this.currentComputePass.dispatch(num);
+      this.currentComputePass.dispatch(context.threadNum);
     }
   }
 
@@ -591,7 +597,8 @@ export class WebGPUEngine implements IRenderEngine {
     if (this.options.antialiasing) {
       const mainTextureDescriptor = {
         size: this.mainTextureExtends,
-        arrayLayerCount: 1,
+        // TODO: arrayLayerCount is deprecated: use size.depth
+        // arrayLayerCount: 1,
         mipLevelCount: 1,
         sampleCount: this.mainPassSampleCount,
         dimension: WebGPUConstants.TextureDimension.E2d,
@@ -622,7 +629,7 @@ export class WebGPUEngine implements IRenderEngine {
 
     const depthTextureDescriptor = {
       size: this.mainTextureExtends,
-      arrayLayerCount: 1,
+      // arrayLayerCount: 1,
       mipLevelCount: 1,
       sampleCount: this.mainPassSampleCount,
       dimension: WebGPUConstants.TextureDimension.E2d,
@@ -738,13 +745,9 @@ export class WebGPUEngine implements IRenderEngine {
   private compileShaderToSpirV(
     source: string,
     type: string,
-    defines: string | null,
     shaderVersion: string,
   ): Promise<Uint32Array> {
-    return this.compileRawShaderToSpirV(
-      shaderVersion + (defines ? defines + '\n' : '') + source,
-      type,
-    );
+    return this.compileRawShaderToSpirV(shaderVersion + source, type);
   }
 
   private createPipelineStageDescriptor(

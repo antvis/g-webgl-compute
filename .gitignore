@@ -68,7 +68,7 @@ jspm_packages/
 lib/
 dist/
 es/
-# docs/
+docs/
 
 .DS_Store
 public

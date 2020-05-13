@@ -2,6 +2,12 @@
 
 A WebGPU Engine for real-time rendering and GPGPU.
 
+Wiki
+
+- [如何使用 Compute Pipeline API](https://github.com/antvis/GWebGPUEngine/wiki/Compute-Pipeline-API)
+- [如何用 Typescript 写 Compute Shader](https://github.com/antvis/GWebGPUEngine/wiki/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8-TS-%E8%AF%AD%E6%B3%95%E5%86%99-Compute-Shader)
+- [示例：向量加法](https://github.com/antvis/GWebGPUEngine/wiki/%E5%AE%9E%E7%8E%B0%E5%90%91%E9%87%8F%E5%8A%A0%E6%B3%95)
+
 ## 前置条件
 
 安装 [Chrome Canary](https://www.google.com/chrome/canary/) 后，可以开启 `chrome://flags/#enable-unsafe-webgpu`。
@@ -23,7 +29,7 @@ A WebGPU Engine for real-time rendering and GPGPU.
   - [perform-ecs](https://github.com/fireveined/perform-ecs/)
   - [WickedEngine](https://github.com/turanszkij/WickedEngine)，基于 C++
 - 基于 [inversify](https://github.com/inversify/InversifyJS/), 一个 IoC c 容器
-- WebGPU 实现部分参考 [Babylon.js](https://github.com/BabylonJS/Babylon.js/blob/WebGPU/src/Engines/webgpuEngine.ts)
+- WebGPU 实现部分参考 [Babylon.js](https://github.com/BabylonJS/Babylon.js/blob/WebGPU/src/Engines/webgpuEngine.ts)，默认使用 WebGPU，如果发现浏览器不支持自动降级到 WebGL。
 - 尝试移植一些可并行算法到 GPU 侧执行。相比 WebGL，WebGPU 支持 ComputeShader。目前已有很多成功案例：
   - tensorflow.js 除了默认后端 WebGL，也支持 WebGPU 和 WASM。
   - 简单的矩阵并行运算。[DEMO 🔗](https://observablehq.com/@yhyddr/gpu-matrix-compute)
@@ -76,7 +82,8 @@ world.add(scene, mesh);
 我们提供了一些内置的计算模型，你可以使用任何渲染技术对于计算结果进行展示（当然也可以用我们的渲染 API）。
 
 ```typescript
-import { World } from '@antv/g-webgpu';
+// 获取 HTMLCanvasElement
+const canvas = document.getElementById('application');
 
 const world = new World(canvas, {
   engineOptions: {
@@ -84,23 +91,37 @@ const world = new World(canvas, {
   },
 });
 
-const compute = this.world.createComputePipeline({
-  type: 'layout', // 'layout' | 'particle'
-  shader: computeShaderGLSL, // Compute Shader
-  shaderInWebGL: computeShaderGLSLInWebGL // Fragment Shader in WebGL
-  particleCount: 1500, // dispatch 数目
-  particleData: data, // 初始数据
-  maxIteration: 8000, // 迭代次数，到达后结束触发 onCompleted 回调
-  onCompleted: (finalParticleData) => {
-    // 使用最终计算结果渲染
+const compute = world.createComputePipeline({
+  shader: `
+    //...
+  `, // 下一节的 Shader 文本
+  onCompleted: (result) => {
+    console.log(result); // [2, 4, 6, 8, 10, 12, 14, 16]
+    world.destroy(); // 计算完成后销毁相关 GPU 资源
   },
 });
 
-// 传入 ComputeShader 的参数
-this.world.setBinding(compute, 'simParams', simParamData, {
-  binding: 1,
-  type: 'uniform-buffer',
-});
+// 绑定输入到 Compute Shader 中的两个参数
+world.setBinding(compute, 'vectorA', [1, 2, 3, 4, 5, 6, 7, 8]);
+world.setBinding(compute, 'vectorB', [1, 2, 3, 4, 5, 6, 7, 8]);
+```
+
+使用 TS 编写 Shader：
+
+```typescript
+const vectorA: vec4[];
+const vectorB: vec4[];
+
+export function compute(threadId: int) {
+  // 获取当前线程处理的数据
+  const a = vectorA[threadId];
+  const b = vectorB[threadId];
+
+  // 输出当前线程处理完毕的数据，即两个向量相加后的结果
+  vectorA[threadId] = a + b;
+  // 也可以写成 vectorB[threadId] = a + b;
+  // 但要记住，受限于 WebGL 的实现我们只能输出一份数据
+}
 ```
 
 ### 计算模型

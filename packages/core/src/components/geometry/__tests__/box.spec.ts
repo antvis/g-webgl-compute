@@ -1,15 +1,26 @@
 import { mat4, quat, vec3 } from 'gl-matrix';
+import { injectable } from 'inversify';
 import 'reflect-metadata';
 import {
   ComponentManager,
   container,
   createEntity,
   IDENTIFIER,
+  IRenderEngine,
 } from '../../..';
 import { GeometryComponent } from '../GeometryComponent';
 import { GeometrySystem } from '../System';
 
+@injectable()
+class MockRenderEngine {}
+
 describe('Box geometry', () => {
+  container
+    .bind<IRenderEngine>(IDENTIFIER.RenderEngine)
+    // @ts-ignore
+    .to(MockRenderEngine)
+    .inSingletonScope();
+
   const geometrySystem = container.getNamed<GeometrySystem>(
     IDENTIFIER.Systems,
     IDENTIFIER.GeometrySystem,
@@ -21,6 +32,10 @@ describe('Box geometry', () => {
 
   afterEach(() => {
     geometryManager.clear();
+  });
+
+  afterAll(() => {
+    container.unbind(IDENTIFIER.RenderEngine);
   });
 
   test('should generate a box geometry with default params.', () => {

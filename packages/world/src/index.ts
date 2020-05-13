@@ -1,3 +1,4 @@
+import { Parser } from '@antv/g-webgpu-compiler';
 import { World } from './World';
 
-export { World };
+export { Parser, World };

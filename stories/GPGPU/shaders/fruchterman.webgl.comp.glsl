@@ -24,9 +24,23 @@ uniform float u_MaxDisplace;
 
 varying vec2 v_TexCoord;
 
+int getThreadId() {
+  return int(floor(v_TexCoord.s * u_TexSize + 0.5));
+}
+vec4 getThreadData(float i) {
+  return texture2D(u_Data, vec2((i + 0.5) / u_TexSize, 1));
+}
+vec4 getThreadData(int i) {
+  return getThreadData(float(i));
+}
+vec4 setThreadData(int i, vec4 data) {
+  return data;
+}
+
 void main() {
-  int i = int(floor(v_TexCoord.s * u_TexSize + 0.5));
-  vec4 node_i = texture2D(u_Data, vec2(v_TexCoord.s, 1));
+  int i = getThreadId();
+  // vec4 node_i = texture2D(u_Data, vec2(v_TexCoord.s, 1));
+  vec4 node_i = getThreadData(i);
   float dx = 0.0, dy = 0.0;
   gl_FragColor = node_i;
 
@@ -35,7 +49,7 @@ void main() {
   // repulsive
   for (int j = 0; j < PARTICLE_NUM; j++) {
     if (i != j + 1) {
-      vec4 node_j = texture2D(u_Data, vec2((float(j) + 0.5) / u_TexSize , 1));
+      vec4 node_j = getThreadData(j);
       float xDist = node_i.r - node_j.r;
       float yDist = node_i.g - node_j.g;
       float dist = sqrt(xDist * xDist + yDist * yDist) + 0.01;
@@ -55,15 +69,13 @@ void main() {
     // when arr_idx % 4 == 0 update node_idx_buffer
     int buf_offset = arr_idx - arr_idx / 4 * 4;
     if (p == 0 || buf_offset == 0) {
-      node_buffer = texture2D(u_Data, vec2((float(arr_idx / 4) + 0.5) /
-                                          u_TexSize , 1));
+      node_buffer = getThreadData(arr_idx / 4);
     }
     float float_j = buf_offset == 0 ? node_buffer.r :
                     buf_offset == 1 ? node_buffer.g :
                     buf_offset == 2 ? node_buffer.b :
                                       node_buffer.a;
-    vec4 node_j = texture2D(u_Data, vec2((float_j + 0.5) /
-                                    u_TexSize, 1));
+    vec4 node_j = getThreadData(float_j);
     float xDist = node_i.r - node_j.r;
     float yDist = node_i.g - node_j.g;
     float dist = sqrt(xDist * xDist + yDist * yDist) + 0.01;
