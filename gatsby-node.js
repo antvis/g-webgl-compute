@@ -23,9 +23,9 @@ exports.onCreateWebpackConfig = ({ getConfig }) => {
   config.resolve.alias = {
     ...config.resolve.alias,
     'https://cdn.jsdelivr.net/npm/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js': path.resolve(__dirname, 'stub'),
-    // '@antv/g-webgpu': path.resolve(__dirname, 'packages/g-webgpu/src/index.ts'),
-    // '@antv/g-webgpu-core': path.resolve(__dirname, 'packages/core/src/index.ts'),
-    // '@antv/g-webgpu-engine': path.resolve(__dirname, 'packages/engine/src/index.ts'),
-    // '@antv/g-webgpu-compiler': path.resolve(__dirname, 'packages/compiler/src/index.ts'),
+    '@antv/g-webgpu': path.resolve(__dirname, 'packages/g-webgpu/src'),
+    '@antv/g-webgpu-core': path.resolve(__dirname, 'packages/core/src'),
+    '@antv/g-webgpu-engine': path.resolve(__dirname, 'packages/engine/src'),
+    '@antv/g-webgpu-compiler': path.resolve(__dirname, 'packages/compiler/src'),
   };
 };

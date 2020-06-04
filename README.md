@@ -88,6 +88,7 @@ const compute = world.createComputePipeline({
   shader: `
     //...
   `,
+  dispatch: [1, 1, 1],
   onCompleted: (result) => {
     console.log(result); // [2, 4, 6, 8, 10, 12, 14, 16]
     world.destroy();
@@ -102,16 +103,29 @@ world.setBinding(compute, 'vectorB', [1, 2, 3, 4, 5, 6, 7, 8]);
 Our Compute Shader using Typescript syntax：
 
 ```typescript
-const vectorA: vec4[];
-const vectorB: vec4[];
+import { globalInvocationID } from 'g-webgpu';
 
-export function compute(threadId: int) {
-  // get data of current thread by threadId
-  const a = vectorA[threadId];
-  const b = vectorB[threadId];
+@numthreads(8, 1, 1)
+class Add2Vectors {
+  @in @out
+  vectorA: float[];
 
-  // output result
-  vectorA[threadId] = a + b;
+  @in
+  vectorB: float[];
+
+  sum(a: float, b: float): float {
+    return a + b;
+  }
+
+  @main
+  compute() {
+    // 获取当前线程处理的数据
+    const a = this.vectorA[globalInvocationID.x];
+    const b = this.vectorB[globalInvocationID.x];
+
+    // 输出当前线程处理完毕的数据，即两个向量相加后的结果
+    this.vectorA[globalInvocationID.x] = this.sum(a, b);
+  }
 }
 ```
 

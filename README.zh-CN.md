@@ -96,6 +96,7 @@ const compute = world.createComputePipeline({
   shader: `
     //...
   `, // 下一节的 Shader 文本
+  dispatch: [1, 1, 1],
   onCompleted: (result) => {
     console.log(result); // [2, 4, 6, 8, 10, 12, 14, 16]
     world.destroy(); // 计算完成后销毁相关 GPU 资源
@@ -110,18 +111,29 @@ world.setBinding(compute, 'vectorB', [1, 2, 3, 4, 5, 6, 7, 8]);
 使用 TS 编写 Shader：
 
 ```typescript
-const vectorA: vec4[];
-const vectorB: vec4[];
+import { globalInvocationID } from 'g-webgpu';
 
-export function compute(threadId: int) {
-  // 获取当前线程处理的数据
-  const a = vectorA[threadId];
-  const b = vectorB[threadId];
+@numthreads(8, 1, 1)
+class Add2Vectors {
+  @in @out
+  vectorA: float[];
 
-  // 输出当前线程处理完毕的数据，即两个向量相加后的结果
-  vectorA[threadId] = a + b;
-  // 也可以写成 vectorB[threadId] = a + b;
-  // 但要记住，受限于 WebGL 的实现我们只能输出一份数据
+  @in
+  vectorB: float[];
+
+  sum(a: float, b: float): float {
+    return a + b;
+  }
+
+  @main
+  compute() {
+    // 获取当前线程处理的数据
+    const a = this.vectorA[globalInvocationID.x];
+    const b = this.vectorB[globalInvocationID.x];
+
+    // 输出当前线程处理完毕的数据，即两个向量相加后的结果
+    this.vectorA[globalInvocationID.x] = this.sum(a, b);
+  }
 }
 ```
 

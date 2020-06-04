@@ -9,7 +9,7 @@ module.exports = {
   ],
   siteMetadata: {
     title: 'GWebGPU',
-    description: 'Large-scale WebGL-powered Geospatial data visualization analysis framework',
+    description: 'A GPGPU engine based on WebGPU & WebGL',
     siteUrl: 'https://l7.antv.vision',
     githubUrl: 'https://github.com/antvis/GWebGPUEngine',
     navs: [
@@ -33,7 +33,8 @@ module.exports = {
         title: {
           zh: '示例',
           en: 'Examples'
-        }
+        },
+        redirect: 'tutorial/add2vectors'
       }
     ],
     docs: [
@@ -44,6 +45,30 @@ module.exports = {
           en: 'Introduction'
         },
         order: 0
+      },
+      {
+        slug: 'api/syntax',
+        title: {
+          zh: '语法介绍',
+          en: 'Shader Syntax'
+        },
+        order: 1
+      },
+      {
+        slug: 'api/compute-pipeline',
+        title: {
+          zh: '计算管线 API',
+          en: 'API of compute pipeline'
+        },
+        order: 2
+      },
+      {
+        slug: 'api/workgroup',
+        title: {
+          zh: '线程组',
+          en: 'Workgroup'
+        },
+        order: 3
       },
     ],
     examples: [

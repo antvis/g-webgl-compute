@@ -1,4 +1,5 @@
-import { World } from '@antv/g-webgpu';
+import GCanvas from '@antv/g-canvas';
+import GWebGPU from '@antv/g-webgpu';
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -130,45 +131,188 @@ class Fruchterman {
 }
 `;
 
+const MAX_ITERATION = 8000;
+
 const App = React.memo(function Add2Vectors() {
-  const [result, setResult] = useState([]);
+  const [timeElapsed, setTimeElapsed] = useState(0);
   useEffect(() => {
-    const canvas = document.getElementById('application') as HTMLCanvasElement;
-    if (canvas) {
-      const world = new World(canvas, {
-        engineOptions: {
-          supportCompute: true,
-        },
-      });
+    (async () => {
+      const canvas = document.getElementById(
+        'application',
+      ) as HTMLCanvasElement;
+      if (canvas) {
+        // @see https://g6.antv.vision/en/examples/net/forceDirected/#basicForceDirected
+        const data = await (
+          await fetch(
+            'https://gw.alipayobjects.com/os/basement_prod/7bacd7d1-4119-4ac1-8be3-4c4b9bcbc25f.json',
+          )
+        ).json();
 
-      const compute = world.createComputePipeline({
-        shader: gCode,
-        dispatch: [1, 1, 1],
-        onCompleted: (r) => {
-          setResult(r);
-          // 计算完成后销毁相关 GPU 资源
-          world.destroy();
-        },
-      });
+        const nodes = data.nodes.map((n) => ({
+          x: (Math.random() * 2 - 1) / 10,
+          y: (Math.random() * 2 - 1) / 10,
+          id: n.id,
+        }));
+        const edges = data.edges;
+        const numParticles = nodes.length;
+        const nodesEdgesArray = buildTextureData(nodes, edges);
 
-      world.setBinding(compute, 'vectorA', [1, 2, 3, 4, 5, 6, 7, 8]);
-      world.setBinding(compute, 'vectorB', [1, 2, 3, 4, 5, 6, 7, 8]);
-    }
+        const world = new window.GWebGPU.World(canvas, {
+          engineOptions: {
+            supportCompute: true,
+          },
+        });
+
+        const timeStart = window.performance.now();
+        const compute = world.createComputePipeline({
+          shader: gCode,
+          dispatch: [numParticles, 1, 1],
+          maxIteration: MAX_ITERATION,
+          onCompleted: (finalParticleData) => {
+            setTimeElapsed(window.performance.now() - timeStart);
+            // draw with G
+            renderCircles(finalParticleData, numParticles);
+
+            // precompiled
+            // console.log(world.getPrecompiledBundle(compute));
+
+            // 计算完成后销毁相关 GPU 资源
+            world.destroy();
+          },
+        });
+
+        world.setBinding(compute, 'u_Data', nodesEdgesArray);
+        world.setBinding(
+          compute,
+          'u_K',
+          Math.sqrt((numParticles * numParticles) / (numParticles + 1) / 300),
+        );
+        world.setBinding(
+          compute,
+          'u_K2',
+          (numParticles * numParticles) / (numParticles + 1) / 300 / 300,
+        );
+        world.setBinding(compute, 'u_Gravity', 50);
+        world.setBinding(compute, 'u_Speed', 0.1);
+        world.setBinding(
+          compute,
+          'u_MaxDisplace',
+          Math.sqrt(numParticles * numParticles) / 10,
+        );
+        world.setBinding(compute, 'MAX_EDGE_PER_VERTEX', maxEdgePerVetex);
+        world.setBinding(compute, 'VERTEX_COUNT', numParticles);
+      }
+    })();
   }, []);
 
   return (
     <>
-      <h2> Add 2 Vectors</h2>
-      <ul>
-        <li>WorkGroup: 1</li>
-        <li>Threads per WorkGroup: 8</li>
-        <li>VectorA: 1, 2, 3, 4, 5, 6, 7, 8</li>
-        <li>VectorB: 1, 2, 3, 4, 5, 6, 7, 8</li>
-      </ul>
       <canvas id="application" style={{ display: 'none' }} />
-      Result: {result.toString()}
+      <div id="container" />
+      <div>Elapsed time: {timeElapsed / 1000}s</div>
+      <div>
+        Ported from the same{' '}
+        <a href="https://g6.antv.vision/en/examples/net/furchtermanLayout#fruchtermanWebWorker">
+          example
+        </a>{' '}
+        in G6
+      </div>
     </>
   );
 });
 
 ReactDOM.render(<App />, document.getElementById('wrapper'));
+
+const CANVAS_HEIGHT = 600;
+const CANVAS_WIDTH = 600;
+function renderCircles(finalParticleData, numParticles) {
+  const canvas = new window.GCanvas.Canvas({
+    container: 'container',
+    width: CANVAS_WIDTH,
+    height: CANVAS_HEIGHT,
+  });
+
+  // draw edges
+  for (let i = 0; i < lineIndexBufferData.length; i += 2) {
+    const x1 = finalParticleData[lineIndexBufferData[i] * 4];
+    const y1 = finalParticleData[lineIndexBufferData[i] * 4 + 1];
+    const x2 = finalParticleData[lineIndexBufferData[i + 1] * 4];
+    const y2 = finalParticleData[lineIndexBufferData[i + 1] * 4 + 1];
+    const group = canvas.addGroup();
+    group.addShape('line', {
+      attrs: {
+        x1: convertWebGLCoord2Canvas(x1, CANVAS_WIDTH),
+        y1: convertWebGLCoord2Canvas(y1, CANVAS_HEIGHT),
+        x2: convertWebGLCoord2Canvas(x2, CANVAS_WIDTH),
+        y2: convertWebGLCoord2Canvas(y2, CANVAS_HEIGHT),
+        stroke: '#1890FF',
+        lineWidth: 1,
+      },
+    });
+  }
+
+  // draw nodes
+  for (let i = 0; i < numParticles * 4; i += 4) {
+    const x = finalParticleData[i];
+    const y = finalParticleData[i + 1];
+    const group = canvas.addGroup();
+    group.addShape('circle', {
+      attrs: {
+        x: convertWebGLCoord2Canvas(x, CANVAS_WIDTH),
+        y: convertWebGLCoord2Canvas(y, CANVAS_HEIGHT),
+        r: 5,
+        fill: 'red',
+        stroke: 'blue',
+        lineWidth: 2,
+      },
+    });
+  }
+}
+
+function convertWebGLCoord2Canvas(c: number, size: number) {
+  return ((c + 1) / 2) * size;
+}
+
+const lineIndexBufferData = [];
+let maxEdgePerVetex;
+// @see https://github.com/nblintao/ParaGraphL/blob/master/sigma.layout.paragraphl.js#L192-L229
+function buildTextureData(nodes, edges) {
+  const dataArray = [];
+  const nodeDict = [];
+  const mapIdPos = {};
+  let i = 0;
+  for (i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    mapIdPos[n.id] = i;
+    dataArray.push(n.x);
+    dataArray.push(n.y);
+    dataArray.push(0);
+    dataArray.push(0);
+    nodeDict.push([]);
+  }
+  for (i = 0; i < edges.length; i++) {
+    const e = edges[i];
+    nodeDict[mapIdPos[e.source]].push(mapIdPos[e.target]);
+    nodeDict[mapIdPos[e.target]].push(mapIdPos[e.source]);
+    lineIndexBufferData.push(mapIdPos[e.source], mapIdPos[e.target]);
+  }
+
+  maxEdgePerVetex = 0;
+  for (i = 0; i < nodes.length; i++) {
+    const offset = dataArray.length;
+    const dests = nodeDict[i];
+    const len = dests.length;
+    dataArray[i * 4 + 2] = offset;
+    dataArray[i * 4 + 3] = dests.length;
+    maxEdgePerVetex = Math.max(maxEdgePerVetex, dests.length);
+    for (let j = 0; j < len; ++j) {
+      const dest = dests[j];
+      dataArray.push(+dest);
+    }
+  }
+
+  while (dataArray.length % 4 !== 0) {
+    dataArray.push(0);
+  }
+  return new Float32Array(dataArray);
+}
