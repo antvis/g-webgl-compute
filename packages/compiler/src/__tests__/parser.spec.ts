@@ -15,11 +15,11 @@ describe('Parser', () => {
   const parser = new Parser();
 
   test('should generate empty AST for invalid code.', () => {
-    const result = parser.parse(`
+    expect(() => {
+      parser.parse(`
       const a:;
     `);
-
-    expect(result).toBe(undefined);
+    }).toThrowError();
   });
 
   // https://github.com/estree/estree/blob/master/es2015.md#importdeclaration

@@ -415,6 +415,68 @@ export class WebGPUEngine implements IRenderEngine {
     return dataBuffer;
   }
 
+  public createSampler(descriptor: GPUSamplerDescriptor) {
+    return this.device.createSampler(descriptor);
+  }
+
+  public createTexture(
+    [width, height]: [number, number],
+    imageData: Uint8ClampedArray,
+    usage: GPUTextureUsageFlags,
+  ) {
+    let data = null;
+
+    const rowPitch = Math.ceil((width * 4) / 256) * 256;
+    if (rowPitch === width * 4) {
+      data = imageData;
+    } else {
+      data = new Uint8Array(rowPitch * height);
+      let imagePixelIndex = 0;
+      for (let y = 0; y < height; ++y) {
+        for (let x = 0; x < width; ++x) {
+          const i = x * 4 + y * rowPitch;
+          data[i] = imageData[imagePixelIndex];
+          data[i + 1] = imageData[imagePixelIndex + 1];
+          data[i + 2] = imageData[imagePixelIndex + 2];
+          data[i + 3] = imageData[imagePixelIndex + 3];
+          imagePixelIndex += 4;
+        }
+      }
+    }
+
+    const texture = this.device.createTexture({
+      size: {
+        width,
+        height,
+        depth: 1,
+      },
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.COPY_DST | usage,
+    });
+
+    const textureDataBuffer = this.createBuffer(
+      data,
+      WebGPUConstants.BufferUsage.CopyDst | WebGPUConstants.BufferUsage.CopySrc,
+    );
+
+    this.uploadEncoder.copyBufferToTexture(
+      {
+        buffer: textureDataBuffer,
+        bytesPerRow: rowPitch,
+      },
+      {
+        texture,
+      },
+      {
+        width,
+        height,
+        depth: 1,
+      },
+    );
+
+    return texture;
+  }
+
   public setRenderBindGroups(bindGroups: GPUBindGroup[]) {
     const renderPass = this.bundleEncoder || this.currentRenderPass!;
     for (let i = 0; i < bindGroups.length; i++) {
@@ -487,7 +549,7 @@ export class WebGPUEngine implements IRenderEngine {
     if (output) {
       const { length, typedArrayConstructor, gpuBuffer } = output;
       if (gpuBuffer) {
-        const byteCount = length * typedArrayConstructor.BYTES_PER_ELEMENT;
+        const byteCount = length! * typedArrayConstructor!.BYTES_PER_ELEMENT;
         const gpuReadBuffer = this.device.createBuffer({
           size: byteCount,
           usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
@@ -509,10 +571,9 @@ export class WebGPUEngine implements IRenderEngine {
         );
 
         const arraybuffer = await gpuReadBuffer.mapReadAsync();
-
         // destroy read buffer later
         this.tempBuffers.push(gpuReadBuffer);
-        return new typedArrayConstructor(arraybuffer);
+        return new typedArrayConstructor!(arraybuffer);
       }
     }
     return new Float32Array();
@@ -548,7 +609,7 @@ export class WebGPUEngine implements IRenderEngine {
 
   public dispatch(context: GLSLContext) {
     if (this.currentComputePass) {
-      this.currentComputePass.dispatch(context.threadNum);
+      this.currentComputePass.dispatch(...context.dispatch);
     }
   }
 

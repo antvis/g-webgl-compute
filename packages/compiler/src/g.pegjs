@@ -109,13 +109,22 @@ Identifier
   = !ReservedWord name:IdentifierName { return name; }
 
 IdentifierName "identifier"
-  = head:IdentifierStart tail:IdentifierPart* type:(__ ":" __ DataType ("[]")?)? {
+  = head:IdentifierStart tail:IdentifierPart* type:(__ ":" __ DataType ("["(IdentifierName / NumericLiteral)?"]")?)? {
+      var dataType = extractOptional(type, 4) || [];
       return {
         type: "Identifier",
         name: head + tail.join(""),
         typeAnnotation: flatten([
           extractOptional(type, 3),
-          extractOptional(type, 4),
+          dataType.map((t) => {
+            if (!t) { return ''; }
+          	if (t.type === 'Literal') {
+              return t.value;
+            } else if (t.type === 'Identifier') {
+              return t.name;
+            }
+            return t;
+          }).join(''),
         ]),
       };
     }
@@ -164,7 +173,6 @@ Keyword
   / ForToken
   / FunctionToken
   / IfToken
-  / InToken
   / ReturnToken
   / SwitchToken
   / VarToken
@@ -174,6 +182,7 @@ Keyword
   / EnumToken
   / ExportToken
   / ImportToken
+  / ClassToken
 
 Literal
   = BooleanLiteral
@@ -329,6 +338,7 @@ Zs = [\u0020\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]
 // Tokens
 
 BreakToken      = "break"      !IdentifierPart
+ClassToken      = "class"      !IdentifierPart
 ContinueToken   = "continue"   !IdentifierPart
 DefaultToken    = "default"    !IdentifierPart
 DoToken         = "do"         !IdentifierPart
@@ -1066,7 +1076,7 @@ ImportDeclaration
     { return { type: "ImportDeclaration", source: moduleName, specifiers: [{type: 'ImportNamespaceSpecifier', local: defaultSpecifier}] }; }
 
 ExportDeclaration
-  = ExportToken __ declaration:FunctionDeclaration
+  = ExportToken __ declaration:(FunctionDeclaration / ClassDeclaration)
   { return { type: "ExportDefaultDeclaration", declaration }; }
 
 // ----- A.5 Functions and Programs -----
@@ -1087,20 +1097,30 @@ FunctionDeclaration
     }
 
 FunctionExpression
-  = FunctionToken __ id:(Identifier __)?
+  = FunctionToken? __ id:(Identifier __)?
     "(" __ params:(FormalParameterList __)? ")" __
+    type:(__ ":" __ DataType __)?
     "{" __ body:FunctionBody __ "}"
     {
       return {
         type: "FunctionExpression",
         id: extractOptional(id, 0),
         params: optionalList(extractOptional(params, 0)),
-        body: body
+        body: body,
+        returnType: optionalList(extractOptional(type, 3)).join(""),
       };
     }
 
+Parameter
+  = decorators:Decorators name:Identifier {
+     return {
+       ...name,
+       decorators,
+     }
+   }
+
 FormalParameterList
-  = head:Identifier tail:(__ "," __ Identifier)* {
+  = head:Parameter tail:(__ "," __ Parameter)* {
       return buildList(head, tail, 3);
     }
 
@@ -1120,6 +1140,56 @@ Program
       };
     }
 
+ClassDeclaration
+  = decorators:Decorators ClassToken __ id:Identifier __
+    "{" __ body:ClassBody __ "}" {
+    return {
+      type: "ClassDeclaration",
+      id,
+      body,
+      decorators,
+    }
+  }
+
+ClassBody
+  = body:ClassElements? {
+    return {
+      type: "ClassBody",
+      body: optionalList(body),
+    }
+  }
+
+ClassElements
+  = head:ClassElement tail:(__ ClassElement)* {
+      return buildList(head, tail, 1);
+    }
+
+ClassElement
+  = ClassProperty
+  / MethodDefinition
+
+ClassProperty
+  = ClassPropertyComputedName
+  // / ClassPropertyNonComputedName
+
+ClassPropertyComputedName
+  = decorators:Decorators key:Identifier EOS {
+    return {
+      type: "ClassProperty",
+      key,
+      decorators,
+    }
+  }
+
+MethodDefinition
+  = decorators:Decorators value:FunctionExpression {
+    return {
+      type: "MethodDefinition",
+      value,
+      decorators,
+    }
+  }
+
 SourceElements
   = head:SourceElement tail:(__ SourceElement)* {
       return buildList(head, tail, 1);
@@ -1128,6 +1198,15 @@ SourceElements
 SourceElement
   = Statement
   / FunctionDeclaration
+  / ClassDeclaration
+
+Decorators
+  = decorators:("@" Expression __)* {
+    return decorators.map((d) => ({
+      type: 'Decorator',
+      expression: d[1],
+    }));
+  }
 
 Float      = "float"      !IdentifierPart
 Int      = "int"      !IdentifierPart
@@ -1142,6 +1221,7 @@ Bvec4      = "bvec4"      !IdentifierPart
 Ivec2      = "ivec2"      !IdentifierPart
 Ivec3      = "ivec3"      !IdentifierPart
 Ivec4      = "ivec4"      !IdentifierPart
+Image2D      = "image2D"  !IdentifierPart
 
 DataType
   = Float
@@ -1157,3 +1237,4 @@ DataType
   / Ivec2
   / Ivec3
   / Ivec4
+  / Image2D

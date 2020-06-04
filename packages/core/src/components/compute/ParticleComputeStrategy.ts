@@ -27,13 +27,13 @@ export class ParticleComputeStrategy implements IComputeStrategy {
     // ];
 
     // create GPUBuffers for uniform & storeage buffers
-    component.bindings.forEach((binding) => {
-      if (binding.type === 'uniform-buffer' && binding.data) {
-        binding.buffer = this.engine.createUniformBuffer(binding.data);
-      } else if (binding.type === 'storage-buffer' && binding.data) {
-        binding.buffer = this.engine.createVertexBuffer(binding.data, 128);
-      }
-    });
+    // component.bindings.forEach((binding) => {
+    //   if (binding.type === 'uniform-buffer' && binding.data) {
+    //     binding.buffer = this.engine.createUniformBuffer(binding.data);
+    //   } else if (binding.type === 'storage-buffer' && binding.data) {
+    //     binding.buffer = this.engine.createVertexBuffer(binding.data, 128);
+    //   }
+    // });
 
     // create compute pipeline layout
     const computeBindGroupLayout = this.engine
@@ -50,11 +50,11 @@ export class ParticleComputeStrategy implements IComputeStrategy {
             visibility: 4,
             type: 'storage-buffer',
           },
-          ...component.bindings.map((binding) => ({
-            binding: binding.binding,
-            visibility: 4,
-            type: binding.type,
-          })),
+          // ...component.bindings.map((binding) => ({
+          //   binding: binding.binding,
+          //   visibility: 4,
+          //   type: binding.type,
+          // })),
         ],
       });
     component.pipelineLayout = this.engine.getDevice().createPipelineLayout({

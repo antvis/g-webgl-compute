@@ -17,7 +17,7 @@
     "build": "run-p build:*",
     "build:cjs": "BABEL_ENV=cjs babel src --root-mode upward --out-dir lib --source-maps --extensions .ts,.tsx --delete-dir-on-start",
     "build:esm": "BABEL_ENV=esm babel src --root-mode upward --out-dir es --source-maps --extensions .ts,.tsx --delete-dir-on-start",
-    "watch": "BABEL_ENV=cjs babel src --watch --root-mode upward --out-dir lib --source-maps --extensions .ts,.tsx --delete-dir-on-start"
+    "watch": "BABEL_ENV=esm babel src --watch --root-mode upward --out-dir es --source-maps --extensions .ts,.tsx --delete-dir-on-start"
   },
   "author": "xiaoiver",
   "license": "ISC",
@@ -26,7 +26,6 @@
     "@antv/g-webgpu-compiler": "0.0.1",
     "@webgpu/glslang": "^0.0.15",
     "@webgpu/types": "^0.0.22",
-    "eventemitter3": "^4.0.0",
     "gl-matrix": "^3.1.0",
     "hammerjs": "^2.0.8",
     "inversify": "^5.0.1",

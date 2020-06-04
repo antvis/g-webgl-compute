@@ -1,6 +1,6 @@
 import { GLSLContext } from '@antv/g-webgpu-compiler';
 import { inject, injectable } from 'inversify';
-import { concat } from 'lodash';
+import concat from 'lodash/concat';
 import { IRenderEngine } from '../..';
 import { IDENTIFIER } from '../../identifier';
 import { ComputeComponent } from './ComputeComponent';
@@ -24,13 +24,13 @@ export class LayoutComputeStrategy implements IComputeStrategy {
 
     if (this.engine.supportWebGPU) {
       const buffers = context.uniforms.filter(
-        (uniform) => uniform.type === 'sampler2D',
+        (uniform) => uniform.type === 'sampler2D' || 'image2D',
       );
       const uniforms = context.uniforms.filter(
-        (uniform) => uniform.type !== 'sampler2D',
+        (uniform) => uniform.type !== 'sampler2D' && uniform.type !== 'image2D',
       );
 
-      const bufferBindingIndex = uniforms.length ? 1 : 0;
+      let bufferBindingIndex = uniforms.length ? 1 : 0;
       const bindGroupLayoutEntries = [];
       const bindGroupEntries = [];
       if (bufferBindingIndex) {
@@ -59,38 +59,83 @@ export class LayoutComputeStrategy implements IComputeStrategy {
       }
 
       // create GPUBuffers for storeage buffers
-      buffers.forEach((buffer, i) => {
+      buffers.forEach((buffer) => {
         if (buffer.data) {
-          // @ts-ignore
-          const gpuBuffer = this.engine.createVertexBuffer(
+          if (buffer.type === 'sampler2D') {
             // @ts-ignore
-            isFinite(Number(buffer.data)) ? [buffer.data] : buffer.data,
-            128,
-          );
-          if (!context.output) {
-            context.output = {
+            const gpuBuffer = this.engine.createVertexBuffer(
               // @ts-ignore
-              length: isFinite(Number(buffer.data)) ? 1 : buffer.data.length,
-              typedArrayConstructor: Float32Array,
-              gpuBuffer,
-            };
-          }
-          bindGroupEntries.push({
-            binding: bufferBindingIndex + i,
-            resource: {
-              buffer: gpuBuffer,
-              offset: 0,
-              size:
+              isFinite(Number(buffer.data)) ? [buffer.data] : buffer.data,
+              128,
+            );
+            if (buffer.name === context.output.name) {
+              context.output = {
+                name: buffer.name,
                 // @ts-ignore
-                (isFinite(Number(buffer.data)) ? 1 : buffer.data.length) * 4, // 默认 Float32Array
-            },
-          });
+                length: isFinite(Number(buffer.data)) ? 1 : buffer.data.length,
+                typedArrayConstructor: Float32Array,
+                gpuBuffer,
+              };
+            }
+            bindGroupEntries.push({
+              binding: bufferBindingIndex,
+              resource: {
+                buffer: gpuBuffer,
+                offset: 0,
+                size:
+                  // @ts-ignore
+                  (isFinite(Number(buffer.data)) ? 1 : buffer.data.length) *
+                  (isFinite(Number(buffer.data))
+                    ? 1
+                    : // @ts-ignore
+                      (buffer.data as Float32Array).BYTES_PER_ELEMENT || 4), // 默认 Float32Array
+              },
+            });
+            bindGroupLayoutEntries.push({
+              binding: bufferBindingIndex,
+              visibility: 4,
+              type: 'storage-buffer',
+            });
+
+            bufferBindingIndex++;
+          } else if (buffer.type === 'image2D') {
+            if (!buffer.size) {
+              throw new Error(`The size of ${buffer.name} must be declared.`);
+            }
+            const gpuBuffer = this.engine.createTexture(
+              buffer.size,
+              // @ts-ignore
+              buffer.data,
+              4, // sampled-texture
+            );
+            const sampler = this.engine.createSampler({
+              magFilter: 'linear',
+              minFilter: 'linear',
+            });
+
+            bindGroupEntries.push({
+              binding: bufferBindingIndex,
+              resource: gpuBuffer.createView(),
+            });
+            bindGroupEntries.push({
+              binding: bufferBindingIndex + 1,
+              resource: sampler,
+            });
+
+            bindGroupLayoutEntries.push({
+              binding: bufferBindingIndex,
+              visibility: 4,
+              type: 'sampled-texture',
+            });
+            bindGroupLayoutEntries.push({
+              binding: bufferBindingIndex + 1,
+              visibility: 4,
+              type: 'sampler',
+            });
+
+            bufferBindingIndex += 2;
+          }
         }
-        bindGroupLayoutEntries.push({
-          binding: bufferBindingIndex + i,
-          visibility: 4,
-          type: 'storage-buffer',
-        });
       });
 
       // create compute pipeline layout

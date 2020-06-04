@@ -1,0 +1,13 @@
+{
+  "title": {
+    "zh": "Fruchterman 布局算法",
+    "en": "Fruchterman Layout"
+  },
+  "demos": [
+    {
+      "filename": "index.tsx",
+      "title": "Fruchterman 布局算法",
+      "screenshot": "https://gw.alipayobjects.com/mdn/antv_site/afts/img/A*Gzj7SYk-vdEAAAAAAAAAAABkARQnAQ"
+    }
+  ]
+}

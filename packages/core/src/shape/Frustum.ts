@@ -2,7 +2,7 @@ import { mat4, vec3 } from 'gl-matrix';
 import { AABB } from './AABB';
 import { Plane } from './Plane';
 
-export const enum Mask {
+export enum Mask {
   OUTSIDE = 0xffffffff,
   INSIDE = 0x00000000,
   INDETERMINATE = 0x7fffffff,

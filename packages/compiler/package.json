@@ -17,7 +17,7 @@
     "build": "run-p build:*",
     "build:cjs": "BABEL_ENV=cjs babel src --root-mode upward --out-dir lib --source-maps --extensions .ts,.tsx --delete-dir-on-start",
     "build:esm": "BABEL_ENV=esm babel src --root-mode upward --out-dir es --source-maps --extensions .ts,.tsx --delete-dir-on-start",
-    "watch": "BABEL_ENV=cjs babel src --watch --root-mode upward --out-dir lib --source-maps --extensions .ts,.tsx --delete-dir-on-start",
+    "watch": "BABEL_ENV=esm babel src --watch --root-mode upward --out-dir es --source-maps --extensions .ts,.tsx --delete-dir-on-start",
     "pegjs": "node scripts/generate-parser"
   },
   "author": "xiaoiver",
@@ -27,7 +27,8 @@
   },
   "devDependencies": {
     "pegjs": "^0.10.0",
-    "ts-pegjs": "^0.2.6"
+    "ts-pegjs": "^0.2.6",
+    "@webgpu/types": "^0.0.22"
   },
   "publishConfig": {
     "access": "public"

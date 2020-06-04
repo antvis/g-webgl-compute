@@ -3,7 +3,7 @@ import { Component } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
 import { IComputeStrategy } from './IComputeStrategy';
 
-export type ComputeType = 'particle' | 'layout';
+type ComputeType = 'particle' | 'layout';
 type TypedArrayConstructor =
   | Int8ArrayConstructor
   | Uint8ArrayConstructor
@@ -15,7 +15,7 @@ type TypedArrayConstructor =
   | Float32ArrayConstructor
   | Float64ArrayConstructor;
 
-export class ComputeComponent extends Component<ComputeComponent> {
+class ComputeComponent extends Component<ComputeComponent> {
   public type: ComputeType;
 
   public strategy: IComputeStrategy;
@@ -37,18 +37,16 @@ export class ComputeComponent extends Component<ComputeComponent> {
 
   public pipelineLayout: GPUPipelineLayout;
 
-  public bindings: Array<
-    {
-      name: string;
-      data?: ArrayBufferView;
-      buffer?: GPUBuffer;
-    } & GPUBindGroupLayoutEntry
-  > = [];
+  public bindings: Array<{
+    name: string;
+    data?: ArrayBufferView;
+    buffer?: GPUBuffer;
+  }> = [];
 
   /**
-   * particle num to dispatch
+   * size of thread grid
    */
-  public threadNum: number;
+  public dispatch: [number, number, number];
 
   public particleBuffers: GPUBuffer[] = new Array(2);
   public particleBindGroups = new Array(2);
@@ -79,3 +77,5 @@ export class ComputeComponent extends Component<ComputeComponent> {
     Object.assign(this, data);
   }
 }
+
+export { ComputeType, ComputeComponent };

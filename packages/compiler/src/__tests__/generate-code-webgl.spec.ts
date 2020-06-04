@@ -27,9 +27,13 @@ describe('Generate Code', () => {
   test('should generate uniforms correctly.', () => {
     const result = parser.generateCode(
       parser.parse(`
-      const a: float;
-      const b: vec4[];
-      `)!,
+class Add2Vectors {
+  @in
+  a: float;
+
+  @in
+  b: vec4[];
+}`)!,
     );
 
     expect(result).toContain('uniform float a;');
@@ -39,15 +43,15 @@ describe('Generate Code', () => {
   test('should generate variable declaration correctly.', () => {
     const result = parser.generateCode(
       parser.parse(`
-      function test() {
-        const a: vec3 = [1, 1, 1];
-        const a = [1, 1, 1];
-        var a = true;
-        var a = 10;
-        const a: vec4;
-        const dx = 0.0, dy = 0.0;
-        var a = int(10);
-      }`)!,
+function test() {
+  const a: vec3 = [1, 1, 1];
+  const a = [1, 1, 1];
+  var a = true;
+  var a = 10;
+  const a: vec4;
+  const dx = 0.0, dy = 0.0;
+  var a = int(10);
+}`)!,
     );
     expect(result).toContain('vec3 a = vec3(1.0,1.0,1.0);');
     expect(result).toContain('bool a = true;');
@@ -60,39 +64,57 @@ describe('Generate Code', () => {
   test('should generate function declaration correctly.', () => {
     const result = parser.generateCode(
       parser.parse(`
-        function test(a: float, b: vec3): float {
-          var a = true;
-          a = b * (c + d);
-          if (c == 2 && d != 3) { c = d; }
-          for (let i =0;i< 10;i++) {
-            c = d;
-            break;
-          }
-          a = func(c, d(2)) + 2;
-          return c;
-        }
-      `)!,
+function test(a: float, b: vec3): float {
+  var a = true;
+  a = b * (c + d);
+  if (c == 2 && d != 3) { c = d; }
+  for (let i =0;i< 10;i++) {
+    c = d;
+    break;
+  }
+  a = func(c, d(2)) + 2;
+  return c;
+}`)!,
     );
 
-    expect(result).toContain(
-      'float test(float a,vec3 b) {\nbool a = true;\na = bool((b * bool((c + bool(d)))));\nif ((c == 2) && (d != 3)) {c = d;}\nfor (int i = 0; (i < int(10)); i++) {c = d;\nbreak;}\na = bool((func(c,d(2)) + bool(2)));\nreturn c;}',
-    );
+    expect(result).toContain(`
+float test(float a,vec3 b) {
+bool a = true;
+a = float((b * float((c + float(d)))));
+if ((c == 2) && (d != 3)) {c = d;}
+for (int i = 0; (i < int(10)); i++) {c = d;
+break;}
+a = float((func(c,d(2)) + float(2.0)));
+return c;}`);
   });
 
   test('should generate void main() correctly.', () => {
     const result = parser.generateCode(
       parser.parse(`
-        export function test(a: float, b: vec3): float {
-          var a = true;
-          a = b * (c + d);
-          return c;
-        }
-      `)!,
+class Add2Vectors {
+
+  sum(a: float, b: float): float {
+    return a + b;
+  }
+
+  @main
+  test() {
+    const a = 1;
+    const b = 2;
+    const c = a + b;
+    const d = this.sum(a, b);
+    return c;
+  }
+}`)!,
     );
 
-    expect(result).toContain(
-      'bool a = true;\na = bool((b * bool((c + bool(d)))));\nreturn c;',
-    );
+    expect(result).toContain('void main()');
+    expect(result).toContain(`
+float a = 1.0;
+float b = 2.0;
+float c = (a + float(b));
+float d = sum(a,b);
+return c;`);
   });
 
   test("should infer variable's type from context correctly.", () => {
@@ -301,17 +323,19 @@ describe('Generate Code', () => {
   test('should generate proper get/setThreadData clause.', () => {
     // 通过右值类型推导
     const result = parser.parse(`
-      const vectorA: vec4[];
+class Add2Vectors {
+  @in
+  vectorA: vec4[];
 
-      export function compute(threadId: int) {
-
-        const a = vectorA[threadId];
-        vectorA[threadId] = [1, 2, 3, 4];
-      }
-    `)!;
+  @main
+  test() {
+    const a = this.vectorA[globalInvocationID.x];
+    this.vectorA[globalInvocationID.x] = [1, 2, 3, 4];
+  }
+}`)!;
 
     expect(parser.generateCode(result)).toContain(
-      'vec4 a = getThreadData(vectorA, threadId);',
+      'vec4 a = getDatavectorA(globalInvocationID.x);',
     );
     expect(parser.generateCode(result)).toContain(
       'gl_FragColor = vec4(vec4(1.0,2.0,3.0,4.0));',

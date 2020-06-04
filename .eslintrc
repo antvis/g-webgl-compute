@@ -3,8 +3,7 @@
     "eslint-config-egg"
   ],
   "globals": {
-    "AMap": true,
-    "L7": true,
+    "GWebGPU": true
   },
   "env": {
     "browser": true,

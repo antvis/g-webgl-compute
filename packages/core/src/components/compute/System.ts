@@ -68,14 +68,14 @@ export class ComputeSystem implements ISystem {
     type = 'layout',
     shader,
     precompiled = false,
-    threadNum,
+    dispatch = [1, 1, 1],
     maxIteration = 1,
     onCompleted = null,
   }: {
     type: ComputeType;
     shader: string;
     precompiled?: boolean;
-    threadNum: number;
+    dispatch: [number, number, number];
     maxIteration?: number;
     onCompleted?: ((particleData: ArrayBufferView) => void) | null;
   }) {
@@ -90,7 +90,7 @@ export class ComputeSystem implements ISystem {
       strategy,
       rawShaderCode: shader,
       precompiled,
-      threadNum,
+      dispatch,
       maxIteration,
       onCompleted,
     });
@@ -100,19 +100,13 @@ export class ComputeSystem implements ISystem {
     return entity;
   }
 
-  public setBinding(
-    entity: Entity,
-    name: string,
-    data: ArrayBufferView,
-    descriptor: GPUBindGroupLayoutEntry,
-  ) {
+  public setBinding(entity: Entity, name: string, data: ArrayBufferView) {
     const compute = this.compute.getComponentByEntity(entity);
 
     if (compute) {
       compute.bindings.push({
         name,
         data,
-        ...descriptor,
       });
     }
   }
@@ -132,7 +126,7 @@ export class ComputeSystem implements ISystem {
         component.compiledBundle.shaders[target] = this.parser.generateCode(
           this.parser.parse(component.rawShaderCode)!,
           {
-            threadNum: component.threadNum,
+            dispatch: component.dispatch,
             maxIteration: component.maxIteration,
             // @ts-ignore
             bindings: component.bindings,
@@ -167,7 +161,7 @@ export class ComputeSystem implements ISystem {
       component.compiledBundle.shaders[target] = this.parser.generateCode(
         this.parser.parse(component.rawShaderCode)!,
         {
-          threadNum: component.threadNum,
+          dispatch: component.dispatch,
           maxIteration: component.maxIteration,
           // @ts-ignore
           bindings: component.bindings,

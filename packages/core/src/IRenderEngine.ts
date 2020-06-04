@@ -160,6 +160,14 @@ export interface IRenderEngine {
 
   createIndexBuffer(data: number[] | ArrayBuffer | ArrayBufferView): GPUBuffer;
 
+  createTexture(
+    [width, height]: [number, number],
+    imageData: Uint8ClampedArray,
+    usage: GPUTextureUsageFlags,
+  ): GPUTexture;
+
+  createSampler(descriptor: GPUSamplerDescriptor): GPUSampler;
+
   setRenderBindGroups(bindGroups: GPUBindGroup[]): void;
 
   setComputeBindGroups(bindGroups: GPUBindGroup[]): void;

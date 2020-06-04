@@ -1,7 +1,9 @@
-import { isBoolean, isFinite, isNull } from 'lodash';
+// tslint:disable-next-line:no-reference
+/// <reference path="../../../node_modules/@webgpu/types/dist/index.d.ts" />
+import isBoolean from 'lodash/isBoolean';
+import isFinite from 'lodash/isFinite';
 import { AST_NODE_TYPES } from './ast-node-types';
 import {
-  builtinFunctions,
   componentWiseFunctions,
   exportFunctions,
   swizzling,
@@ -9,20 +11,34 @@ import {
   typePriority,
 } from './builtin-functions';
 import { parse } from './g';
+import { IShaderGenerator } from './targets/IShaderGenerator';
+import { WebGLShaderGenerator } from './targets/webgl';
+import { WebGPUShaderGenerator } from './targets/webgpu';
 import {
   BlockStatement,
+  ClassDeclaration,
+  ClassProperty,
+  Decorator,
   ExportDefaultDeclaration,
   Expression,
   ForStatement,
   FunctionDeclaration,
+  FunctionExpression,
   Identifier,
   IfStatement,
   ImportDeclaration,
   Literal,
+  MethodDefinition,
   Node,
   ReturnStatement,
   VariableDeclaration,
 } from './ts-estree';
+
+enum PropertyDecorator {
+  In = 'in',
+  Out = 'out',
+  Shared = 'shared',
+}
 
 export interface Program {
   type: 'Program';
@@ -30,7 +46,7 @@ export interface Program {
 }
 
 export interface ProgramParams {
-  threadNum: number;
+  dispatch: [number, number, number];
   maxIteration: number;
   bindings: Array<{
     name: string;
@@ -50,17 +66,52 @@ type TypedArrayConstructor =
   | Float64ArrayConstructor;
 
 export interface GLSLContext {
-  threadNum: number;
+  /**
+   * 程序名
+   */
+  name: string;
+  /**
+   * size of thread grid
+   * 即 WebGL 2 Compute 中的 dispatchCompute
+   * 或者 WebGPU 中的 dispatch
+   */
+  dispatch: [number, number, number];
+  /**
+   * size of each thread group
+   * Compute Shader 中的 local_size_x/y/z
+   */
+  threadGroupSize: [number, number, number];
+  /**
+   * 迭代次数，例如布局运算中需要迭代很多次才能到达稳定
+   */
   maxIteration: number;
-  output?: {
-    length: number;
-    typedArrayConstructor: TypedArrayConstructor;
+  /**
+   * 目前仅支持单一输出，受限于 WebGL 实现
+   */
+  output: {
+    name: string;
+    size?: [number, number];
+    length?: number;
+    typedArrayConstructor?: TypedArrayConstructor;
     gpuBuffer?: GPUBuffer;
+    outputElementsPerTexel?: number;
   };
+  /**
+   * 常量，可分成编译时和运行时两类：
+   * 1. 编译时即可确定值
+   * 2. 运行时：例如循环长度需要为常量，但在编译时又无法确定
+   * TODO 支持定义函数，例如 tensorflow 中的 DIV_CEIL
+   */
   defines: Array<{
     name: string;
     value: number;
-    runtime: boolean;
+    runtime: boolean; // 是否是运行时生成
+  }>;
+  globalDeclarations: Array<{
+    name: string;
+    type: string;
+    value: string;
+    shared: boolean;
   }>;
   uniforms: Array<{
     name: string;
@@ -75,6 +126,10 @@ export interface GLSLContext {
       | Int8Array
       | Int16Array
       | Int32Array;
+    size?: [number, number];
+    format: string;
+    readonly: boolean;
+    writeonly: boolean;
   }>;
 }
 
@@ -90,6 +145,11 @@ interface Variable {
   type?: ContextVariableType;
 }
 
+interface IDecorator {
+  name: string;
+  params: number[];
+}
+
 interface Context {
   parent: Context | null;
   variables: Variable[];
@@ -101,10 +161,6 @@ export enum Target {
   WebGL = 'WebGL',
 }
 
-const GWEBGPU_THREAD_ID = 'gWebGPUThreadId';
-const GWEBGPU_UNIFORM_PARAMS = 'gWebGPUUniformParams';
-const GWEBGPU_BUFFER = 'gWebGPUBuffer';
-
 export class Parser {
   /**
    * 根据目标平台生成 Shader 代码
@@ -114,10 +170,21 @@ export class Parser {
   private target: Target = Target.WebGL;
 
   private glslContext: GLSLContext = {
-    threadNum: 0,
+    name: '',
+    dispatch: [1, 1, 1],
+    threadGroupSize: [1, 1, 1],
     maxIteration: 1,
     defines: [],
     uniforms: [],
+    globalDeclarations: [],
+    output: {
+      name: '',
+    },
+  };
+
+  private generators: Record<Target, IShaderGenerator> = {
+    [Target.WebGPU]: new WebGPUShaderGenerator(),
+    [Target.WebGL]: new WebGLShaderGenerator(),
   };
 
   public setTarget(target: Target) {
@@ -136,8 +203,9 @@ export class Parser {
       return parse(source);
     } catch (e) {
       // tslint:disable-next-line:no-console
-      // console.error(e);
-      return;
+      console.error('[Parse error]:', e);
+
+      throw e;
     }
   }
 
@@ -145,8 +213,10 @@ export class Parser {
     program: Program,
     params: Partial<ProgramParams> = {},
   ): string {
+    this.glslContext.maxIteration = params.maxIteration || 1;
+    this.glslContext.dispatch = params.dispatch || [1, 1, 1];
+
     let main = '';
-    let customFunctionDeclarations = '';
     let builtinFunctionDeclarations = '';
     const rootContext: Context = {
       parent: null,
@@ -155,14 +225,51 @@ export class Parser {
     };
 
     program.body.forEach((node) => {
-      if (node.type === AST_NODE_TYPES.ExportDefaultDeclaration) {
+      if (node.type === AST_NODE_TYPES.ClassDeclaration) {
         const childContext: Context = {
           parent: rootContext,
-          variables: [],
+          variables: [
+            {
+              name: 'globalInvocationID',
+              alias: [],
+              typeAnnotation: 'ivec3',
+            },
+            {
+              name: 'workGroupSize',
+              alias: [],
+              typeAnnotation: 'ivec3',
+            },
+            {
+              name: 'workGroupID',
+              alias: [],
+              typeAnnotation: 'ivec3',
+            },
+            {
+              name: 'localInvocationID',
+              alias: [],
+              typeAnnotation: 'ivec3',
+            },
+            {
+              name: 'localInvocationIndex',
+              alias: [],
+              typeAnnotation: 'int',
+            },
+            {
+              name: 'numWorkGroups',
+              alias: [],
+              typeAnnotation: 'ivec3',
+            },
+            {
+              name: 'imageLoad',
+              alias: [],
+              type: ContextVariableType.Function,
+              typeAnnotation: 'vec4',
+            },
+          ],
           children: [],
         };
         rootContext.children.push(childContext);
-        main = this.compileExportDeclaration(node, childContext);
+        main += this.compileClassDeclaration(node, childContext);
       } else if (node.type === AST_NODE_TYPES.ImportDeclaration) {
         builtinFunctionDeclarations = this.compileImportDeclaration(
           node,
@@ -171,40 +278,10 @@ export class Parser {
       } else if (node.type === AST_NODE_TYPES.VariableDeclaration) {
         this.compileVariableDeclaration(node, rootContext);
       } else if (node.type === AST_NODE_TYPES.FunctionDeclaration) {
-        const childContext = {
-          parent: rootContext,
-          variables: [],
-          children: [],
-        };
-        rootContext.children.push(childContext);
-        customFunctionDeclarations +=
-          this.compileFunctionDeclaration(node, childContext) + '\n';
+        main += this.compileFunctionExpression(node, rootContext);
       }
     });
 
-    // 推断线程数
-    let threadNum = params.threadNum || 0;
-    if (!threadNum && params.bindings && params.bindings.length) {
-      const firstInputDataTexture = this.glslContext.uniforms.find(
-        (u) => u.type === 'sampler2D',
-      );
-      if (firstInputDataTexture) {
-        const inputBinding = params.bindings.find(
-          (binding) => binding.name === firstInputDataTexture.name,
-        );
-        if (inputBinding && inputBinding.data) {
-          // @ts-ignore
-          threadNum = Math.ceil(inputBinding.data.length / 4);
-        }
-      }
-    }
-    this.glslContext.maxIteration = params.maxIteration || 1;
-    this.glslContext.threadNum = threadNum;
-    this.glslContext.defines.push({
-      name: 'THREAD_NUM',
-      value: threadNum,
-      runtime: true,
-    });
     // 生成运行时 define
     params.bindings?.forEach(({ name, data }) => {
       if (name === name.toUpperCase() && isFinite(Number(data))) {
@@ -216,80 +293,50 @@ export class Parser {
       }
     });
 
-    // 生成 uniform 声明
-    const uniformDeclarations = this.glslContext.uniforms
-      .map((uniform) => {
-        uniform.data = params.bindings?.find(
-          (b) => b.name === uniform.name,
-        )?.data;
-        if (this.target === Target.WebGL) {
-          return `uniform ${uniform.type} ${uniform.name};`;
-        } else if (
-          this.target === Target.WebGPU &&
-          uniform.type !== 'sampler2D' // WebGPU Compute Shader 使用 buffer 而非 uniform
-        ) {
-          return `${uniform.type} ${uniform.name};`;
-        }
-        return '';
-      })
-      .join('\n')
-      .trim();
-    const bufferBindingIndex = uniformDeclarations ? 1 : 0;
+    // 拷贝数据
+    this.glslContext.uniforms.forEach((uniform) => {
+      uniform.data = params.bindings?.find(
+        (b) => b.name === uniform.name,
+      )?.data;
 
-    const defines = this.glslContext.defines
-      .filter((define) => !define.runtime)
-      .map((define) => `#define ${define.name} ${define.value}`)
-      .join('\n');
-    if (this.target === Target.WebGL) {
-      return `
-      #ifdef GL_FRAGMENT_PRECISION_HIGH
-        precision highp float;
-      #else
-        precision mediump float;
-      #endif
-      ${defines}
-      ${uniformDeclarations}
-      uniform float u_TexSize;
-      varying vec2 v_TexCoord;
-      ${builtinFunctions[Target.WebGL]}
-      ${builtinFunctionDeclarations}
-      ${customFunctionDeclarations}
-      ${main}
-      `;
-    } else if (this.target === Target.WebGPU) {
-      return `
-      ${defines}
-      ${uniformDeclarations &&
-        `
-        layout(std140, set = 0, binding = 0) uniform GWebGPUParams {
-          ${uniformDeclarations}
-        } ${GWEBGPU_UNIFORM_PARAMS};
-      `}
-      ${this.glslContext.uniforms
-        .filter((u) => u.type === 'sampler2D')
-        .map(
-          (u, i) => `
-        layout(std140, set = 0, binding = ${i +
-          bufferBindingIndex}) buffer GWebGPUBuffer${i} {
-          vec4 ${u.name}[];
-        } ${GWEBGPU_BUFFER}${i};`,
-        )
-        .join('\n')}
-      ${builtinFunctions[Target.WebGPU]}
-      ${builtinFunctionDeclarations}
-      ${customFunctionDeclarations}
-      ${main}
-      `;
-    }
-    return '';
+      if (!uniform.data) {
+        if (uniform.type === 'sampler2D') {
+          let sizePerElement = 1;
+          if (uniform.format.endsWith('ec4[]')) {
+            sizePerElement = 4;
+          } else if (uniform.format.endsWith('ec3[]')) {
+            sizePerElement = 3;
+          } else if (uniform.format.endsWith('ec2[]')) {
+            sizePerElement = 2;
+          }
+          uniform.data = new Float32Array(
+            this.glslContext.output.length! * sizePerElement,
+          ).fill(0);
+        } else if (uniform.type === 'image2D') {
+          // @ts-ignore
+          buffer.data = new Uint8ClampedArray(context.output.length!).fill(0);
+        }
+      }
+    });
+
+    return this.generators[this.target].generateShaderCode(
+      this.glslContext,
+      main,
+    );
   }
 
   public clear() {
     this.glslContext = {
-      threadNum: 0,
+      name: '',
+      dispatch: [1, 1, 1],
+      threadGroupSize: [1, 1, 1],
       maxIteration: 1,
       defines: [],
       uniforms: [],
+      globalDeclarations: [],
+      output: {
+        name: '',
+      },
     };
   }
 
@@ -322,51 +369,117 @@ export class Parser {
   /**
    * 转译成 void main()
    */
-  public compileExportDeclaration(
-    node: ExportDefaultDeclaration,
+  public compileClassDeclaration(
+    node: ClassDeclaration,
     context: Context,
   ): string {
-    if (node.declaration.type === AST_NODE_TYPES.FunctionDeclaration) {
-      // 修改返回值类型
-      // @ts-ignore
-      node.declaration.returnType = 'void';
+    this.glslContext.name = node?.id?.name || '';
 
-      // 修改方法名
-      if (!node.declaration.id) {
-        // @ts-ignore
-        node.declaration.id = {
-          type: AST_NODE_TYPES.Identifier,
-        };
+    node.decorators?.forEach((decorator) => {
+      if (
+        decorator.expression.type === AST_NODE_TYPES.CallExpression &&
+        decorator.expression.callee.type === AST_NODE_TYPES.Identifier &&
+        decorator.expression.callee.name === 'numthreads'
+      ) {
+        // numthreads(8, 1, 1)
+        this.glslContext.threadGroupSize = decorator.expression.arguments
+          .slice(0, 3)
+          .map(
+            (a) => (a.type === AST_NODE_TYPES.Literal && Number(a.value)) || 1,
+          ) as [number, number, number];
       }
-      node.declaration!.id!.name = 'main';
+    });
 
-      // 添加 threadId 参数的获取方法
-      let append;
-      const threadId = node.declaration.params[0];
-      const threadIdName =
-        (threadId &&
-          threadId.type === AST_NODE_TYPES.Identifier &&
-          threadId.name) ||
-        GWEBGPU_THREAD_ID;
-      if (this.target === Target.WebGL) {
-        append = `
-          int ${threadIdName} = int(floor(v_TexCoord.s * u_TexSize + 0.5));
-        `;
-      } else if (this.target === Target.WebGPU) {
-        append = `
-          int ${threadIdName} = int(gl_GlobalInvocationID.x);
-        `;
-      }
+    if (node.body.type === AST_NODE_TYPES.ClassBody) {
+      /**
+       * uniforms
+       * eg. prop1: vec3[]
+       */
+      const classProperties = node.body.body.filter(
+        (e) => e.type === AST_NODE_TYPES.ClassProperty,
+      ) as ClassProperty[];
 
-      // main 函数不能包含参数
-      node.declaration.params = [];
-      return this.compileFunctionDeclaration(node.declaration, context, append);
+      classProperties.forEach((property) => {
+        if (property.key.type === AST_NODE_TYPES.Identifier) {
+          const format =
+            ((property.key.typeAnnotation as unknown) as string) || 'float';
+          let type = format;
+          if ((type as string).endsWith('[]')) {
+            type = 'sampler2D';
+          }
+
+          context.variables.push({
+            name: property.key.name,
+            alias: [],
+            typeAnnotation: type as string,
+          });
+
+          if (property.decorators) {
+            this.analyzeDecorators(
+              (property.key as Identifier).name,
+              type,
+              format,
+              property.decorators,
+            );
+          }
+        }
+      });
+
+      const methodDefinitions = node.body.body.filter(
+        (e) => e.type === AST_NODE_TYPES.MethodDefinition,
+      ) as MethodDefinition[];
+
+      return methodDefinitions
+        .map((method) => {
+          let append = '';
+          if (method.value.type === AST_NODE_TYPES.FunctionExpression) {
+            // void main()
+            if (method.decorators && method.decorators.length === 1) {
+              // @ts-ignore
+              method.value.returnType = 'void';
+              method.value.params = [];
+              (method.value.id as Identifier).name = 'main';
+
+              // 不能在全局作用域定义
+              // @see https://community.khronos.org/t/gles-compile-errors-under-marshmallow/74876
+              if (this.target === Target.WebGL) {
+                const [
+                  localSizeX,
+                  localSizeY,
+                  localSizeZ,
+                ] = this.glslContext.threadGroupSize;
+                const [groupX, groupY, groupZ] = this.glslContext.dispatch;
+                append = `
+ivec3 workGroupSize = ivec3(${localSizeX}, ${localSizeY}, ${localSizeZ});
+ivec3 numWorkGroups = ivec3(${groupX}, ${groupY}, ${groupZ});     
+int globalInvocationIndex = int(floor(v_TexCoord.x * u_OutputTextureSize.x))
+  + int(floor(v_TexCoord.y * u_OutputTextureSize.y)) * int(u_OutputTextureSize.x);
+int workGroupIDLength = globalInvocationIndex / (workGroupSize.x * workGroupSize.y * workGroupSize.z);
+ivec3 workGroupID = ivec3(workGroupIDLength / numWorkGroups.y / numWorkGroups.z, workGroupIDLength / numWorkGroups.x / numWorkGroups.z, workGroupIDLength / numWorkGroups.x / numWorkGroups.y);
+int localInvocationIDZ = globalInvocationIndex / (workGroupSize.x * workGroupSize.y);
+int localInvocationIDY = (globalInvocationIndex - localInvocationIDZ * workGroupSize.x * workGroupSize.y) / workGroupSize.x;
+int localInvocationIDX = globalInvocationIndex - localInvocationIDZ * workGroupSize.x * workGroupSize.y - localInvocationIDY * workGroupSize.x;
+ivec3 localInvocationID = ivec3(localInvocationIDX, localInvocationIDY, localInvocationIDZ);
+ivec3 globalInvocationID = workGroupID * workGroupSize + localInvocationID;
+int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize.y
+                + localInvocationID.y * workGroupSize.x + localInvocationID.x;
+`;
+              }
+            }
+            return this.compileFunctionExpression(
+              method.value,
+              context,
+              append,
+            );
+          }
+        })
+        .join('\n');
     }
     return '';
   }
 
-  public compileFunctionDeclaration(
-    node: FunctionDeclaration,
+  public compileFunctionExpression(
+    node: FunctionExpression | FunctionDeclaration,
     context: Context,
     append?: string,
   ): string {
@@ -383,16 +496,34 @@ export class Parser {
       type: ContextVariableType.Function,
       typeAnnotation: `${node.returnType}`,
     });
-    return `${node.returnType} ${node.id?.name}(${(node.params || [])
-      .map(
-        (p) =>
-          p.type === AST_NODE_TYPES.Identifier &&
-          `${p.typeAnnotation} ${p.name}`,
+
+    node.params.forEach((param) => {
+      // 函数参数加入当前上下文中，便于 body 中语句进行类型推导
+      context.variables.push({
+        name: (param.type === AST_NODE_TYPES.Identifier && param.name) || '',
+        alias: [],
+        typeAnnotation:
+          (param.type === AST_NODE_TYPES.Identifier &&
+            ((param.typeAnnotation as unknown) as string)) ||
+          '',
+      });
+    });
+
+    if (node.body) {
+      return `${node.returnType || 'void'} ${node.id?.name}(${(
+        node.params || []
       )
-      .join(',')}) {${append || ''}\n${this.compileBlockStatement(
-      node.body,
-      context,
-    )}}`;
+        .map(
+          (p) =>
+            p.type === AST_NODE_TYPES.Identifier &&
+            `${p.typeAnnotation} ${p.name}`,
+        )
+        .join(',')}) {${append || ''}\n${this.compileBlockStatement(
+        node.body,
+        context,
+      )}}`;
+    }
+    return '';
   }
 
   public compileBlockStatement(node: BlockStatement, context: Context): string {
@@ -429,8 +560,15 @@ export class Parser {
       node.type === AST_NODE_TYPES.LogicalExpression ||
       node.type === AST_NODE_TYPES.BinaryExpression
     ) {
-      const type =
-        inferredType || this.inferTypeByExpression(node.left, context);
+      let type = inferredType || this.inferTypeByExpression(node.left, context);
+
+      // WebGL 中 gl_FragColor 的右值都必须是 vec4 类型
+      if (
+        this.target === Target.WebGL &&
+        this.isReferringDataTexture(node.left)
+      ) {
+        type = 'vec4';
+      }
       let right = this.compileExpression(node.right, context, type, false);
       if (type) {
         // 这里需要考虑 if (a > 1) 这种情况，如果 a 的类型是 float，需要转译成 if (a > float(1))
@@ -456,9 +594,35 @@ export class Parser {
         .map((e) => this.compileExpression(e, context, inferredType, isLeft))
         .join('');
     } else if (node.type === AST_NODE_TYPES.CallExpression) {
+      if (
+        this.target === Target.WebGPU &&
+        node.callee.type === AST_NODE_TYPES.Identifier &&
+        node.callee.name === 'imageLoad'
+      ) {
+        const textureName =
+          (node.arguments[0].type === AST_NODE_TYPES.MemberExpression &&
+            node.arguments[0].property.type === AST_NODE_TYPES.Identifier &&
+            node.arguments[0].property.name) ||
+          '';
+        return (
+          (textureName &&
+            `texture(sampler2D(${textureName}, ${textureName}Sampler), ${this.compileExpression(
+              node.arguments[1],
+              context,
+              'vec2',
+              false,
+            )})`) ||
+          ''
+        );
+      }
       // function(a, b)
       // TODO: 替换 Math.sin() -> sin()
-      return `${(node.callee as Identifier).name}(${node.arguments
+      return `${this.compileExpression(
+        node.callee,
+        context,
+        '',
+        isLeft,
+      )}(${node.arguments
         .map((e) => {
           if (e.type === AST_NODE_TYPES.CallExpression) {
             // int(floor(v.x + 0.5))
@@ -469,50 +633,106 @@ export class Parser {
         })
         .join(',')})`;
     } else if (node.type === AST_NODE_TYPES.MemberExpression) {
-      // vectorA[threadId]
-      if (node.object.type === AST_NODE_TYPES.Identifier) {
-        const alias = this.findAliasVariableName(node.object.name, context);
-        if (alias && this.isDataTexture(alias)) {
-          if (this.target === Target.WebGL) {
-            // 如果是赋值语句
-            if (isLeft) {
-              return 'gl_FragColor';
+      if (node.object.type === AST_NODE_TYPES.MemberExpression) {
+        // WebGL 需要修改 AST 结构
+        // * 如果是右值 this.vectorA[globalInvocationID.x] -> getDatavectorA(this.vectorA, globalInvocationID.x)
+        // * 如果是左值 this.vectorA[globalInvocationID.x] -> gl_FragColor
+        if (this.target === Target.WebGL && this.isReferringDataTexture(node)) {
+          if (isLeft) {
+            return 'gl_FragColor';
+          } else {
+            return this.compileExpression(
+              {
+                type: AST_NODE_TYPES.CallExpression,
+                callee: {
+                  type: AST_NODE_TYPES.Identifier,
+                  name: `getData${(node.object.property.type ===
+                    AST_NODE_TYPES.Identifier &&
+                    node.object.property.name) ||
+                    ''}`,
+                  // @ts-ignore
+                  typeAnnotation: '',
+                },
+                arguments: [node.property],
+              },
+              context,
+              '',
+              isLeft,
+            );
+          }
+        }
+
+        return `${this.compileExpression(
+          node.object,
+          context,
+          inferredType,
+          isLeft,
+        )}${node.computed ? '[' : '.'}${this.compileExpression(
+          node.property,
+          context,
+          'uint',
+          isLeft,
+        )}${node.computed ? ']' : ''}`;
+      } else if (node.object.type === AST_NODE_TYPES.Identifier) {
+        // vectorA[threadId]
+        let objectName = node.object.name;
+        if (
+          objectName === 'this' &&
+          node.property.type === AST_NODE_TYPES.Identifier
+        ) {
+          objectName = node.property.name;
+          const alias = this.findAliasVariableName(objectName, context);
+
+          if (alias) {
+            if (this.isDataTexture(alias)) {
+              if (this.target === Target.WebGPU) {
+                // 引用 buffer 同理
+                const bufferIndex = this.glslContext.uniforms
+                  .filter((u) => u.type === 'sampler2D')
+                  .findIndex((u) => u.name === alias);
+                if (bufferIndex > -1) {
+                  return `${WebGPUShaderGenerator.GWEBGPU_BUFFER}${bufferIndex}.${alias}`;
+                }
+              }
             } else {
-              // 需要获取通过下标获取 buffer 数据
-              return `getThreadData(${alias}, ${this.compileExpression(
-                node.property,
-                context,
-                '',
-                isLeft,
-              )})`;
-            }
-          } else if (this.target === Target.WebGPU) {
-            // 引用 buffer 同理
-            const bufferIndex = this.glslContext.uniforms
-              .filter((u) => u.type === 'sampler2D')
-              .findIndex((u) => u.name === alias);
-            if (bufferIndex > -1) {
-              return `${GWEBGPU_BUFFER}${bufferIndex}.${alias}[${this.compileExpression(
-                node.property,
-                context,
-                inferredType,
-                isLeft,
-              )}]`;
+              if (this.target === Target.WebGPU) {
+                // WebGPU 中我们将所有 uniform 整合成了一个，因此需要修改用户的引用方式
+                const uniform = this.glslContext.uniforms
+                  .filter((u) => u.type !== 'sampler2D' && u.type !== 'image2D')
+                  .find((u) => u.name === alias);
+                if (uniform) {
+                  return `${WebGPUShaderGenerator.GWEBGPU_UNIFORM_PARAMS}.${alias}`;
+                }
+              }
             }
           }
         }
       }
       if (node.property.type === AST_NODE_TYPES.Identifier) {
-        // swizzling & struct uniform eg. params.u_k / vec.rgba
-        return `${(node.object as Identifier).name}.${
-          (node.property as Identifier).name
-        }`;
+        if (!node.computed) {
+          // swizzling & struct uniform eg. params.u_k / vec.rgba
+          return `${(node.object as Identifier).name}.${
+            (node.property as Identifier).name
+          }`;
+        } else {
+          return `${(node.object as Identifier).name}[${
+            (node.property as Identifier).name
+          }]`;
+        }
       } else if (
         node.property.type === AST_NODE_TYPES.Literal &&
         isFinite(Number(node.property.value))
       ) {
         // vec[0]
         return `${(node.object as Identifier).name}[${node.property.value}]`;
+      } else {
+        // data[a + b]
+        return `${(node.object as Identifier).name}[${this.compileExpression(
+          node.property,
+          context,
+          'uint',
+          isLeft,
+        )}]`;
       }
     } else if (node.type === AST_NODE_TYPES.ConditionalExpression) {
       // 条件判断也应该丢弃掉之前推断的类型
@@ -532,6 +752,13 @@ export class Parser {
         inferredType,
         false,
       )})`;
+    } else if (node.type === AST_NODE_TYPES.UnaryExpression) {
+      return `${node.operator}(${this.compileExpression(
+        node.argument,
+        context,
+        inferredType,
+        isLeft,
+      )})`;
     } else if (node.type === AST_NODE_TYPES.ArrayExpression) {
       const type = inferredType || this.inferTypeByExpression(node, context);
       if (type) {
@@ -544,23 +771,6 @@ export class Parser {
           .join(',')})`;
       }
     } else if (node.type === AST_NODE_TYPES.Identifier) {
-      if (this.target === Target.WebGPU) {
-        // WebGPU 中我们将所有 uniform 整合成了一个，因此需要修改用户的引用方式
-        const uniform = this.glslContext.uniforms
-          .filter((u) => u.type !== 'sampler2D')
-          .find((u) => u.name === node.name);
-        if (uniform) {
-          return `${GWEBGPU_UNIFORM_PARAMS}.${node.name}`;
-        }
-
-        // 引用 buffer 同理
-        const bufferIndex = this.glslContext.uniforms
-          .filter((u) => u.type === 'sampler2D')
-          .findIndex((u) => u.name === node.name);
-        if (bufferIndex > -1) {
-          return `${GWEBGPU_BUFFER}${bufferIndex}.${node.name}`;
-        }
-      }
       return node.name;
     } else if (node.type === AST_NODE_TYPES.Literal) {
       if (inferredType === 'float') {
@@ -604,38 +814,6 @@ export class Parser {
           }
 
           return '';
-        } else if (
-          context.parent === null &&
-          declarator.init === null &&
-          node.kind === 'const' &&
-          identifier.name !== identifier.name.toUpperCase()
-        ) {
-          /**
-           * 非全大写转译成 uniform
-           * const a: float;
-           * const a: vec3;
-           * const a: vec4[];
-           * ->
-           * uniform float a;
-           * uniform vec3 a;
-           * uniform sampler2D a;
-           */
-          // 保存声明的变量类型到上下文中
-          let type = identifier.typeAnnotation || 'float';
-          if ((type as string).endsWith('[]')) {
-            type = 'sampler2D';
-          }
-          context.variables.push({
-            name: identifier.name,
-            alias: [],
-            typeAnnotation: type as string,
-          });
-          this.glslContext.uniforms.push({
-            name: identifier.name,
-            type: type as string,
-          });
-          // 最后统一输出
-          return '';
         } else {
           /**
            * 变量声明
@@ -647,6 +825,7 @@ export class Parser {
            * var a = 10;
            * var a = int(222);
            * var a;
+           * var a = this.v[index];
            * ->
            * vec3 a = vec3(1.0, 1.0, 1.0);
            * vec2 a = vec2(1.0, 1.0);
@@ -654,6 +833,7 @@ export class Parser {
            * float a = 10.0;
            * int a = int(222);
            * float a;
+           * vec3 a = v[index];
            */
           const type =
             identifier.typeAnnotation ||
@@ -814,8 +994,13 @@ export class Parser {
         const variable = parent.variables.find(
           (v) =>
             v.type === ContextVariableType.Function &&
-            expression.callee.type === AST_NODE_TYPES.Identifier &&
-            v.name === expression.callee.name,
+            ((expression.callee.type === AST_NODE_TYPES.Identifier &&
+              v.name === expression.callee.name) ||
+              (expression.callee.type === AST_NODE_TYPES.MemberExpression &&
+                expression.callee.object.type === AST_NODE_TYPES.Identifier &&
+                expression.callee.object.name === 'this' &&
+                expression.callee.property.type === AST_NODE_TYPES.Identifier &&
+                expression.callee.property.name === v.name)),
         );
         if (variable) {
           type = variable.typeAnnotation;
@@ -857,13 +1042,30 @@ export class Parser {
         expression.operator,
       );
     } else if (expression?.type === AST_NODE_TYPES.MemberExpression) {
-      if (expression.object.type === AST_NODE_TYPES.Identifier) {
-        const alias = this.findAliasVariableName(
-          expression.object.name,
-          context,
-        );
-        if (alias && this.isDataTexture(alias)) {
-          return 'vec4';
+      // this.vectorA[index]
+      if (expression.object.type === AST_NODE_TYPES.MemberExpression) {
+        return this.inferTypeByExpression(expression.object, context);
+      } else if (expression.object.type === AST_NODE_TYPES.Identifier) {
+        let objectName = expression.object.name;
+        let shouldSkipThis = false;
+        if (
+          objectName === 'this' &&
+          expression.property.type === AST_NODE_TYPES.Identifier
+        ) {
+          objectName = expression.property.name;
+          shouldSkipThis = true;
+        }
+        const alias = this.findAliasVariableName(objectName, context);
+
+        if (alias) {
+          if (this.isDataTexture(alias)) {
+            const uniform = this.glslContext.uniforms.find(
+              (u) => alias === u.name,
+            );
+            return (uniform && uniform.format.replace('[]', '')) || 'vec4';
+          } else if (shouldSkipThis) {
+            return this.inferTypeByExpression(expression.property, context);
+          }
         }
       }
       // 首先获取 vec 的类型
@@ -972,5 +1174,91 @@ export class Parser {
     return !!this.glslContext.uniforms.find(
       (u) => u.type === 'sampler2D' && name === u.name,
     );
+  }
+
+  private isReferringDataTexture(node: Expression) {
+    return (
+      node.type === AST_NODE_TYPES.MemberExpression &&
+      node.object.type === AST_NODE_TYPES.MemberExpression &&
+      node.object.object.type === AST_NODE_TYPES.Identifier &&
+      node.object.object.name === 'this' &&
+      node.object.computed === false
+    );
+  }
+
+  private analyzeDecorators(
+    propertyName: string,
+    propertyType: string,
+    propertyFormat: string,
+    decorators: Decorator[],
+  ) {
+    const analyzeDecorators = decorators.map((d) => this.extractDecorator(d));
+
+    analyzeDecorators.forEach(({ name, params }) => {
+      if (name === PropertyDecorator.Shared) {
+        this.glslContext.globalDeclarations.push({
+          name: propertyName,
+          type: propertyFormat,
+          shared: true,
+          value: `${params[0]}`,
+        });
+      } else if (
+        name === PropertyDecorator.Out ||
+        name === PropertyDecorator.In
+      ) {
+        let existed = this.glslContext.uniforms.find(
+          (u) => u.name === propertyName,
+        );
+        if (!existed) {
+          existed = {
+            name: propertyName,
+            type: propertyType,
+            format: propertyFormat,
+            readonly: !!!analyzeDecorators.find(
+              (d) => d.name === PropertyDecorator.Out,
+            ),
+            writeonly: !!!analyzeDecorators.find(
+              (d) => d.name === PropertyDecorator.In,
+            ),
+            size: [Number(params[0]) || 1, Number(params[1]) || 1] as [
+              number,
+              number,
+            ],
+          };
+          this.glslContext.uniforms.push(existed);
+        }
+
+        if (name === PropertyDecorator.Out) {
+          this.glslContext.output.name = propertyName;
+          this.glslContext.output.size = existed.size;
+          this.glslContext.output.length = existed.size![0] * existed.size![1];
+
+          if (propertyType === 'image2D') {
+            this.glslContext.output.typedArrayConstructor = Uint8ClampedArray;
+            this.glslContext.output.length! *= 4;
+          }
+        }
+      }
+    });
+  }
+
+  private extractDecorator(decorator: Decorator): IDecorator {
+    let name = '';
+    let params: number[] = [];
+    if (decorator.expression.type === AST_NODE_TYPES.Identifier) {
+      name = decorator.expression.name;
+    } else if (
+      decorator.expression.type === AST_NODE_TYPES.CallExpression &&
+      decorator.expression.callee.type === AST_NODE_TYPES.Identifier
+    ) {
+      name = decorator.expression.callee.name;
+      params = decorator.expression.arguments.map(
+        (a) => (a.type === AST_NODE_TYPES.Literal && Number(a.value)) || 0,
+      );
+    }
+    return {
+      name,
+      params,
+    };
   }
 }

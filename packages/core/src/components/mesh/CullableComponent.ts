@@ -4,7 +4,7 @@ import { NonFunctionProperties } from '../../ComponentManager';
 /**
  * @see https://doc.babylonjs.com/how_to/optimizing_your_scene#changing-mesh-culling-strategy
  */
-export const enum Strategy {
+export enum Strategy {
   Standard,
 }
 

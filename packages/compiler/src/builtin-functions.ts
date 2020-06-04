@@ -74,18 +74,13 @@ export type BuiltinFunctionNames = string;
 
 export const builtinFunctions = {
   [Target.WebGL]: `
-    vec4 getThreadData(sampler2D tex) {
-      return texture2D(tex, vec2(v_TexCoord.s, 1));
-    }
-    vec4 getThreadData(sampler2D tex, float i) {
-      return texture2D(tex, vec2((i + 0.5) / u_TexSize, 1));
-    }
-    vec4 getThreadData(sampler2D tex, int i) {
-      if (i == int(floor(v_TexCoord.s * u_TexSize + 0.5))) {
-        return texture2D(tex, vec2(v_TexCoord.s, 1));
-      }
-      return texture2D(tex, vec2((float(i) + 0.5) / u_TexSize, 1));
-    }
+vec2 addrTranslation_1Dto2D(float address1D, vec2 texSize) {
+  vec2 conv_const = vec2(1.0 / texSize.x, 1.0 / (texSize.x * texSize.y));
+  vec2 normAddr2D = float(address1D) * conv_const;
+  return vec2(fract(normAddr2D.x), normAddr2D.y);
+}
+
+void barrier() {}
   `,
   [Target.WebGPU]: '',
 };

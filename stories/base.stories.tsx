@@ -1,11 +1,14 @@
 import { storiesOf } from '@storybook/react';
 import * as React from 'react';
+import Blur from './GPGPU/Blur';
 // import Curl from './GPGPU/Curl';
 // import Flocking from './GPGPU/Flocking';
 // import Fruchterman from './GPGPU/Fruchterman';
 import FruchtermanRenderWithG from './GPGPU/FruchtermanRenderWithG';
+import Reduction from './GPGPU/Reduction';
 // import Gravity from './GPGPU/Gravity';
 import VectorAdd from './GPGPU/VectorAdd';
+
 // import Instanced from './Rendering/Instanced';
 // import RotatingCube from './Rendering/RotatingCube';
 // import RotatingCubeWithRecordBundle from './Rendering/RotatingCubeWithRecordBundle';
@@ -23,4 +26,6 @@ storiesOf('GPGPU', module)
   // .add('Gravity', () => <Gravity />)
   // .add('Fruchterman', () => <Fruchterman />)
   .add('FruchtermanRenderWithG', () => <FruchtermanRenderWithG />)
-  .add('MatrixAdd', () => <VectorAdd />);
+  .add('VectorAdd', () => <VectorAdd />)
+  .add('Reduction', () => <Reduction />)
+  .add('Blur', () => <Blur />);

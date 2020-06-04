@@ -1,5 +1,7 @@
 # [WIP] GWebGPUEngine
 
+[![travis ci](https://travis-ci.com/antvis/GWebGPUEngine.svg?branch=master)](https://travis-ci.com/antvis/GWebGPUEngine) [![](https://flat.badgen.net/npm/v/@antv/g-webgpu?icon=npm)](https://www.npmjs.com/package/@antv/g-webgpu) ![最近提交](https://badgen.net/github/last-commit/antvis/GWebGPUEngine)
+
 A WebGPU Engine for real-time rendering and GPGPU. [中文](./README.zh-CN.md)
 
 Wiki
