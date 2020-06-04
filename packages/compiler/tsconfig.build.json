@@ -6,7 +6,8 @@
     "baseUrl": "./",
     "paths": {
       "*": ["node_modules", "typings/*"]
-    }
+    },
+    "noImplicitAny": false
   },
   "include": [
     "./src"

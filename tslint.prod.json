@@ -5,6 +5,6 @@
     "no-implicit-dependencies": true
   },
   "linterOptions": {
-    "exclude": ["**/*.d.ts", "**/data/*.ts", "**/*.{test,story}.ts{,x}", "**/g.ts"]
+    "exclude": ["**/*.d.ts", "**/data/*.ts", "**/*.{test,story}.ts{,x}", "packages/compiler/src/g.ts"]
   }
 }

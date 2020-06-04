@@ -1,3 +1,4 @@
+// @ts-nocheck
 // tslint:disable:only-arrow-functions
 // tslint:disable:object-literal-shorthand
 // tslint:disable:trailing-comma
