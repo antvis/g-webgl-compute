@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+<url> <loc>https://l7.antv.vision/en/docs/api/gwebgpu</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/en/docs/api/compute-pipeline</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh/docs/api/compute-pipeline</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh/docs/api/gwebgpu</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/en/docs/api/syntax</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh/docs/api/syntax</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/en/docs/api/workgroup</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh/docs/api/workgroup</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh/examples/tutorial/fruchterman</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/en/examples/tutorial/fruchterman</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/en/examples/tutorial/add2vectors</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh/examples/tutorial/add2vectors</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh/docs/api</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/en/docs/api</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh/examples/tutorial</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/en/examples/tutorial</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/en</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+<url> <loc>https://l7.antv.vision/zh</loc> <changefreq>daily</changefreq> <priority>0.7</priority> </url>
+</urlset>
