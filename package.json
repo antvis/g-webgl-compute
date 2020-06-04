@@ -155,11 +155,6 @@
     "last 2 version",
     "Firefox ESR"
   ],
-  "config": {
-    "commitizen": {
-      "path": "cz-conventional-changelog"
-    }
-  },
   "tnpm": {
     "mode": "yarn"
   },
