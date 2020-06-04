@@ -1,4 +1,3 @@
-// @ts-nocheck
 // tslint:disable:only-arrow-functions
 // tslint:disable:object-literal-shorthand
 // tslint:disable:trailing-comma
@@ -865,6 +864,10 @@ function peg$parse(input: string, options?: IParseOptions) {
   const peg$c374 = peg$literalExpectation("ivec4", false);
   const peg$c375 = "image2D";
   const peg$c376 = peg$literalExpectation("image2D", false);
+  const peg$c377 = "mat3";
+  const peg$c378 = peg$literalExpectation("mat3", false);
+  const peg$c379 = "mat4";
+  const peg$c380 = peg$literalExpectation("mat4", false);
 
   let peg$currPos = 0;
   let peg$savedPos = 0;
@@ -12293,6 +12296,80 @@ function peg$parse(input: string, options?: IParseOptions) {
     return s0;
   }
 
+  function peg$parseMat3(): any {
+    let s0, s1, s2, s3;
+
+    s0 = peg$currPos;
+    if (input.substr(peg$currPos, 4) === peg$c377) {
+      s1 = peg$c377;
+      peg$currPos += 4;
+    } else {
+      s1 = peg$FAILED;
+      if (peg$silentFails === 0) { peg$fail(peg$c378); }
+    }
+    if (s1 !== peg$FAILED) {
+      s2 = peg$currPos;
+      peg$silentFails++;
+      s3 = peg$parseIdentifierPart();
+      peg$silentFails--;
+      if (s3 === peg$FAILED) {
+        s2 = undefined;
+      } else {
+        peg$currPos = s2;
+        s2 = peg$FAILED;
+      }
+      if (s2 !== peg$FAILED) {
+        s1 = [s1, s2];
+        s0 = s1;
+      } else {
+        peg$currPos = s0;
+        s0 = peg$FAILED;
+      }
+    } else {
+      peg$currPos = s0;
+      s0 = peg$FAILED;
+    }
+
+    return s0;
+  }
+
+  function peg$parseMat4(): any {
+    let s0, s1, s2, s3;
+
+    s0 = peg$currPos;
+    if (input.substr(peg$currPos, 4) === peg$c379) {
+      s1 = peg$c379;
+      peg$currPos += 4;
+    } else {
+      s1 = peg$FAILED;
+      if (peg$silentFails === 0) { peg$fail(peg$c380); }
+    }
+    if (s1 !== peg$FAILED) {
+      s2 = peg$currPos;
+      peg$silentFails++;
+      s3 = peg$parseIdentifierPart();
+      peg$silentFails--;
+      if (s3 === peg$FAILED) {
+        s2 = undefined;
+      } else {
+        peg$currPos = s2;
+        s2 = peg$FAILED;
+      }
+      if (s2 !== peg$FAILED) {
+        s1 = [s1, s2];
+        s0 = s1;
+      } else {
+        peg$currPos = s0;
+        s0 = peg$FAILED;
+      }
+    } else {
+      peg$currPos = s0;
+      s0 = peg$FAILED;
+    }
+
+    return s0;
+  }
+
   function peg$parseDataType(): any {
     let s0;
 
@@ -12322,7 +12399,13 @@ function peg$parse(input: string, options?: IParseOptions) {
                           if (s0 === peg$FAILED) {
                             s0 = peg$parseIvec4();
                             if (s0 === peg$FAILED) {
-                              s0 = peg$parseImage2D();
+                              s0 = peg$parseMat3();
+                              if (s0 === peg$FAILED) {
+                                s0 = peg$parseMat4();
+                                if (s0 === peg$FAILED) {
+                                  s0 = peg$parseImage2D();
+                                }
+                              }
                             }
                           }
                         }

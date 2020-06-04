@@ -1222,6 +1222,8 @@ Ivec2      = "ivec2"      !IdentifierPart
 Ivec3      = "ivec3"      !IdentifierPart
 Ivec4      = "ivec4"      !IdentifierPart
 Image2D      = "image2D"  !IdentifierPart
+Mat3       = "mat3"      !IdentifierPart
+Mat4       = "mat4"      !IdentifierPart
 
 DataType
   = Float
@@ -1237,4 +1239,6 @@ DataType
   / Ivec2
   / Ivec3
   / Ivec4
+  / Mat3
+  / Mat4
   / Image2D
