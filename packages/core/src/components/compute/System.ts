@@ -100,7 +100,11 @@ export class ComputeSystem implements ISystem {
     return entity;
   }
 
-  public setBinding(entity: Entity, name: string, data: ArrayBufferView) {
+  public setBinding(
+    entity: Entity,
+    name: string,
+    data: ArrayBufferView | number[] | number,
+  ) {
     const compute = this.compute.getComponentByEntity(entity);
 
     if (compute) {

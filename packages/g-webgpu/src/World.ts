@@ -200,8 +200,8 @@ export class World implements ILifeCycle {
   }
 
   public createComputePipeline(params: {
-    type: ComputeType;
-    precompiled: boolean;
+    type?: ComputeType;
+    precompiled?: boolean;
     shader: string;
     dispatch: [number, number, number];
     maxIteration?: number;
@@ -211,7 +211,10 @@ export class World implements ILifeCycle {
       IDENTIFIER.Systems,
       IDENTIFIER.ComputeSystem,
     );
-    return computeSystem.createComputePipeline(params);
+    return computeSystem.createComputePipeline({
+      ...params,
+      type: params.type || 'layout',
+    });
   }
 
   public getPrecompiledBundle(entity: Entity): string {
@@ -255,7 +258,11 @@ export class World implements ILifeCycle {
     geometrySystem.setIndex(entity, data);
   }
 
-  public setBinding(entity: Entity, name: string, data: ArrayBufferView) {
+  public setBinding(
+    entity: Entity,
+    name: string,
+    data: ArrayBufferView | number[] | number,
+  ) {
     const computeSystem = container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.ComputeSystem,

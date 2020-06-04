@@ -51,11 +51,6 @@
     "@commitlint/cli": "^8.1.0",
     "@commitlint/config-conventional": "^8.1.0",
     "@open-wc/webpack-import-meta-loader": "^0.4.3",
-    "@rollup/plugin-alias": "2.2.0",
-    "@rollup/plugin-commonjs": "11.0.2",
-    "@rollup/plugin-json": "^4.0.0",
-    "@rollup/plugin-node-resolve": "^6.0.0",
-    "@rollup/plugin-typescript": "^3.0.0",
     "@storybook/addon-actions": "^5.1.9",
     "@storybook/addon-console": "^1.2.1",
     "@storybook/addon-info": "^5.1.9",
@@ -125,15 +120,6 @@
     "react-i18next": "^11.0.1",
     "react-scripts": "^3.4.1",
     "rimraf": "^2.6.2",
-    "rollup": "^1.27.14",
-    "rollup-plugin-analyzer": "^3.2.2",
-    "rollup-plugin-babel": "^4.3.3",
-    "rollup-plugin-buble": "^0.19.8",
-    "rollup-plugin-node-resolve": "^5.2.0",
-    "rollup-plugin-postcss": "^2.0.3",
-    "rollup-plugin-re": "^1.0.7",
-    "rollup-plugin-terser": "^5.1.2",
-    "rollup-pluginutils": "^2.8.2",
     "sass-loader": "^7.1.0",
     "stats.js": "^0.17.0",
     "style-loader": "^1.0.0",
@@ -157,7 +143,7 @@
   "workspaces": [
     "packages/*",
     "stories/*",
-    "build/*"
+    "examples/*"
   ],
   "husky": {
     "hooks": {

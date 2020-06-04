@@ -16,7 +16,7 @@ type TypedArrayConstructor =
   | Float64ArrayConstructor;
 
 class ComputeComponent extends Component<ComputeComponent> {
-  public type: ComputeType;
+  public type: ComputeType = 'layout';
 
   public strategy: IComputeStrategy;
 
@@ -39,7 +39,7 @@ class ComputeComponent extends Component<ComputeComponent> {
 
   public bindings: Array<{
     name: string;
-    data?: ArrayBufferView;
+    data?: ArrayBufferView | number[] | number;
     buffer?: GPUBuffer;
   }> = [];
 
