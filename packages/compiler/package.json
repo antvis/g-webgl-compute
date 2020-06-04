@@ -1,6 +1,6 @@
 {
   "name": "@antv/g-webgpu-compiler",
-  "version": "0.0.1",
+  "version": "0.1.0-alpha.0",
   "description": "",
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -26,9 +26,9 @@
     "lodash": "^4.17.15"
   },
   "devDependencies": {
+    "@webgpu/types": "^0.0.22",
     "pegjs": "^0.10.0",
-    "ts-pegjs": "^0.2.6",
-    "@webgpu/types": "^0.0.22"
+    "ts-pegjs": "^0.2.6"
   },
   "publishConfig": {
     "access": "public"
