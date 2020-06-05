@@ -3,79 +3,7 @@
 [![travis ci](https://travis-ci.com/antvis/GWebGPUEngine.svg?branch=master)](https://travis-ci.com/antvis/GWebGPUEngine) [![](https://flat.badgen.net/npm/v/@antv/g-webgpu?icon=npm)](https://www.npmjs.com/package/@antv/g-webgpu) ![最近提交](https://badgen.net/github/last-commit/antvis/GWebGPUEngine)
 A WebGPU Engine for real-time rendering and GPGPU.
 
-Wiki
-
-- [如何使用 Compute Pipeline API](https://github.com/antvis/GWebGPUEngine/wiki/Compute-Pipeline-API)
-- [如何用 Typescript 写 Compute Shader](https://github.com/antvis/GWebGPUEngine/wiki/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8-TS-%E8%AF%AD%E6%B3%95%E5%86%99-Compute-Shader)
-- [示例：向量加法](https://github.com/antvis/GWebGPUEngine/wiki/%E5%AE%9E%E7%8E%B0%E5%90%91%E9%87%8F%E5%8A%A0%E6%B3%95)
-
-## 前置条件
-
-安装 [Chrome Canary](https://www.google.com/chrome/canary/) 后，可以开启 `chrome://flags/#enable-unsafe-webgpu`。
-
-目前本项目中的 Shader 基于 [GLSL 4.5](https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.4.50.pdf) 编写，通过 glslang (wasm) 转成二进制格式 SPIR-V，因此只能在 Chrome Canary 和 Edge Canary 中运行。
-而 Safari 使用纯文本 WSL(Web Shading Language)，所以只能在 Safari Technology Preview 中运行。[浏览器实现进度](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status)
-
-因此现在网络上的各种 WebGPU 示例，有的只能用 Safari 打开，有的只能用 Chrome / Edge 打开。未来也可能由新着色语言 [Tint](https://docs.google.com/presentation/d/1qHhFq0GJtY_59rNjpiHU--JW4bW4Ji3zWei-gM6cabs/edit#slide=id.p) 统一。
-
-## 示例
-
-- [Fruchterman](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--fruchterman)
-- [Flocking](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking)
-
-## 特性
-
-- 基于 [ECS 架构](http://entity-systems.wikidot.com/) ，很多 3D 引擎例如 Unity 和 PlayCanvas 也是如此。在使用 TS 实现时还参考了：
-  - [Entitas](https://github.com/sschmid/Entitas-CSharp)，基于 C#
-  - [perform-ecs](https://github.com/fireveined/perform-ecs/)
-  - [WickedEngine](https://github.com/turanszkij/WickedEngine)，基于 C++
-- 基于 [inversify](https://github.com/inversify/InversifyJS/), 一个 IoC c 容器
-- WebGPU 实现部分参考 [Babylon.js](https://github.com/BabylonJS/Babylon.js/blob/WebGPU/src/Engines/webgpuEngine.ts)，默认使用 WebGPU，如果发现浏览器不支持自动降级到 WebGL。
-- 尝试移植一些可并行算法到 GPU 侧执行。相比 WebGL，WebGPU 支持 ComputeShader。目前已有很多成功案例：
-  - tensorflow.js 除了默认后端 WebGL，也支持 WebGPU 和 WASM。
-  - 简单的矩阵并行运算。[DEMO 🔗](https://observablehq.com/@yhyddr/gpu-matrix-compute)
-  - 「Get started with GPU Compute on the Web」[🔗](https://developers.google.com/web/updates/2019/08/get-started-with-gpu-compute-on-the-web)
-- 终极目标是让前端使用类 TS 语法编写 Shader 代码，降低 CPU -> GPU 算法实现的成本。
-
-## TODO
-
-- 基于 [FrameGraph](https://zhuanlan.zhihu.com/p/36522188) 定义渲染资源和流程
-- WSL 兼容
-- TS -> GLSL/WSL 转译
-
-## Getting started
-
-```typescript
-const canvas = document.getElementById('application');
-
-// create a world
-const world = new World(canvas);
-
-// create a camera
-const camera = world.createCamera({
-  aspect: Math.abs(canvas.width / canvas.height),
-  angle: 72,
-  far: 100,
-  near: 1,
-});
-world.getCamera(camera).setPosition(0, 5, 5);
-
-// create a scene
-const scene = world.createScene({ camera });
-
-// create geometry, material and attach them to mesh
-const boxGeometry = world.createBoxGeometry({
-  halfExtents: vec3.fromValues(1, 1, 1),
-});
-const material = world.createBasicMaterial();
-const mesh = world.createMesh({
-  geometry: boxGeometry,
-  material,
-});
-
-// add meshes to current scene
-world.add(scene, mesh);
-```
+https://gwebgpu.antv.vision/zh/docs/api/gwebgpu
 
 ## GPGPU
 
@@ -176,8 +104,6 @@ Watch all the packages:
 yarn watch
 ```
 
-Run Storybook on `http://localhost:6006/`:
-
 ```bash
-yarn storybook
+yarn start
 ```

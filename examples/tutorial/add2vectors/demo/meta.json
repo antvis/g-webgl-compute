@@ -7,7 +7,12 @@
     {
       "filename": "add2vector.tsx",
       "title": "两个向量相加",
-      "screenshot": "https://gw.alipayobjects.com/mdn/antv_site/afts/img/A*Gzj7SYk-vdEAAAAAAAAAAABkARQnAQ"
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    },
+    {
+      "filename": "add2vector-precompiled.tsx",
+      "title": "两个向量相加（预编译）",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
     }
   ]
 }

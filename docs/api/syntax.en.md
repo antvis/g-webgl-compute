@@ -259,7 +259,7 @@ max(vec2(1.0, 2.0), vec2(2.0, 1.0)) // 返回 vec2(2.0, 2.0)
 
 ## 线程组声明
 
-通过类装饰器 `numthreads` 可以声明每个线程组中包含多少线程，详见[线程组](/zh/docs/api/workgroup)：
+通过类装饰器 `numthreads` 可以声明每个线程组中包含多少线程，详见[线程、共享内存与同步](/zh/docs/api/workgroup)：
 
 ```typescript
 @numthreads(10, 1, 1)
@@ -296,4 +296,35 @@ class MyProgram {
 | globalInvocationID   | ivec3 | 当前线程在全局线程组中的索引。计算方法为 `workGroupID * workGroupSize + localInvocationID`                                                                           |
 | localInvocationIndex | int   | 当前线程在自己线程组中的一维索引，计算方法为 `localInvocationID.z * workGroupSize.x * workGroupSize.y + localInvocationID.y * workGroupSize.x + localInvocationID.x` |
 
-以上变量的说明详见[线程组](/zh/docs/api/workgroup)。
+以上变量的说明详见[线程、共享内存与同步](/zh/docs/api/workgroup)。
+
+## 共享内存与同步
+
+⚠️ 只在 WebGPU 下环境有效
+
+在某些算法（例如 reduce）线程组内的线程需要共享内存，显然更新后也需要同步。详见[线程、共享内存与同步](/zh/docs/api/workgroup)。
+
+- 通过 `@shared(length)` 属性修饰器可以声明一个线程组内共享内存，读写方式和其他输入/输出变量一致
+- 通过 `barrier()` 可以触发内存同步
+
+```typescript
+import { globalInvocationID } from 'g-webgpu';
+
+@numthreads(10, 1, 1)
+class MyProgram {
+  @in
+  globalData: float[];
+
+  @shared(1024)
+  sharedData: float[];
+
+  @main
+  compute() {
+    const tid = localInvocationID.x;
+    const i = workGroupID.x * workGroupSize.x * 2 + localInvocationID.x;
+
+    this.sharedData[tid] = this.globalData[i] + this.globalData[i + workGroupSize.x];
+    barrier();
+  }
+}
+```

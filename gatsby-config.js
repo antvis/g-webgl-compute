@@ -3,14 +3,16 @@ module.exports = {
     {
       resolve: '@antv/gatsby-theme-antv',
       options: {
-        GATrackingId: 'UA-148148901-7'
+        GATrackingId: 'UA-148148901-9'
       }
     }
   ],
   siteMetadata: {
     title: 'GWebGPU',
     description: 'A GPGPU engine based on WebGPU & WebGL',
-    siteUrl: 'https://l7.antv.vision',
+    siteUrl: 'https://gwebgpu.antv.vision',
+    // cname: false,
+    // pathPrefix: '/GWebGPUEngine',
     githubUrl: 'https://github.com/antvis/GWebGPUEngine',
     navs: [
       {
@@ -21,13 +23,13 @@ module.exports = {
         },
         redirect: 'api/gwebgpu'
       },
-      // {
-      //   slug: 'docs/tutorial',
-      //   title: {
-      //     zh: '教程',
-      //     en: 'Tutorial'
-      //   }
-      // },
+      {
+        slug: 'docs/tutorial',
+        title: {
+          zh: '教程',
+          en: 'Tutorial'
+        }
+      },
       {
         slug: 'examples/tutorial',
         title: {

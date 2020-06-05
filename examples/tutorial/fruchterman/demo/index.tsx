@@ -1,5 +1,5 @@
-import GCanvas from '@antv/g-canvas';
-import GWebGPU from '@antv/g-webgpu';
+import { Canvas } from '@antv/g-canvas';
+import { World } from '@antv/g-webgpu';
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -133,7 +133,7 @@ class Fruchterman {
 
 const MAX_ITERATION = 8000;
 
-const App = React.memo(function Add2Vectors() {
+const App = React.memo(function Fruchterman() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   useEffect(() => {
     (async () => {
@@ -157,7 +157,7 @@ const App = React.memo(function Add2Vectors() {
         const numParticles = nodes.length;
         const nodesEdgesArray = buildTextureData(nodes, edges);
 
-        const world = new window.GWebGPU.World(canvas, {
+        const world = new World(canvas, {
           engineOptions: {
             supportCompute: true,
           },
@@ -226,7 +226,7 @@ ReactDOM.render(<App />, document.getElementById('wrapper'));
 const CANVAS_HEIGHT = 600;
 const CANVAS_WIDTH = 600;
 function renderCircles(finalParticleData, numParticles) {
-  const canvas = new window.GCanvas.Canvas({
+  const canvas = new Canvas({
     container: 'container',
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,

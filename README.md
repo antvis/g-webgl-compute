@@ -4,71 +4,7 @@
 
 A WebGPU Engine for real-time rendering and GPGPU. [中文](./README.zh-CN.md)
 
-Wiki
-
-- [How to use Compute Pipeline API](https://github.com/antvis/GWebGPUEngine/wiki/Compute-Pipeline-API)
-- [How to write Compute Shader with Typescript](https://github.com/antvis/GWebGPUEngine/wiki/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8-TS-%E8%AF%AD%E6%B3%95%E5%86%99-Compute-Shader)
-- [Use case: add 2 vectors](https://github.com/antvis/GWebGPUEngine/wiki/%E5%AE%9E%E7%8E%B0%E5%90%91%E9%87%8F%E5%8A%A0%E6%B3%95)
-
-Online Demo: [https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking)
-
-[The current implementation status of the WebGPU API spec](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status)
-
-## Prerequisite
-
-Please run in Chrome Canary() behind the flag `--enable-unsafe-webgpu`.The `chrome://flags/#enable-unsafe-webgpu` flag must be enabled.
-
-## Demos
-
-- [Fruchterman](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--fruchterman)
-- [Flocking](https://antv.vision/GWebGPUEngine/?path=/story/gpgpu--flocking)
-
-## Features
-
-- Based on [ECS Architecture](http://entity-systems.wikidot.com/) which has been used in many 3D engines like Unity and PlayCanvas, especially inspired by
-  - [Entitas](https://github.com/sschmid/Entitas-CSharp)
-  - [perform-ecs](https://github.com/fireveined/perform-ecs/)
-  - [WickedEngine](https://github.com/turanszkij/WickedEngine).
-- Based on [inversify](https://github.com/inversify/InversifyJS/), an IoC container implemented by TS.
-- Use WebGPU by default and fallback to WebGL if not supported.
-- We try to port some parallelizable algorithms to GPU side with **ComputeShader** implemented in WebGPU API. These algorithms are written with GLSL syntax now, but we hope using some TS-like languages in the future.
-  [stardustjs](https://github.com/stardustjs/stardust/tree/dev/packages/stardust-core/src/compiler) has already done a lot of work.
-
-## Getting started
-
-rendering with Three.js-styled API:
-
-```typescript
-const canvas = document.getElementById('application');
-
-// create a world
-const world = new World(canvas);
-
-// create a camera
-const camera = world.createCamera({
-  aspect: Math.abs(canvas.width / canvas.height),
-  angle: 72,
-  far: 100,
-  near: 1,
-});
-world.getCamera(camera).setPosition(0, 5, 5);
-
-// create a scene
-const scene = world.createScene({ camera });
-
-// create geometry, material and attach them to mesh
-const boxGeometry = world.createBoxGeometry({
-  halfExtents: vec3.fromValues(1, 1, 1),
-});
-const material = world.createBasicMaterial();
-const mesh = world.createMesh({
-  geometry: boxGeometry,
-  material,
-});
-
-// add meshes to current scene
-world.add(scene, mesh);
-```
+https://gwebgpu.antv.vision/zh/docs/api/gwebgpu
 
 ## GPGPU
 
@@ -155,8 +91,6 @@ Watch all the packages:
 yarn watch
 ```
 
-Run Storybook on `http://localhost:6006/`:
-
 ```bash
-yarn storybook
+yarn start
 ```

@@ -5,8 +5,10 @@ order: 2
 
 ### 前置条件
 
-- ⚠️ WebGL 中需要浏览器支持 `OES_texture_float` [扩展](https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float)
-- ⚠️ WebGPU 需要使用 Chrome/Edge Canary 运行，Safari Preview 由于使用 WSL 暂不支持
+- ⚠️ WebGL 中需要浏览器支持 `OES_texture_float` [扩展](https://developer.mozilla.org/en-US/docs/Web/API/OES_texture_float)。可以在 https://webglreport.com/ 中查看本机是否支持该扩展
+- ⚠️ WebGPU 需要使用 Chrome/Edge Canary 运行，Safari Preview 由于使用 [WHLSL](https://webkit.org/blog/8482/web-high-level-shading-language/) 暂不支持，待后续完善 compiler 后支持
+
+如果希望体验 WebGPU 的运行效果，或者使用一些 WebGPU 特有的特性（共享内存与同步），请先下载 Chrome/Edge Canary，开启 `chrome://flags/#enable-unsafe-webgpu`。
 
 ### 开启 GPGPU 支持
 

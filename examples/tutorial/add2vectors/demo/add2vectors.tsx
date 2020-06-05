@@ -1,4 +1,4 @@
-import GWebGPU from '@antv/g-webgpu';
+import { World } from '@antv/g-webgpu';
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -34,7 +34,7 @@ const App = React.memo(function Add2Vectors() {
   useEffect(() => {
     const canvas = document.getElementById('application') as HTMLCanvasElement;
     if (canvas) {
-      const world = new GWebGPU.World(canvas, {
+      const world = new World(canvas, {
         engineOptions: {
           supportCompute: true,
         },
