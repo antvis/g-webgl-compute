@@ -8,4 +8,5 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### Features
 
-* 支持 WebGL debug ([6fe69f0](https://github.com/antvis/GWebGPUEngine/commit/6fe69f032d92b3871e8f2aa2478d8c9384502c6d))
+- 支持 WebGL debug ([6fe69f0](https://github.com/antvis/GWebGPUEngine/commit/6fe69f032d92b3871e8f2aa2478d8c9384502c6d))
+- 新增 `onIterationCompleted` 回调

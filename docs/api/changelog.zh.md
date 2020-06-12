@@ -3,10 +3,10 @@ title: 更新日志
 order: 5
 ---
 
-# 0.1.3
+# 0.2.0
 
-- 新增 `onIterationCompleted` 回调，详见[]()
-- 新增 debug 功能
+- 新增 `onIterationCompleted` 回调
+- 新增 WebGL debug 功能
 
 # 0.1.2
 
