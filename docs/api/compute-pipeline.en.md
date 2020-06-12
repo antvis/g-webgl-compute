@@ -30,7 +30,7 @@ const compute = world.createComputePipeline({
   precompiled: true,
   dispatch: [1, 1, 1],
   maxIteration: 1,
-  onComplete: (result) => {},
+  onCompleted: (result) => {},
 });
 ```
 

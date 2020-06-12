@@ -30,7 +30,8 @@ const compute = world.createComputePipeline({
   precompiled: true,
   dispatch: [1, 1, 1],
   maxIteration: 1,
-  onComplete: (result) => {},
+  onCompleted: (result) => {},
+  onIterationCompleted: (iteration: number) => {},
 });
 ```
 
@@ -41,6 +42,7 @@ const compute = world.createComputePipeline({
 - `dispatch`: `[number, number, number]` **required** 线程网格尺寸。
 - `maxIteration`: `number` **optional** 执行迭代数。默认为 1，即运行一次后结束。在布局算法中需要迭代很多次后达到稳定，此时可传入。
 - `onCompleted`: `function` **optional** 完成计算后回调。参数包含计算完成的数组数据。
+- `onIterationCompleted`: `function` **optional** 每次迭代完成计算后回调。参数仅包含当前迭代次数，不包含当前迭代计算完成的数组数据。
 
 由于我们使用了 ECS 架构，返回值为 Entity 即实体 ID，后续可使用该 ID 进行数据绑定操作。
 

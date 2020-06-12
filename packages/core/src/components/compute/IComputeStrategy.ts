@@ -25,6 +25,23 @@ export interface IComputeStrategy {
   getBindingGroup(): GPUBindGroup;
 
   /**
+   * 通过名称更新 uniform
+   */
+  updateUniformGPUBuffer(
+    uniformName: string,
+    data:
+      | number
+      | number[]
+      | Float32Array
+      | Uint8Array
+      | Uint16Array
+      | Uint32Array
+      | Int8Array
+      | Int16Array
+      | Int32Array,
+  ): void;
+
+  /**
    * destroy used GPUBuffer(s)
    */
   destroy(): void;

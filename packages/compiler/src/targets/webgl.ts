@@ -34,8 +34,20 @@ uniform vec2 u_OutputTextureSize;
 uniform int u_OutputTexelCount;
 varying vec2 v_TexCoord;
 
+bool gWebGPUDebug = false;
+vec4 gWebGPUDebugOutput = vec4(0.0);
+
 ${main}
     `.replace(/this\./g, ''); // 替换掉所有 'this.' 全局作用域;
+  }
+
+  public generateDebugCode(): string {
+    // 在 main 函数末尾添加输出代码
+    return `
+if (gWebGPUDebug) {
+  gl_FragColor = gWebGPUDebugOutput;
+}
+`;
   }
 
   public generateDefines(glslContext: GLSLContext): string {

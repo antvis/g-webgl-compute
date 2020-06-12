@@ -1,6 +1,6 @@
 ---
 title: Roadmap
-order: 4
+order: 5
 ---
 
 # 提升 Shader 开发体验
@@ -9,6 +9,7 @@ order: 4
 未来我们希望提供 G 语言的 VS Code 扩展，提供高亮、诊断、自动补全等语言特性，提升开发者的编程体验。
 
 这样开发者可以创建 `.g` 文件，使用类似 webpack 的 `raw-loader` 以字符串形式加载：
+
 ```typescript
 import myGCode from './my-code.g';
 
@@ -29,6 +30,7 @@ const compute = world.createComputePipeline({
 # 支持 debug
 
 Shader 程序显然没法直接在浏览器中用开发者工具进行 debug。但我们或许可以尝试使用类似 `console.log` 的方式，提前输出一些关键变量：
+
 ```typescript
 @main
 compute() {

@@ -33,7 +33,7 @@ class Fruchterman {
   calcRepulsive(i: int, currentNode: vec4): vec2 {
     let dx = 0, dy = 0;
     for (let j = 0; j < VERTEX_COUNT; j++) {
-      if (i != j + 1) {
+      if (i != j) {
         const nextNode = this.u_Data[j];
         const xDist = currentNode[0] - nextNode[0];
         const yDist = currentNode[1] - nextNode[1];

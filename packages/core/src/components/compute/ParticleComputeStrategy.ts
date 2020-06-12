@@ -109,6 +109,10 @@ export class ParticleComputeStrategy implements IComputeStrategy {
     return this.component.particleBuffers[this.component.iteration % 2];
   }
 
+  public updateUniformGPUBuffer() {
+    //
+  }
+
   public destroy() {
     this.component.particleBuffers.forEach((buffer) => buffer.destroy());
   }

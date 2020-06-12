@@ -321,7 +321,7 @@ export class Parser {
 
     return this.generators[this.target].generateShaderCode(
       this.glslContext,
-      main,
+      builtinFunctionDeclarations + main,
     );
   }
 
@@ -431,6 +431,7 @@ export class Parser {
 
       return methodDefinitions
         .map((method) => {
+          let prepend = '';
           let append = '';
           if (method.value.type === AST_NODE_TYPES.FunctionExpression) {
             // void main()
@@ -439,6 +440,8 @@ export class Parser {
               method.value.returnType = 'void';
               method.value.params = [];
               (method.value.id as Identifier).name = 'main';
+
+              append = this.generators[this.target].generateDebugCode();
 
               // 不能在全局作用域定义
               // @see https://community.khronos.org/t/gles-compile-errors-under-marshmallow/74876
@@ -449,7 +452,7 @@ export class Parser {
                   localSizeZ,
                 ] = this.glslContext.threadGroupSize;
                 const [groupX, groupY, groupZ] = this.glslContext.dispatch;
-                append = `
+                prepend = `
 ivec3 workGroupSize = ivec3(${localSizeX}, ${localSizeY}, ${localSizeZ});
 ivec3 numWorkGroups = ivec3(${groupX}, ${groupY}, ${groupZ});     
 int globalInvocationIndex = int(floor(v_TexCoord.x * u_OutputTextureSize.x))
@@ -469,6 +472,7 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
             return this.compileFunctionExpression(
               method.value,
               context,
+              prepend,
               append,
             );
           }
@@ -481,6 +485,7 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
   public compileFunctionExpression(
     node: FunctionExpression | FunctionDeclaration,
     context: Context,
+    prepend?: string,
     append?: string,
   ): string {
     // TODO: 暂不考虑参数 spread、解构等写法
@@ -518,10 +523,10 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
             p.type === AST_NODE_TYPES.Identifier &&
             `${p.typeAnnotation} ${p.name}`,
         )
-        .join(',')}) {${append || ''}\n${this.compileBlockStatement(
+        .join(',')}) {${prepend || ''}\n${this.compileBlockStatement(
         node.body,
         context,
-      )}}`;
+      )}\n${append || ''}}`;
     }
     return '';
   }

@@ -1,5 +1,4 @@
 import { Parser, Target } from '@antv/g-webgpu-compiler';
-import { vec3 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
 import {
   Component,
@@ -71,6 +70,7 @@ export class ComputeSystem implements ISystem {
     dispatch = [1, 1, 1],
     maxIteration = 1,
     onCompleted = null,
+    onIterationCompleted = null,
   }: {
     type: ComputeType;
     shader: string;
@@ -78,6 +78,7 @@ export class ComputeSystem implements ISystem {
     dispatch: [number, number, number];
     maxIteration?: number;
     onCompleted?: ((particleData: ArrayBufferView) => void) | null;
+    onIterationCompleted?: ((iteration: number) => void) | null;
   }) {
     const entity = createEntity();
     const strategy = container.getNamed<IComputeStrategy>(
@@ -93,6 +94,7 @@ export class ComputeSystem implements ISystem {
       dispatch,
       maxIteration,
       onCompleted,
+      onIterationCompleted,
     });
 
     strategy.component = this.compute.getComponentByEntity(entity)!;
@@ -103,15 +105,36 @@ export class ComputeSystem implements ISystem {
   public setBinding(
     entity: Entity,
     name: string,
-    data: ArrayBufferView | number[] | number,
+    data:
+      | number
+      | number[]
+      | Float32Array
+      | Uint8Array
+      | Uint16Array
+      | Uint32Array
+      | Int8Array
+      | Int16Array
+      | Int32Array,
   ) {
     const compute = this.compute.getComponentByEntity(entity);
 
     if (compute) {
-      compute.bindings.push({
-        name,
-        data,
-      });
+      if (compute.compiledBundle) {
+        const existedBinding = compute.compiledBundle.context.uniforms.find(
+          (b) => b.name === name,
+        );
+        if (existedBinding) {
+          // TODO: 只允许非 float[] int[] vec4[] 数据类型在运行时更新
+          existedBinding.data = data;
+
+          compute.strategy.updateUniformGPUBuffer(name, data);
+        }
+      } else {
+        compute.bindings.push({
+          name,
+          data,
+        });
+      }
     }
   }
 

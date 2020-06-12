@@ -19,6 +19,13 @@ export class LayoutComputeStrategy implements IComputeStrategy {
   @inject(IDENTIFIER.RenderEngine)
   private readonly engine: IRenderEngine;
 
+  private mergedUniformGPUBuffer: GPUBuffer;
+  private uniformGPUBufferLayout: Array<{
+    name: string;
+    offset: number;
+  }> = [];
+  private vertexBuffers: GPUBuffer[] = [];
+
   public init(context: GLSLContext) {
     const component = this.component;
 
@@ -34,10 +41,20 @@ export class LayoutComputeStrategy implements IComputeStrategy {
       const bindGroupLayoutEntries = [];
       const bindGroupEntries = [];
       if (bufferBindingIndex) {
+        let offset = 0;
+        // FIXME: 所有 uniform 合并成一个 buffer，固定使用 Float32Array 存储，确实会造成一些内存的浪费
         const mergedUniformData = concat(
-          uniforms.map((uniform) => uniform.data),
+          uniforms.map((uniform) => {
+            this.uniformGPUBufferLayout.push({
+              name: uniform.name,
+              offset,
+            });
+            // @ts-ignore
+            offset += (uniform.data.length || 1) * 4;
+            return uniform.data;
+          }),
         );
-        const mergedUniformGPUBuffer = this.engine.createUniformBuffer(
+        this.mergedUniformGPUBuffer = this.engine.createUniformBuffer(
           // @ts-ignore
           mergedUniformData,
         );
@@ -51,7 +68,7 @@ export class LayoutComputeStrategy implements IComputeStrategy {
         bindGroupEntries.push({
           binding: 0,
           resource: {
-            buffer: mergedUniformGPUBuffer,
+            buffer: this.mergedUniformGPUBuffer,
             offset: 0,
             size: mergedUniformData.length * 4, // 默认 Float32Array
           },
@@ -68,6 +85,7 @@ export class LayoutComputeStrategy implements IComputeStrategy {
               isFinite(Number(buffer.data)) ? [buffer.data] : buffer.data,
               128,
             );
+            this.vertexBuffers.push(gpuBuffer);
             if (buffer.name === context.output.name) {
               context.output = {
                 name: buffer.name,
@@ -160,6 +178,9 @@ export class LayoutComputeStrategy implements IComputeStrategy {
     // finish asap
     while (this.component.iteration <= this.component.maxIteration - 1) {
       this.engine.dispatch(this.component.compiledBundle.context);
+      if (this.component.onIterationCompleted) {
+        this.component.onIterationCompleted(this.component.iteration);
+      }
       this.component.iteration++;
     }
   }
@@ -172,9 +193,53 @@ export class LayoutComputeStrategy implements IComputeStrategy {
     return this.component.particleBuffers[0];
   }
 
+  public updateUniformGPUBuffer(
+    uniformName: string,
+    data:
+      | number
+      | number[]
+      | Float32Array
+      | Uint8Array
+      | Uint16Array
+      | Uint32Array
+      | Int8Array
+      | Int16Array
+      | Int32Array,
+  ) {
+    const layout = this.uniformGPUBufferLayout.find(
+      (l) => l.name === uniformName,
+    );
+
+    if (layout) {
+      this.engine.setSubData(
+        this.mergedUniformGPUBuffer,
+        layout.offset,
+        Number.isFinite(data)
+          ? new Float32Array([data as number])
+          : new Float32Array(
+              data as
+                | number[]
+                | Float32Array
+                | Uint8Array
+                | Uint16Array
+                | Uint32Array
+                | Int8Array
+                | Int16Array
+                | Int32Array,
+            ),
+      );
+    }
+  }
+
   public destroy() {
     if (this.component.particleBuffers[0]) {
       this.component.particleBuffers[0].destroy();
     }
+
+    if (this.mergedUniformGPUBuffer) {
+      this.mergedUniformGPUBuffer.destroy();
+    }
+
+    this.vertexBuffers.forEach((b) => b.destroy());
   }
 }

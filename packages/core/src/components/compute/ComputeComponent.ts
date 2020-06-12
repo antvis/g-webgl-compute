@@ -71,6 +71,11 @@ class ComputeComponent extends Component<ComputeComponent> {
    */
   public onCompleted?: ((particleData: ArrayBufferView) => void) | null;
 
+  /**
+   * when every iteration finished, send back final particles' data
+   */
+  public onIterationCompleted?: ((iteration: number) => void) | null;
+
   constructor(data: Partial<NonFunctionProperties<ComputeComponent>>) {
     super(data);
 

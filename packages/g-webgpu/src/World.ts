@@ -206,6 +206,7 @@ export class World implements ILifeCycle {
     dispatch: [number, number, number];
     maxIteration?: number;
     onCompleted?: ((particleData: ArrayBufferView) => void) | null;
+    onIterationCompleted?: ((iteration: number) => void) | null;
   }) {
     const computeSystem = container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,
@@ -261,7 +262,16 @@ export class World implements ILifeCycle {
   public setBinding(
     entity: Entity,
     name: string,
-    data: ArrayBufferView | number[] | number,
+    data:
+      | number
+      | number[]
+      | Float32Array
+      | Uint8Array
+      | Uint16Array
+      | Uint32Array
+      | Int8Array
+      | Int16Array
+      | Int32Array,
   ) {
     const computeSystem = container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,

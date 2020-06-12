@@ -86,6 +86,74 @@ void barrier() {}
 };
 
 export const exportFunctions = {
-  [Target.WebGL]: {},
-  [Target.WebGPU]: {},
+  [Target.WebGL]: {
+    debug: {
+      content: `
+void debug(vec4 o) {
+  gWebGPUDebug = true;
+  gWebGPUDebugOutput = o;
+}
+void debug(vec3 o) {
+  debug(vec4(o.xyz, 0.0));
+}
+void debug(vec2 o) {
+  debug(vec4(o.xy, 0.0, 0.0));
+}
+void debug(ivec4 o) {
+  debug(vec4(o));
+}
+void debug(ivec3 o) {
+  debug(vec4(o.xyz, 0.0));
+}
+void debug(ivec2 o) {
+  debug(vec4(o.xy, 0.0, 0.0));
+}
+void debug(float o) {
+  debug(vec4(o, 0.0, 0.0, 0.0));
+}
+void debug(int o) {
+  debug(vec4(o, 0.0, 0.0, 0.0));
+}
+void debug(bool o) {
+  debug(vec4(o, 0.0, 0.0, 0.0));
+}
+`,
+      returnType: 'void',
+    },
+  },
+  [Target.WebGPU]: {
+    debug: {
+      content: `
+void debug(vec4 o) {
+  gWebGPUDebug = true;
+  gWebGPUDebugOutput = o;
+}
+void debug(vec3 o) {
+  debug(vec4(o.xyz, 0.0));
+}
+void debug(vec2 o) {
+  debug(vec4(o.xy, 0.0, 0.0));
+}
+void debug(ivec4 o) {
+  debug(vec4(o));
+}
+void debug(ivec3 o) {
+  debug(vec4(o.xyz, 0.0));
+}
+void debug(ivec2 o) {
+  debug(vec4(o.xy, 0.0, 0.0));
+}
+void debug(float o) {
+  debug(vec4(o, 0.0, 0.0, 0.0));
+}
+void debug(int o) {
+  debug(vec4(o, 0.0, 0.0, 0.0));
+}
+void debug(bool o) {
+  debug(vec4(o, 0.0, 0.0, 0.0));
+}
+`,
+      returnType: 'void',
+    },
+  },
 };

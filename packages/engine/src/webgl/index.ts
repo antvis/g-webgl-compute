@@ -336,7 +336,7 @@ export class WebGLEngine implements IRenderEngine {
           throw new Error(`invalid data type ${type}`);
         }
         // @ts-ignore
-        uniforms[name] = data;
+        uniforms[name] = () => uniform.data;
       }
     });
 
