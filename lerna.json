@@ -1,6 +1,9 @@
 {
   "packages": [
-    "packages/*"
+    "packages/compiler",
+    "packages/core",
+    "packages/engine",
+    "packages/g-webgpu"
   ],
   "command": {
     "publish": {

@@ -2,7 +2,7 @@
 title: 简介
 order: 0
 redirect_from:
-  - /zh/docs/api
+  - /en/docs/api
 ---
 
 # 什么是 GPGPU ？

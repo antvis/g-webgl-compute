@@ -15,8 +15,27 @@ redirect_from:
 <script src="https://unpkg.com/@antv/g-webgpu"></script>
 ```
 
+我们会暴露 `GWebGPU` 全局对象：
+```typescript
+const world = window.GWebGPU.World();
+```
+
 ## 使用 @antv/g-webgpu
 
 ```bash
 npm install --save @antv/g-webgpu
 ```
+
+```typescript
+import { World } from '@antv/g-webgpu';
+
+const world = World();
+```
+
+## 安装 VS Code 扩展
+
+[安装 VS Code 扩展](/zh/docs/api/vscode-extension)，获得更好的编程体验。
+
+## 开始编写第一个并行计算任务
+
+[两个向量相加](/zh/docs/tutorial/add2vectors)
