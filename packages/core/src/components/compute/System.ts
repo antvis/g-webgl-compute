@@ -138,7 +138,6 @@ export class ComputeSystem implements ISystem {
       | Int32Array
       | {
           entity: Entity;
-          bindingName: string;
         },
   ) {
     const compute = this.compute.getComponentByEntity(entity);
@@ -173,9 +172,8 @@ export class ComputeSystem implements ISystem {
               });
             }
 
-            const { entity: referEntity, bindingName } = data as {
+            const { entity: referEntity } = data as {
               entity: Entity;
-              bindingName: string;
             };
 
             const referCompute = this.compute.getComponentByEntity(referEntity);
@@ -184,12 +182,7 @@ export class ComputeSystem implements ISystem {
             const contextName = compute?.compiledBundle.context.name;
 
             if (referContextName) {
-              this.engine.referUniformTexture(
-                contextName,
-                name,
-                referContextName,
-                bindingName,
-              );
+              this.engine.confirmInput(contextName, name, referContextName);
             }
           }
         }

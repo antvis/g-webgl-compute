@@ -19,8 +19,17 @@ const world = new World(canvas, {
   engineOptions: {
     supportCompute: true,
   },
+  onInit: (engine) => {
+    console.log(engine.isFloatSupported());
+  },
 });
 ```
+
+我们在 WebGL 的实现中使用了 OES_texture_float 扩展进行浮点数纹理的读写。但是该扩展存在一定兼容性问题，尤其是在移动端 和 Safari 中：http://webglstats.com/webgl/extension/OES_texture_float
+
+为此在 `onInit` 回调中可以通过 `isFloatSupported` 查询当前浏览器的支持情况，如果发现不支持可以及时中断下面计算管线的创建，切换成 CPU 版本的算法。
+
+未来我们会尝试在不支持该扩展的浏览器中做兼容，详见：https://github.com/antvis/GWebGPUEngine/issues/26。
 
 ### 创建 ComputePipeline
 

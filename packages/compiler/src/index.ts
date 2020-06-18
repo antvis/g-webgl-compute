@@ -86,6 +86,10 @@ export interface GLSLContext {
    */
   maxIteration: number;
   /**
+   * 是否需要 pingpong，如果存在输入和输出为同一个的情况
+   */
+  needPingpong: boolean;
+  /**
    * 目前仅支持单一输出，受限于 WebGL 实现
    */
   output: {
@@ -180,6 +184,7 @@ export class Parser {
     output: {
       name: '',
     },
+    needPingpong: false,
   };
 
   private generators: Record<Target, IShaderGenerator> = {
@@ -337,6 +342,7 @@ export class Parser {
       output: {
         name: '',
       },
+      needPingpong: false,
     };
   }
 
@@ -1230,6 +1236,13 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
     decorators: Decorator[],
   ) {
     const analyzeDecorators = decorators.map((d) => this.extractDecorator(d));
+
+    if (
+      analyzeDecorators.find((d) => d.name === PropertyDecorator.Out) &&
+      analyzeDecorators.find((d) => d.name === PropertyDecorator.In)
+    ) {
+      this.glslContext.needPingpong = true;
+    }
 
     analyzeDecorators.forEach(({ name, params }) => {
       if (name === PropertyDecorator.Shared) {

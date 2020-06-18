@@ -143,23 +143,23 @@ class CalcCenter {
   @in
   u_Data: vec4[];
 
-  @out(1)
+  @out
   u_Center: vec2[];
 
   @main
   compute() {
-    let sumx = 0, sumy = 0;
+    let sumX = 0, sumY = 0;
     for (let j = 0; j < VERTEX_COUNT; j++) {
-      sumx += this.u_Data[j].x;
-      sumy += this.u_Data[j].y;
+      sumX += this.u_Data[j].x;
+      sumY += this.u_Data[j].y;
     }
 
-    this.u_Center[0] = [sumx / VERTEX_COUNT, sumy/ VERTEX_COUNT];
+    this.u_Center[0] = [sumX / VERTEX_COUNT, sumY/ VERTEX_COUNT];
   }
 }
 `;
 
-const MAX_ITERATION = 1;
+const MAX_ITERATION = 8000;
 
 const App = React.memo(function Fruchterman() {
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -198,21 +198,13 @@ const App = React.memo(function Fruchterman() {
           maxIteration: MAX_ITERATION,
           onIterationCompleted: async () => {
             world.setBinding(compute2, 'u_Data', {
-              // @ts-ignore
               entity: compute,
-              bindingName: 'u_Data',
             });
           },
           onCompleted: (finalParticleData) => {
             setTimeElapsed(window.performance.now() - timeStart);
             // draw with G
             renderCircles(finalParticleData, numParticles);
-
-            // precompiled
-            // console.log(world.getPrecompiledBundle(compute));
-
-            // 计算完成后销毁相关 GPU 资源
-            // world.destroy();
           },
         });
 
@@ -244,13 +236,12 @@ const App = React.memo(function Fruchterman() {
           maxIteration: MAX_ITERATION,
           onIterationCompleted: async () => {
             world.setBinding(compute, 'u_Center', {
-              // @ts-ignore
-              entity: compute,
-              bindingName: 'u_Center',
+              entity: compute2,
             });
           },
           onCompleted: (finalParticleData) => {
-            console.log(finalParticleData);
+            console.log('center: ', finalParticleData);
+            world.destroy();
           },
         });
         world.setBinding(compute2, 'u_Data', nodesEdgesArray);
@@ -326,8 +317,6 @@ function renderCircles(finalParticleData, numParticles) {
       },
     });
   }
-
-  console.log(sumx / numParticles, sumy / numParticles);
 }
 
 function convertWebGLCoord2Canvas(c: number, size: number) {

@@ -88,10 +88,6 @@ export class World implements ILifeCycle {
     this.useRenderBundle = !!options.useRenderBundle;
   }
 
-  public isFloatSupported() {
-    return this.engine.isFloatSupported();
-  }
-
   public getCamera(entity: Entity) {
     const manager = container.get<ComponentManager<CameraComponent>>(
       IDENTIFIER.CameraComponentManager,
@@ -275,7 +271,10 @@ export class World implements ILifeCycle {
       | Uint32Array
       | Int8Array
       | Int16Array
-      | Int32Array,
+      | Int32Array
+      | {
+          entity: Entity;
+        },
   ) {
     const computeSystem = container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,

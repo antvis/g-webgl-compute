@@ -18,7 +18,7 @@ export class WebGLEngine implements IRenderEngine {
   private contextCache: {
     [contextName: string]: {
       texOutput: regl.Texture2D;
-      texInput: regl.Texture2D;
+      texInput?: regl.Texture2D;
       texFBO: regl.Framebuffer2D;
       computeCommand: regl.DrawCommand;
       textureCache: {
@@ -337,7 +337,10 @@ export class WebGLEngine implements IRenderEngine {
         cache.textureCache[name] = uniformTexture;
         // 需要动态获取，有可能在运行时通过 setBinding 关联到另一个计算程序的输出
         // @ts-ignore
-        uniforms[name] = () => cache.textureCache[name];
+        uniforms[name] =
+          context.maxIteration > 1 && context.needPingpong
+            ? cache.textureCache[name]
+            : () => cache.textureCache[name];
         // @ts-ignore
         uniforms[`${name}Size`] = [width, width];
       } else {
@@ -360,8 +363,8 @@ export class WebGLEngine implements IRenderEngine {
     // @ts-ignore
     uniforms.u_OutputTexelCount = outputTexelCount;
 
-    // 大于一次认为需要 pingpong
-    if (context.maxIteration > 1) {
+    // 大于一次且 输入输出均为自身的 认为需要 pingpong
+    if (context.maxIteration > 1 && context.needPingpong) {
       // @ts-ignore
       cache.texInput = uniforms[outputTextureName];
       // @ts-ignore
@@ -421,17 +424,17 @@ export class WebGLEngine implements IRenderEngine {
     };
   }
 
-  public referUniformTexture(
+  public confirmInput(
     contextName: string,
     textureName: string,
     referContextName: string,
-    referTextureName: string,
   ) {
     const cache = this.contextCache[contextName];
     const referCache = this.contextCache[referContextName];
     if (cache && referCache) {
+      // 需要 pingpong 的都有 texInput
       cache.textureCache[textureName] =
-        referCache.textureCache[referTextureName];
+        referCache.texInput || referCache.texOutput;
     }
   }
 
@@ -446,9 +449,9 @@ export class WebGLEngine implements IRenderEngine {
       });
 
       // 需要 swap
-      if (context.maxIteration > 1) {
+      if (context.maxIteration > 1 && context.needPingpong) {
         const tmp = cache.texOutput;
-        cache.texOutput = cache.texInput;
+        cache.texOutput = cache.texInput!;
         cache.texInput = tmp;
       }
     }

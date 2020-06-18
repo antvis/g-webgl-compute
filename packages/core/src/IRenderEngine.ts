@@ -185,11 +185,10 @@ export interface IRenderEngine {
     srcArrayBuffer: ArrayBufferView,
   ): void;
 
-  referUniformTexture(
+  confirmInput(
     contextName: string,
     textureName: string,
     referContextName: string,
-    referTextureName: string,
   ): void;
 
   readData(
