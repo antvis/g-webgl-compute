@@ -12,7 +12,7 @@ export interface IComputeStrategy {
   /**
    * dispatch with different frequencies
    */
-  run(): void;
+  run(): Promise<void>;
 
   /**
    *

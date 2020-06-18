@@ -70,6 +70,8 @@ export interface IRenderEngine {
 
   disableScissor(): void;
 
+  isFloatSupported(): boolean;
+
   clear(
     color: GPUColor,
     backBuffer: boolean,
@@ -183,7 +185,26 @@ export interface IRenderEngine {
     srcArrayBuffer: ArrayBufferView,
   ): void;
 
-  readData(context: GLSLContext): Promise<ArrayBufferView>;
+  referUniformTexture(
+    contextName: string,
+    textureName: string,
+    referContextName: string,
+    referTextureName: string,
+  ): void;
+
+  readData(
+    context: GLSLContext,
+  ): Promise<
+    | Float32Array
+    | Float64Array
+    | Int8Array
+    | Uint8Array
+    | Uint8ClampedArray
+    | Int16Array
+    | Uint16Array
+    | Int32Array
+    | Uint32Array
+  >;
 
   bindVertexInputs(vertexInputs: {
     indexBuffer: GPUBuffer | null;

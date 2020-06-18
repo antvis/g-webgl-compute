@@ -72,6 +72,10 @@ export class WebGPUEngine implements IRenderEngine {
   private readonly renderEncoderDescriptor = { label: 'render' };
   private readonly computeEncoderDescriptor = { label: 'compute' };
 
+  public isFloatSupported() {
+    return true;
+  }
+
   public getDevice() {
     return this.device;
   }
@@ -565,7 +569,8 @@ export class WebGPUEngine implements IRenderEngine {
 
         // submit copy command
         this.commandBuffers[0] = this.uploadEncoder.finish();
-        this.device.defaultQueue.submit(this.commandBuffers);
+        // filter undefined buffers
+        this.device.defaultQueue.submit(this.commandBuffers.filter((b) => b));
         this.uploadEncoder = this.device.createCommandEncoder(
           this.uploadEncoderDescriptor,
         );
@@ -611,6 +616,15 @@ export class WebGPUEngine implements IRenderEngine {
     if (this.currentComputePass) {
       this.currentComputePass.dispatch(...context.dispatch);
     }
+  }
+
+  public referUniformTexture(
+    contextName: string,
+    textureName: string,
+    referContextName: string,
+    referTextureName: string,
+  ) {
+    //
   }
 
   private createBuffer(

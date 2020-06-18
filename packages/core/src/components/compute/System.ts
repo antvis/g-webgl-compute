@@ -1,5 +1,6 @@
 import { Parser, Target } from '@antv/g-webgpu-compiler';
 import { inject, injectable } from 'inversify';
+import { isArray, isNumber, isTypedArray } from 'lodash';
 import {
   Component,
   container,
@@ -24,25 +25,45 @@ export class ComputeSystem implements ISystem {
   private parser: Parser = new Parser();
 
   public async execute() {
-    await Promise.all(
-      this.compute.map(async (entity, component) => {
-        if (!component.finished) {
-          if (component.dirty) {
-            await this.compile(component);
-            component.strategy.init(component.compiledBundle.context);
-            component.dirty = false;
-          }
+    // 考虑多个计算程序之间的依赖关系
+    // 先找到多个计算程序中最大的迭代次数，然后按顺序执行
+    let maxIteration = 0;
+    this.compute.map((entity, component) => {
+      if (component.maxIteration > maxIteration) {
+        maxIteration = component.maxIteration;
+      }
+    });
 
+    // 首先所有计算程序依次初始化
+    for (let j = 0; j < this.compute.getCount(); j++) {
+      const component = this.compute.getComponent(j);
+      if (!component.finished) {
+        if (component.dirty) {
+          await this.compile(component);
+          component.strategy.init(component.compiledBundle.context);
+          component.dirty = false;
+        }
+      }
+    }
+
+    for (let i = 0; i < maxIteration; i++) {
+      for (let j = 0; j < this.compute.getCount(); j++) {
+        const component = this.compute.getComponent(j);
+        if (!component.finished) {
           if (component.iteration <= component.maxIteration - 1) {
-            this.engine.setComputePipeline(`compute-${entity}`, {
-              layout: component.pipelineLayout,
-              ...component.stageDescriptor,
-            });
+            this.engine.setComputePipeline(
+              `compute-${this.compute.getEntity(j)}`,
+              {
+                layout: component.pipelineLayout,
+                ...component.stageDescriptor,
+              },
+            );
             this.engine.setComputeBindGroups([
               component.strategy.getBindingGroup(),
             ]);
 
-            component.strategy.run();
+            await component.strategy.run();
+            component.iteration++;
           } else {
             component.finished = true;
             if (component.onCompleted) {
@@ -52,8 +73,8 @@ export class ComputeSystem implements ISystem {
             }
           }
         }
-      }),
-    );
+      }
+    }
   }
 
   public tearDown() {
@@ -78,7 +99,7 @@ export class ComputeSystem implements ISystem {
     dispatch: [number, number, number];
     maxIteration?: number;
     onCompleted?: ((particleData: ArrayBufferView) => void) | null;
-    onIterationCompleted?: ((iteration: number) => void) | null;
+    onIterationCompleted?: ((iteration: number) => Promise<void>) | null;
   }) {
     const entity = createEntity();
     const strategy = container.getNamed<IComputeStrategy>(
@@ -114,28 +135,79 @@ export class ComputeSystem implements ISystem {
       | Uint32Array
       | Int8Array
       | Int16Array
-      | Int32Array,
+      | Int32Array
+      | {
+          entity: Entity;
+          bindingName: string;
+        },
   ) {
     const compute = this.compute.getComponentByEntity(entity);
 
     if (compute) {
+      const isNumberLikeData =
+        isNumber(data) || isTypedArray(data) || isArray(data);
       if (compute.compiledBundle) {
         const existedBinding = compute.compiledBundle.context.uniforms.find(
           (b) => b.name === name,
         );
         if (existedBinding) {
-          // TODO: 只允许非 float[] int[] vec4[] 数据类型在运行时更新
-          existedBinding.data = data;
+          if (isNumberLikeData) {
+            // TODO: 只允许非 float[] int[] vec4[] 数据类型在运行时更新
+            // @ts-ignore
+            existedBinding.data = data;
 
-          compute.strategy.updateUniformGPUBuffer(name, data);
+            // @ts-ignore
+            compute.strategy.updateUniformGPUBuffer(name, data);
+          } else {
+            const existedIndex = compute.bindings.findIndex(
+              (b) => b.name === name,
+            );
+            if (existedIndex > -1) {
+              // @ts-ignore
+              compute.bindings[existedIndex].referer = data;
+            } else {
+              compute.bindings.push({
+                name,
+                // @ts-ignore
+                referer: data,
+              });
+            }
+
+            const { entity: referEntity, bindingName } = data as {
+              entity: Entity;
+              bindingName: string;
+            };
+
+            const referCompute = this.compute.getComponentByEntity(referEntity);
+            const referContextName = referCompute?.compiledBundle.context.name;
+            // @ts-ignore
+            const contextName = compute?.compiledBundle.context.name;
+
+            if (referContextName) {
+              this.engine.referUniformTexture(
+                contextName,
+                name,
+                referContextName,
+                bindingName,
+              );
+            }
+          }
         }
       } else {
-        compute.bindings.push({
-          name,
-          data,
-        });
+        if (isNumberLikeData) {
+          compute.bindings.push({
+            name,
+            // @ts-ignore
+            data,
+          });
+        }
       }
     }
+  }
+
+  public async readOutputData(entity: Entity) {
+    const compute = this.compute.getComponentByEntity(entity)!;
+    return this.engine.readData(compute.compiledBundle.context);
   }
 
   public getParticleBuffer(entity: Entity) {

@@ -73,11 +73,13 @@ export const typePriority = {
 export type BuiltinFunctionNames = string;
 
 export const builtinFunctions = {
+  // 在 fract() 后可能丢失精度，例如(0.0) -> (0.999999)
   [Target.WebGL]: `
+float epsilon = 0.00001;
 vec2 addrTranslation_1Dto2D(float address1D, vec2 texSize) {
   vec2 conv_const = vec2(1.0 / texSize.x, 1.0 / (texSize.x * texSize.y));
   vec2 normAddr2D = float(address1D) * conv_const;
-  return vec2(fract(normAddr2D.x), normAddr2D.y);
+  return vec2(fract(normAddr2D.x + epsilon), normAddr2D.y);
 }
 
 void barrier() {}

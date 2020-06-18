@@ -13,7 +13,7 @@
     "prebuild": "yarn lint",
     "build": "yarn clean && lerna run build",
     "postbuild": "yarn build:declarations",
-    "build:declarations": "lerna exec --stream --no-bail 'tsc --project ./tsconfig.build.json'",
+    "build:declarations": "lerna run tsc",
     "fix": "run-p -c 'lint:ts-* --fix'",
     "lint:css": "stylelint 'packages/**/*.js{,x}'",
     "lint:ts-prod": "tslint --config tslint.prod.json 'packages/**/*.ts{,x}'",
@@ -32,7 +32,7 @@
     "test": "cross-env BABEL_ENV=test jest",
     "coveralls": "jest --coverage && cat ./tests/coverage/lcov.info | coveralls",
     "tsc": "tsc",
-    "watch": "yarn clean && lerna exec --parallel -- cross-env BABEL_ENV=esm babel --watch src --root-mode upward --out-dir es --source-maps --extensions .ts,.tsx --delete-dir-on-start",
+    "watch": "yarn clean && lerna run watch",
     "clean": "lerna run clean"
   },
   "devDependencies": {

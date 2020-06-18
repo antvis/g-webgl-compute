@@ -96,7 +96,7 @@ export class ParticleComputeStrategy implements IComputeStrategy {
     // }
   }
 
-  public run() {
+  public async run() {
     this.engine.dispatch(this.component.compiledBundle.context);
     this.component.iteration++;
   }

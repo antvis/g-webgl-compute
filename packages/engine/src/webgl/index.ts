@@ -21,6 +21,9 @@ export class WebGLEngine implements IRenderEngine {
       texInput: regl.Texture2D;
       texFBO: regl.Framebuffer2D;
       computeCommand: regl.DrawCommand;
+      textureCache: {
+        [textureName: string]: regl.Texture2D;
+      };
     };
   } = {};
 
@@ -235,6 +238,12 @@ export class WebGLEngine implements IRenderEngine {
     });
   }
 
+  public isFloatSupported() {
+    // @see https://github.com/antvis/GWebGPUEngine/issues/26
+    // @ts-ignore
+    return this.gl.limits.readFloat;
+  }
+
   public async compileComputePipelineStageDescriptor(
     computeCode: string,
     context: GLSLContext,
@@ -242,7 +251,9 @@ export class WebGLEngine implements IRenderEngine {
     let cache = this.contextCache[context.name];
     if (!cache) {
       // @ts-ignore
-      cache = {};
+      cache = {
+        textureCache: {},
+      };
     }
     const uniforms = {};
 
@@ -317,13 +328,16 @@ export class WebGLEngine implements IRenderEngine {
           }
         }
 
-        // @ts-ignore
-        uniforms[name] = this.gl.texture({
+        const uniformTexture = this.gl.texture({
           width,
           height: width,
           data: paddingData,
           type: 'float',
         });
+        cache.textureCache[name] = uniformTexture;
+        // 需要动态获取，有可能在运行时通过 setBinding 关联到另一个计算程序的输出
+        // @ts-ignore
+        uniforms[name] = () => cache.textureCache[name];
         // @ts-ignore
         uniforms[`${name}Size`] = [width, width];
       } else {
@@ -405,6 +419,20 @@ export class WebGLEngine implements IRenderEngine {
         entryPoint: 'main',
       },
     };
+  }
+
+  public referUniformTexture(
+    contextName: string,
+    textureName: string,
+    referContextName: string,
+    referTextureName: string,
+  ) {
+    const cache = this.contextCache[contextName];
+    const referCache = this.contextCache[referContextName];
+    if (cache && referCache) {
+      cache.textureCache[textureName] =
+        referCache.textureCache[referTextureName];
+    }
   }
 
   public dispatch(context: GLSLContext) {

@@ -1,5 +1,5 @@
 import { GLSLContext, Target } from '@antv/g-webgpu-compiler';
-import { Component } from '../..';
+import { Component, Entity } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
 import { IComputeStrategy } from './IComputeStrategy';
 
@@ -41,6 +41,10 @@ class ComputeComponent extends Component<ComputeComponent> {
     name: string;
     data?: ArrayBufferView | number[] | number;
     buffer?: GPUBuffer;
+    referer?: {
+      entity: Entity;
+      bindingName: string;
+    };
   }> = [];
 
   /**
@@ -74,7 +78,7 @@ class ComputeComponent extends Component<ComputeComponent> {
   /**
    * when every iteration finished, send back final particles' data
    */
-  public onIterationCompleted?: ((iteration: number) => void) | null;
+  public onIterationCompleted?: ((iteration: number) => Promise<void>) | null;
 
   constructor(data: Partial<NonFunctionProperties<ComputeComponent>>) {
     super(data);

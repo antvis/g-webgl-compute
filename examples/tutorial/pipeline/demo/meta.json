@@ -1,0 +1,13 @@
+{
+  "title": {
+    "zh": "Pipeline",
+    "en": "Pipeline"
+  },
+  "demos": [
+    {
+      "filename": "index.tsx",
+      "title": "Fruchterman 布局算法",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    }
+  ]
+}

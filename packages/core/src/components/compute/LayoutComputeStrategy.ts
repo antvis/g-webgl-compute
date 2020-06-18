@@ -174,14 +174,10 @@ export class LayoutComputeStrategy implements IComputeStrategy {
     }
   }
 
-  public run() {
-    // finish asap
-    while (this.component.iteration <= this.component.maxIteration - 1) {
-      this.engine.dispatch(this.component.compiledBundle.context);
-      if (this.component.onIterationCompleted) {
-        this.component.onIterationCompleted(this.component.iteration);
-      }
-      this.component.iteration++;
+  public async run() {
+    this.engine.dispatch(this.component.compiledBundle.context);
+    if (this.component.onIterationCompleted) {
+      await this.component.onIterationCompleted(this.component.iteration);
     }
   }
 

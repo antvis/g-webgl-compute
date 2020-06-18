@@ -88,6 +88,10 @@ export class World implements ILifeCycle {
     this.useRenderBundle = !!options.useRenderBundle;
   }
 
+  public isFloatSupported() {
+    return this.engine.isFloatSupported();
+  }
+
   public getCamera(entity: Entity) {
     const manager = container.get<ComponentManager<CameraComponent>>(
       IDENTIFIER.CameraComponentManager,
@@ -206,7 +210,7 @@ export class World implements ILifeCycle {
     dispatch: [number, number, number];
     maxIteration?: number;
     onCompleted?: ((particleData: ArrayBufferView) => void) | null;
-    onIterationCompleted?: ((iteration: number) => void) | null;
+    onIterationCompleted?: ((iteration: number) => Promise<void>) | null;
   }) {
     const computeSystem = container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,
@@ -279,6 +283,15 @@ export class World implements ILifeCycle {
     );
 
     return computeSystem.setBinding(entity, name, data);
+  }
+
+  public async readOutputData(entity: Entity) {
+    const computeSystem = container.getNamed<ComputeSystem>(
+      IDENTIFIER.Systems,
+      IDENTIFIER.ComputeSystem,
+    );
+
+    return computeSystem.readOutputData(entity);
   }
 
   public getParticleBuffer(entity: Entity) {

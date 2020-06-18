@@ -728,8 +728,25 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
         node.property.type === AST_NODE_TYPES.Literal &&
         isFinite(Number(node.property.value))
       ) {
+        const index = Number(node.property.value);
+        let swizzlingComponent = 'x';
+        switch (index) {
+          case 0:
+            swizzlingComponent = 'x';
+            break;
+          case 1:
+            swizzlingComponent = 'y';
+            break;
+          case 2:
+            swizzlingComponent = 'z';
+            break;
+          case 3:
+            swizzlingComponent = 'w';
+            break;
+        }
         // vec[0]
-        return `${(node.object as Identifier).name}[${node.property.value}]`;
+        // 考虑 getData()[0] 的情况，转译成 getData().x
+        return `${(node.object as Identifier).name}.${swizzlingComponent}`;
       } else {
         // data[a + b]
         return `${(node.object as Identifier).name}[${this.compileExpression(
@@ -768,8 +785,23 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
       const type = inferredType || this.inferTypeByExpression(node, context);
       if (type) {
         const elementType = type[0] === 'v' ? 'float' : 'number';
+        let sizePerElement = 1;
+        if (type.endsWith('ec4')) {
+          sizePerElement = 4;
+        } else if (type.endsWith('ec3')) {
+          sizePerElement = 3;
+        } else if (type.endsWith('ec2')) {
+          sizePerElement = 2;
+        }
+        const emptyComponents = new Array(
+          sizePerElement - node.elements.length,
+        ).fill({
+          type: AST_NODE_TYPES.Literal,
+          value: 0,
+        });
+        // 需要用 0 补齐缺少的分量，避免 vec4(vec2()) 报错的情况
         // vec3(1.0, 2.0, 3.0)
-        return `${type}(${node.elements
+        return `${type}(${[...node.elements, ...emptyComponents]
           .map((e) => {
             return this.compileExpression(e, context, elementType, isLeft);
           })
