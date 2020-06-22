@@ -3,6 +3,7 @@ import { inject, injectable } from 'inversify';
 import concat from 'lodash/concat';
 import { IRenderEngine } from '../..';
 import { IDENTIFIER } from '../../identifier';
+import { isSafari } from '../../utils/isSafari';
 import { ComputeComponent } from './ComputeComponent';
 import { IComputeStrategy } from './IComputeStrategy';
 
@@ -159,18 +160,28 @@ export class LayoutComputeStrategy implements IComputeStrategy {
       // create compute pipeline layout
       const computeBindGroupLayout = this.engine
         .getDevice()
-        // @ts-ignore
-        .createBindGroupLayout({ entries: bindGroupLayoutEntries });
+        .createBindGroupLayout(
+          isSafari
+            ? // @ts-ignore
+              { bindings: bindGroupLayoutEntries }
+            : { entries: bindGroupLayoutEntries },
+        );
       component.pipelineLayout = this.engine.getDevice().createPipelineLayout({
         bindGroupLayouts: [computeBindGroupLayout],
       });
 
-      component.particleBindGroups[0] = this.engine
-        .getDevice()
-        .createBindGroup({
-          layout: computeBindGroupLayout,
-          entries: bindGroupEntries,
-        });
+      component.particleBindGroups[0] = this.engine.getDevice().createBindGroup(
+        isSafari
+          ? {
+              layout: computeBindGroupLayout,
+              // @ts-ignore
+              bindings: bindGroupEntries,
+            }
+          : {
+              layout: computeBindGroupLayout,
+              entries: bindGroupEntries,
+            },
+      );
     }
   }
 

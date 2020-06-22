@@ -14,6 +14,7 @@ import { parse } from './g';
 import { IShaderGenerator } from './targets/IShaderGenerator';
 import { WebGLShaderGenerator } from './targets/webgl';
 import { WebGPUShaderGenerator } from './targets/webgpu';
+import { WHLSLShaderGenerator } from './targets/whlsl';
 import {
   BlockStatement,
   ClassDeclaration,
@@ -53,6 +54,8 @@ export interface ProgramParams {
     data: number | number[];
   }>;
 }
+
+export const FunctionPrependPlaceholder = '__FunctionPrependPlaceholder__';
 
 type TypedArrayConstructor =
   | Int8ArrayConstructor
@@ -163,6 +166,7 @@ interface Context {
 export enum Target {
   WebGPU = 'WebGPU',
   WebGL = 'WebGL',
+  WHLSL = 'WHLSL',
 }
 
 export class Parser {
@@ -190,6 +194,7 @@ export class Parser {
   private generators: Record<Target, IShaderGenerator> = {
     [Target.WebGPU]: new WebGPUShaderGenerator(),
     [Target.WebGL]: new WebGLShaderGenerator(),
+    [Target.WHLSL]: new WHLSLShaderGenerator(),
   };
 
   public setTarget(target: Target) {
@@ -448,36 +453,46 @@ export class Parser {
               (method.value.id as Identifier).name = 'main';
 
               append = this.generators[this.target].generateDebugCode();
-
-              // 不能在全局作用域定义
-              // @see https://community.khronos.org/t/gles-compile-errors-under-marshmallow/74876
-              if (this.target === Target.WebGL) {
-                const [
-                  localSizeX,
-                  localSizeY,
-                  localSizeZ,
-                ] = this.glslContext.threadGroupSize;
-                const [groupX, groupY, groupZ] = this.glslContext.dispatch;
-                prepend = `
-ivec3 workGroupSize = ivec3(${localSizeX}, ${localSizeY}, ${localSizeZ});
-ivec3 numWorkGroups = ivec3(${groupX}, ${groupY}, ${groupZ});     
-int globalInvocationIndex = int(floor(v_TexCoord.x * u_OutputTextureSize.x))
-  + int(floor(v_TexCoord.y * u_OutputTextureSize.y)) * int(u_OutputTextureSize.x);
-int workGroupIDLength = globalInvocationIndex / (workGroupSize.x * workGroupSize.y * workGroupSize.z);
-ivec3 workGroupID = ivec3(workGroupIDLength / numWorkGroups.y / numWorkGroups.z, workGroupIDLength / numWorkGroups.x / numWorkGroups.z, workGroupIDLength / numWorkGroups.x / numWorkGroups.y);
-int localInvocationIDZ = globalInvocationIndex / (workGroupSize.x * workGroupSize.y);
-int localInvocationIDY = (globalInvocationIndex - localInvocationIDZ * workGroupSize.x * workGroupSize.y) / workGroupSize.x;
-int localInvocationIDX = globalInvocationIndex - localInvocationIDZ * workGroupSize.x * workGroupSize.y - localInvocationIDY * workGroupSize.x;
-ivec3 localInvocationID = ivec3(localInvocationIDX, localInvocationIDY, localInvocationIDZ);
-ivec3 globalInvocationID = workGroupID * workGroupSize + localInvocationID;
-int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize.y
-                + localInvocationID.y * workGroupSize.x + localInvocationID.x;
-`;
+              prepend = this.generators[this.target].generateMainPrepend(
+                this.glslContext,
+              );
+            } else if (this.target === Target.WHLSL) {
+              const hasUniforms = this.glslContext.uniforms.find(
+                (uniform) =>
+                  uniform.type !== 'image2D' && uniform.type !== 'sampler2D',
+              );
+              const buffers = this.glslContext.uniforms.filter(
+                (u) => u.type === 'sampler2D',
+              );
+              if (hasUniforms) {
+                // WSL 不支持全局作用域声明常量，因此只能将 uniforms 透传到每一函数中
+                method.value.params.push({
+                  type: AST_NODE_TYPES.Identifier,
+                  name: WHLSLShaderGenerator.GWEBGPU_UNIFORM_PARAMS,
+                  // @ts-ignore
+                  typeAnnotation:
+                    WHLSLShaderGenerator.GWEBGPU_UNIFORM_PARAMS_STRUCT,
+                  decorators: [],
+                });
               }
+              buffers.forEach((b) => {
+                method.value.params.push({
+                  type: AST_NODE_TYPES.Identifier,
+                  name: b.name,
+                  // @ts-ignore
+                  typeAnnotation: `device ${b.format}`,
+                });
+              });
             }
+            // 创建 function 上下文
+            const functionContext = {
+              parent: context,
+              children: [],
+              variables: [],
+            };
             return this.compileFunctionExpression(
               method.value,
-              context,
+              functionContext,
               prepend,
               append,
             );
@@ -529,10 +544,9 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
             p.type === AST_NODE_TYPES.Identifier &&
             `${p.typeAnnotation} ${p.name}`,
         )
-        .join(',')}) {${prepend || ''}\n${this.compileBlockStatement(
-        node.body,
-        context,
-      )}\n${append || ''}}`;
+        .join(',')}) {${FunctionPrependPlaceholder +
+        prepend}\n${this.compileBlockStatement(node.body, context)}\n${append ||
+        ''}}`;
     }
     return '';
   }
@@ -584,7 +598,9 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
       if (type) {
         // 这里需要考虑 if (a > 1) 这种情况，如果 a 的类型是 float，需要转译成 if (a > float(1))
         if (typeCastFunctions.indexOf(type) > -1) {
-          right = `${type}(${right})`;
+          if (!(this.target === Target.WHLSL && type === 'vec4')) {
+            right = `${type}(${right})`;
+          }
         }
       }
       const isBinary = node.type === AST_NODE_TYPES.BinaryExpression;
@@ -626,6 +642,37 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
           ''
         );
       }
+
+      if (
+        this.target === Target.WHLSL &&
+        node.callee.type === AST_NODE_TYPES.MemberExpression &&
+        node.callee.object.type === AST_NODE_TYPES.Identifier &&
+        node.callee.object.name === 'this'
+      ) {
+        const hasUniforms = this.glslContext.uniforms.find(
+          (uniform) =>
+            uniform.type !== 'image2D' && uniform.type !== 'sampler2D',
+        );
+        const buffers = this.glslContext.uniforms.filter(
+          (u) => u.type === 'sampler2D',
+        );
+        if (hasUniforms) {
+          // 添加 uniform 变量
+          // @ts-ignore
+          node.arguments.push({
+            type: AST_NODE_TYPES.Identifier,
+            name: WHLSLShaderGenerator.GWEBGPU_UNIFORM_PARAMS,
+          });
+        }
+        buffers.forEach((b) => {
+          // @ts-ignore
+          node.arguments.push({
+            type: AST_NODE_TYPES.Identifier,
+            name: b.name,
+          });
+        });
+      }
+
       // function(a, b)
       // TODO: 替换 Math.sin() -> sin()
       return `${this.compileExpression(
@@ -678,12 +725,11 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
           context,
           inferredType,
           isLeft,
-        )}${node.computed ? '[' : '.'}${this.compileExpression(
-          node.property,
-          context,
-          'uint',
-          isLeft,
-        )}${node.computed ? ']' : ''}`;
+        )}${
+          node.computed ? (this.target === Target.WHLSL ? '[uint(' : '[') : '.'
+        }${this.compileExpression(node.property, context, 'int', isLeft)}${
+          node.computed ? (this.target === Target.WHLSL ? ')]' : ']') : ''
+        }`;
       } else if (node.object.type === AST_NODE_TYPES.Identifier) {
         // vectorA[threadId]
         let objectName = node.object.name;
@@ -713,6 +759,14 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
                   .find((u) => u.name === alias);
                 if (uniform) {
                   return `${WebGPUShaderGenerator.GWEBGPU_UNIFORM_PARAMS}.${alias}`;
+                }
+              } else if (this.target === Target.WHLSL) {
+                // WebGPU 中我们将所有 uniform 整合成了一个，因此需要修改用户的引用方式
+                const uniform = this.glslContext.uniforms
+                  .filter((u) => u.type !== 'sampler2D' && u.type !== 'image2D')
+                  .find((u) => u.name === alias);
+                if (uniform) {
+                  return `${WHLSLShaderGenerator.GWEBGPU_UNIFORM_PARAMS}.${alias}`;
                 }
               }
             }
@@ -1135,10 +1189,13 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
               ? 'bool'
               : `bvec${expression.property.name.length}`;
             // 暂不支持 uint WebGL 1 使用 GLSL 100
-            // } else if (objectType.startsWith('uvec')) {
-            //   return expression.property.name.length === 1
-            //     ? 'uint'
-            //     : `uvec${expression.property.name.length}`;
+          } else if (
+            this.target === Target.WHLSL &&
+            objectType.startsWith('uvec')
+          ) {
+            return expression.property.name.length === 1
+              ? 'uint'
+              : `uvec${expression.property.name.length}`;
           }
         }
       }
@@ -1195,6 +1252,10 @@ int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize
   }
 
   private wrapFloat(float: string): string {
+    // 不需要手动声明 float
+    if (this.target === Target.WHLSL) {
+      return float;
+    }
     return float.indexOf('.') === -1 ? `${float}.0` : float;
   }
 

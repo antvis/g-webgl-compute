@@ -1,4 +1,8 @@
-import { Parser, Target } from '@antv/g-webgpu-compiler';
+import {
+  FunctionPrependPlaceholder,
+  Parser,
+  Target,
+} from '@antv/g-webgpu-compiler';
 import { inject, injectable } from 'inversify';
 import { isArray, isNumber, isTypedArray } from 'lodash';
 import {
@@ -11,6 +15,7 @@ import {
 import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
+import { isSafari } from '../../utils/isSafari';
 import { ComputeComponent, ComputeType } from './ComputeComponent';
 import { IComputeStrategy } from './IComputeStrategy';
 
@@ -241,12 +246,17 @@ export class ComputeSystem implements ISystem {
     component: Component<ComputeComponent> & ComputeComponent,
   ) {
     if (!component.precompiled) {
-      const target = this.engine.supportWebGPU ? Target.WebGPU : Target.WebGL;
+      const target = this.engine.supportWebGPU
+        ? isSafari
+          ? Target.WHLSL
+          : Target.WebGPU
+        : Target.WebGL;
       this.parser.setTarget(target);
       component.compiledBundle = {
         shaders: {
           [Target.WebGPU]: '',
           [Target.WebGL]: '',
+          [Target.WHLSL]: '',
         },
         context: this.parser.getGLSLContext(),
       };
@@ -272,17 +282,30 @@ export class ComputeSystem implements ISystem {
       });
     }
 
+    const runtimeDefines = component.compiledBundle.context.defines
+      .filter((define) => define.runtime)
+      .map((define) =>
+        isSafari
+          ? `float ${define.name} = ${define.value};`
+          : `#define ${define.name} ${define.value}`,
+      )
+      .join('\n');
+
     component.stageDescriptor = await this.engine.compileComputePipelineStageDescriptor(
       // 添加运行时 define 常量
-      `${component.compiledBundle.context.defines
-        .filter((define) => define.runtime)
-        .map((define) => `#define ${define.name} ${define.value}`)
-        .join('\n')}
+      `${(!isSafari && runtimeDefines) || ''}
       ${
         component.compiledBundle.shaders[
-          this.engine.supportWebGPU ? Target.WebGPU : Target.WebGL
+          this.engine.supportWebGPU
+            ? isSafari
+              ? Target.WHLSL
+              : Target.WebGPU
+            : Target.WebGL
         ]
-      }`,
+      }`.replace(
+        new RegExp(FunctionPrependPlaceholder, 'g'),
+        isSafari ? runtimeDefines : '',
+      ),
       component.compiledBundle.context,
     );
 

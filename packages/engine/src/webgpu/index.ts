@@ -5,7 +5,11 @@
  * * ComputePipeline
  */
 import { GLSLContext } from '@antv/g-webgpu-compiler';
-import { IRenderEngine, IWebGPUEngineOptions } from '@antv/g-webgpu-core';
+import {
+  IRenderEngine,
+  isSafari,
+  IWebGPUEngineOptions,
+} from '@antv/g-webgpu-core';
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
 import { injectable } from 'inversify';
@@ -124,7 +128,12 @@ export class WebGPUEngine implements IRenderEngine {
     this.commandBuffers[1] = this.renderEncoder.finish();
     this.commandBuffers[2] = this.computeEncoder.finish();
 
-    this.device.defaultQueue.submit(this.commandBuffers);
+    if (isSafari) {
+      // @ts-ignore
+      this.device.getQueue().submit(this.commandBuffers);
+    } else {
+      this.device.defaultQueue.submit(this.commandBuffers);
+    }
 
     this.tempBuffers.forEach((buffer) => buffer.destroy());
     this.tempBuffers = [];
@@ -271,17 +280,24 @@ export class WebGPUEngine implements IRenderEngine {
     computeCode: string,
     context: GLSLContext,
   ): Promise<Pick<GPUComputePipelineDescriptor, 'computeStage'>> {
-    const shaderVersion = '#version 450\n';
-    const computeShader = await this.compileShaderToSpirV(
-      computeCode,
-      'compute',
-      shaderVersion,
-    );
+    let computeShader;
+    if (isSafari) {
+      computeShader = computeCode;
+    } else {
+      const shaderVersion = '#version 450\n';
+      computeShader = await this.compileShaderToSpirV(
+        computeCode,
+        'compute',
+        shaderVersion,
+      );
+    }
 
     return {
       computeStage: {
         module: this.device.createShaderModule({
           code: computeShader,
+          // @ts-ignore
+          isWHLSL: isSafari,
         }),
         entryPoint: 'main',
       },
@@ -368,13 +384,25 @@ export class WebGPUEngine implements IRenderEngine {
       view = data;
     }
 
-    const dataBuffer = this.createBuffer(
-      view,
-      WebGPUConstants.BufferUsage.Vertex |
-        WebGPUConstants.BufferUsage.CopyDst |
-        WebGPUConstants.BufferUsage.CopySrc |
-        usage,
-    );
+    let dataBuffer;
+    if (isSafari) {
+      dataBuffer = this.createBuffer(
+        view,
+        WebGPUConstants.BufferUsage.Vertex |
+          WebGPUConstants.BufferUsage.CopyDst |
+          WebGPUConstants.BufferUsage.MapRead |
+          usage,
+      );
+    } else {
+      // 如果添加了 MapRead，Chrome 会报错
+      dataBuffer = this.createBuffer(
+        view,
+        WebGPUConstants.BufferUsage.Vertex |
+          WebGPUConstants.BufferUsage.CopyDst |
+          WebGPUConstants.BufferUsage.CopySrc |
+          usage,
+      );
+    }
 
     return dataBuffer;
   }
@@ -553,31 +581,36 @@ export class WebGPUEngine implements IRenderEngine {
     if (output) {
       const { length, typedArrayConstructor, gpuBuffer } = output;
       if (gpuBuffer) {
-        const byteCount = length! * typedArrayConstructor!.BYTES_PER_ELEMENT;
-        const gpuReadBuffer = this.device.createBuffer({
-          size: byteCount,
-          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-        });
+        let arraybuffer;
+        if (isSafari) {
+          arraybuffer = await gpuBuffer.mapReadAsync();
+        } else {
+          const byteCount = length! * typedArrayConstructor!.BYTES_PER_ELEMENT;
+          const gpuReadBuffer = this.device.createBuffer({
+            size: byteCount,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+          });
 
-        this.uploadEncoder.copyBufferToBuffer(
-          gpuBuffer,
-          0,
-          gpuReadBuffer,
-          0,
-          byteCount,
-        );
+          this.uploadEncoder.copyBufferToBuffer(
+            gpuBuffer,
+            0,
+            gpuReadBuffer,
+            0,
+            byteCount,
+          );
 
-        // submit copy command
-        this.commandBuffers[0] = this.uploadEncoder.finish();
-        // filter undefined buffers
-        this.device.defaultQueue.submit(this.commandBuffers.filter((b) => b));
-        this.uploadEncoder = this.device.createCommandEncoder(
-          this.uploadEncoderDescriptor,
-        );
+          // submit copy command
+          this.commandBuffers[0] = this.uploadEncoder.finish();
+          // filter undefined buffers
+          this.device.defaultQueue.submit(this.commandBuffers.filter((b) => b));
+          this.uploadEncoder = this.device.createCommandEncoder(
+            this.uploadEncoderDescriptor,
+          );
 
-        const arraybuffer = await gpuReadBuffer.mapReadAsync();
-        // destroy read buffer later
-        this.tempBuffers.push(gpuReadBuffer);
+          arraybuffer = await gpuReadBuffer.mapReadAsync();
+          // destroy read buffer later
+          this.tempBuffers.push(gpuReadBuffer);
+        }
         return new typedArrayConstructor!(arraybuffer);
       }
     }
@@ -650,7 +683,7 @@ export class WebGPUEngine implements IRenderEngine {
 
   private initContextAndSwapChain() {
     this.context = (this.canvas.getContext(
-      'gpupresent',
+      isSafari ? 'gpu' : 'gpupresent',
     ) as unknown) as GPUCanvasContext;
     this.swapChain = this.context.configureSwapChain({
       device: this.device,
@@ -686,7 +719,10 @@ export class WebGPUEngine implements IRenderEngine {
       this.mainTexture = this.device.createTexture(mainTextureDescriptor);
       this.mainColorAttachments = [
         {
-          attachment: this.mainTexture.createView(),
+          attachment: isSafari
+            ? // @ts-ignore
+              this.mainTexture.createDefaultView()
+            : this.mainTexture.createView(),
           loadValue: [0, 0, 0, 1],
           storeOp: WebGPUConstants.StoreOp.Store,
         },
@@ -694,7 +730,10 @@ export class WebGPUEngine implements IRenderEngine {
     } else {
       this.mainColorAttachments = [
         {
-          attachment: this.swapChain.getCurrentTexture().createView(),
+          attachment: isSafari
+            ? // @ts-ignore
+              this.swapChain.getCurrentTexture().createDefaultView()
+            : this.swapChain.getCurrentTexture().createView(),
           loadValue: [0, 0, 0, 1],
           storeOp: WebGPUConstants.StoreOp.Store,
         },
@@ -707,16 +746,22 @@ export class WebGPUEngine implements IRenderEngine {
       mipLevelCount: 1,
       sampleCount: this.mainPassSampleCount,
       dimension: WebGPUConstants.TextureDimension.E2d,
-      format: WebGPUConstants.TextureFormat.Depth24PlusStencil8,
+      format: isSafari
+        ? 'depth32float-stencil8'
+        : WebGPUConstants.TextureFormat.Depth24PlusStencil8,
       usage: WebGPUConstants.TextureUsage.OutputAttachment,
     };
 
     if (this.depthTexture) {
       this.depthTexture.destroy();
     }
+    // @ts-ignore
     this.depthTexture = this.device.createTexture(depthTextureDescriptor);
     this.mainDepthAttachment = {
-      attachment: this.depthTexture.createView(),
+      attachment: isSafari
+        ? // @ts-ignore
+          this.depthTexture.createDefaultView()
+        : this.depthTexture.createView(),
       depthLoadValue: this.clearDepthValue,
       depthStoreOp: WebGPUConstants.StoreOp.Store,
       stencilLoadValue: this.clearStencilValue,
@@ -739,13 +784,15 @@ export class WebGPUEngine implements IRenderEngine {
 
     // Resolve in case of MSAA
     if (this.options.antialiasing) {
-      this.mainColorAttachments[0].resolveTarget = this.swapChain
-        .getCurrentTexture()
-        .createView();
+      this.mainColorAttachments[0].resolveTarget = isSafari
+        ? // @ts-ignore
+          this.swapChain.getCurrentTexture().createDefaultView()
+        : this.swapChain.getCurrentTexture().createView();
     } else {
-      this.mainColorAttachments[0].attachment = this.swapChain
-        .getCurrentTexture()
-        .createView();
+      this.mainColorAttachments[0].attachment = isSafari
+        ? // @ts-ignore
+          this.swapChain.getCurrentTexture().createDefaultView()
+        : this.swapChain.getCurrentTexture().createView();
     }
 
     this.currentRenderPass = this.renderEncoder.beginRenderPass({
@@ -832,12 +879,16 @@ export class WebGPUEngine implements IRenderEngine {
       vertexStage: {
         module: this.device.createShaderModule({
           code: vertexShader,
+          // @ts-ignore
+          isWHLSL: isSafari,
         }),
         entryPoint: 'main',
       },
       fragmentStage: {
         module: this.device.createShaderModule({
           code: fragmentShader,
+          // @ts-ignore
+          isWHLSL: isSafari,
         }),
         entryPoint: 'main',
       },

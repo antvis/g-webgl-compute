@@ -6,7 +6,6 @@ import ReactDOM from 'react-dom';
 const gCode = `
 import { globalInvocationID } from 'g-webgpu';
 
-const SPEED_DIVISOR = 800;
 const MAX_EDGE_PER_VERTEX;
 const VERTEX_COUNT;
 

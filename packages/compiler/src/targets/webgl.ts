@@ -41,6 +41,28 @@ ${main}
     `.replace(/this\./g, ''); // 替换掉所有 'this.' 全局作用域;
   }
 
+  public generateMainPrepend(glslContext: GLSLContext): string {
+    // 不能在全局作用域定义
+    // @see https://community.khronos.org/t/gles-compile-errors-under-marshmallow/74876
+    const [localSizeX, localSizeY, localSizeZ] = glslContext.threadGroupSize;
+    const [groupX, groupY, groupZ] = glslContext.dispatch;
+    return `
+ivec3 workGroupSize = ivec3(${localSizeX}, ${localSizeY}, ${localSizeZ});
+ivec3 numWorkGroups = ivec3(${groupX}, ${groupY}, ${groupZ});     
+int globalInvocationIndex = int(floor(v_TexCoord.x * u_OutputTextureSize.x))
+  + int(floor(v_TexCoord.y * u_OutputTextureSize.y)) * int(u_OutputTextureSize.x);
+int workGroupIDLength = globalInvocationIndex / (workGroupSize.x * workGroupSize.y * workGroupSize.z);
+ivec3 workGroupID = ivec3(workGroupIDLength / numWorkGroups.y / numWorkGroups.z, workGroupIDLength / numWorkGroups.x / numWorkGroups.z, workGroupIDLength / numWorkGroups.x / numWorkGroups.y);
+int localInvocationIDZ = globalInvocationIndex / (workGroupSize.x * workGroupSize.y);
+int localInvocationIDY = (globalInvocationIndex - localInvocationIDZ * workGroupSize.x * workGroupSize.y) / workGroupSize.x;
+int localInvocationIDX = globalInvocationIndex - localInvocationIDZ * workGroupSize.x * workGroupSize.y - localInvocationIDY * workGroupSize.x;
+ivec3 localInvocationID = ivec3(localInvocationIDX, localInvocationIDY, localInvocationIDZ);
+ivec3 globalInvocationID = workGroupID * workGroupSize + localInvocationID;
+int localInvocationIndex = localInvocationID.z * workGroupSize.x * workGroupSize.y
+                + localInvocationID.y * workGroupSize.x + localInvocationID.x;
+`;
+  }
+
   public generateDebugCode(): string {
     // 在 main 函数末尾添加输出代码
     return `

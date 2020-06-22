@@ -54,6 +54,10 @@ if (gWebGPUDebug) {
 `;
   }
 
+  public generateMainPrepend(): string {
+    return '';
+  }
+
   public generateDefines(glslContext: GLSLContext): string {
     // 生成编译时 defines
     return glslContext.defines

@@ -29,6 +29,7 @@ class ComputeComponent extends Component<ComputeComponent> {
     shaders: {
       [Target.WebGL]: string;
       [Target.WebGPU]: string;
+      [Target.WHLSL]: string;
     };
     context: GLSLContext;
   };

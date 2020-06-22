@@ -32,6 +32,7 @@ import { IDENTIFIER } from './identifier';
 import { container, lazyInject, lazyMultiInject } from './inversify.config';
 import { IRenderEngine, IWebGPUEngineOptions } from './IRenderEngine';
 import { ISystem } from './ISystem';
+import { isSafari } from './utils/isSafari';
 
 export {
   container,
@@ -66,4 +67,5 @@ export {
   MeshComponent,
   TransformComponent,
   MaterialComponent,
+  isSafari,
 };

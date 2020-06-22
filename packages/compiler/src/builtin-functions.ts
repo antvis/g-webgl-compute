@@ -1,12 +1,14 @@
 export enum Target {
   WebGPU = 'WebGPU',
   WebGL = 'WebGL',
+  WHLSL = 'WHLSL',
 }
 
 // http://learnwebgl.brown37.net/12_shader_language/glsl_data_types.html
 export const typeCastFunctions = [
   'float',
   'int',
+  'uint',
   'vec2',
   'vec3',
   'vec4',
@@ -65,6 +67,7 @@ export const swizzling = [
 export const typePriority = {
   float: 1,
   int: 2,
+  uint: 3,
   vec2: 100,
   vec3: 101,
   vec4: 102,
@@ -85,6 +88,7 @@ vec2 addrTranslation_1Dto2D(float address1D, vec2 texSize) {
 void barrier() {}
   `,
   [Target.WebGPU]: '',
+  [Target.WHLSL]: '',
 };
 
 export const exportFunctions = {
@@ -158,4 +162,5 @@ void debug(bool o) {
       returnType: 'void',
     },
   },
+  [Target.WHLSL]: {},
 };
