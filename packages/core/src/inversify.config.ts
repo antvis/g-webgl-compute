@@ -20,7 +20,7 @@ import { ResourceHandleComponent } from './components/framegraph/ResourceHandleC
 import { FrameGraphSystem } from './components/framegraph/System';
 import { GeometryComponent } from './components/geometry/GeometryComponent';
 import { GeometrySystem } from './components/geometry/System';
-import { InteractionSystem } from './components/interaction/System';
+// import { InteractionSystem } from './components/interaction/System';
 import { MaterialComponent } from './components/material/MaterialComponent';
 import { MaterialSystem } from './components/material/System';
 import { CullableComponent } from './components/mesh/CullableComponent';
@@ -188,10 +188,10 @@ container
   .to(MaterialSystem)
   .whenTargetNamed(IDENTIFIER.MaterialSystem);
 
-container
-  .bind<ISystem>(IDENTIFIER.Systems)
-  .to(InteractionSystem)
-  .whenTargetNamed(IDENTIFIER.InteractionSystem);
+// container
+//   .bind<ISystem>(IDENTIFIER.Systems)
+//   .to(InteractionSystem)
+//   .whenTargetNamed(IDENTIFIER.InteractionSystem);
 
 container
   .bind<ISystem>(IDENTIFIER.Systems)

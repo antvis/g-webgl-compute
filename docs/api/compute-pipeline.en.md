@@ -15,7 +15,7 @@ order: 2
 和 `RenderPipeline` 一样，我们需要先创建 `World` 并开启 GPGPU 支持：
 
 ```typescript
-const world = new World(canvas, {
+const world = new World({
   engineOptions: {
     supportCompute: true,
   },

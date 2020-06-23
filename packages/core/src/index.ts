@@ -7,7 +7,7 @@ import {
   GeometrySystem,
   IBoxGeometryParams,
 } from './components/geometry/System';
-import { InteractionSystem } from './components/interaction/System';
+// import { InteractionSystem } from './components/interaction/System';
 import { IMaterialParams, MaterialSystem } from './components/material/System';
 import { IMeshParams, MeshSystem } from './components/mesh/System';
 import { SceneSystem } from './components/scene/System';
@@ -56,7 +56,7 @@ export {
   ComputeType,
   FrameGraphSystem,
   GeometrySystem,
-  InteractionSystem,
+  // InteractionSystem,
   MaterialSystem,
   MeshSystem,
   SceneSystem,

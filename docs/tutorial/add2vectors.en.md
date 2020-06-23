@@ -29,10 +29,7 @@ a.add(b).print();  // or tf.add(a, b)
 
 首先调用 [API](/zh/docs/api/compute-pipeline) 完成 Compute Pipeline 的创建。我们使用 `dispatch` 分配了一个 `1 * 1 * 1` 的线程网格，通过 `setBinding` 传入了两个向量作为计算数据。
 ```typescript
-// 获取 HTMLCanvasElement
-const canvas = document.getElementById('application');
-
-const world = new World(canvas, {
+const world = new World({
   engineOptions: {
     supportCompute: true,
   },

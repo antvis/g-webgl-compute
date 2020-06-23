@@ -32,27 +32,24 @@ class Add2Vectors {
 const App = React.memo(function Add2Vectors() {
   const [result, setResult] = useState([]);
   useEffect(() => {
-    const canvas = document.getElementById('application') as HTMLCanvasElement;
-    if (canvas) {
-      const world = new World(canvas, {
-        engineOptions: {
-          supportCompute: true,
-        },
-      });
+    const world = new World({
+      engineOptions: {
+        supportCompute: true,
+      },
+    });
 
-      const compute = world.createComputePipeline({
-        shader: gCode,
-        dispatch: [1, 1, 1],
-        onCompleted: (r) => {
-          setResult(r);
-          // 计算完成后销毁相关 GPU 资源
-          world.destroy();
-        },
-      });
+    const compute = world.createComputePipeline({
+      shader: gCode,
+      dispatch: [1, 1, 1],
+      onCompleted: (r) => {
+        setResult(r);
+        // 计算完成后销毁相关 GPU 资源
+        world.destroy();
+      },
+    });
 
-      world.setBinding(compute, 'vectorA', [1, 2, 3, 4, 5, 6, 7, 8]);
-      world.setBinding(compute, 'vectorB', [1, 2, 3, 4, 5, 6, 7, 8]);
-    }
+    world.setBinding(compute, 'vectorA', [1, 2, 3, 4, 5, 6, 7, 8]);
+    world.setBinding(compute, 'vectorB', [1, 2, 3, 4, 5, 6, 7, 8]);
   }, []);
 
   return (
@@ -64,7 +61,6 @@ const App = React.memo(function Add2Vectors() {
         <li>VectorA: 1, 2, 3, 4, 5, 6, 7, 8</li>
         <li>VectorB: 1, 2, 3, 4, 5, 6, 7, 8</li>
       </ul>
-      <canvas id="application" style={{ display: 'none' }} />
       Result: {result.toString()}
     </>
   );

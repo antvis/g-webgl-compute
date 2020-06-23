@@ -12,6 +12,12 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.worker\.ts$/,
+        use: {
+          loader: 'worker-loader',
+        },
+      },
+      {
         test: /\.(ts|tsx)$/,
         loader: require.resolve('awesome-typescript-loader'),
       },

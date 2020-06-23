@@ -43,34 +43,31 @@ const App = React.memo(function Add2Vectors() {
   const [CPUResult, setCPUResult] = useState(0);
   const [GPUResult, setGPUResult] = useState(0);
   useEffect(() => {
-    const canvas = document.getElementById('application') as HTMLCanvasElement;
-    if (canvas) {
-      const data = new Array(1024 * 1024 * 10).fill(undefined).map((_, i) => 1);
-      let timeStart = window.performance.now();
-      const sum = data.reduce((cur, prev) => prev + cur, 0);
-      setCPUTimeElapsed(window.performance.now() - timeStart);
-      setCPUResult(sum);
+    const data = new Array(1024 * 1024 * 10).fill(undefined).map((_, i) => 1);
+    let timeStart = window.performance.now();
+    const sum = data.reduce((cur, prev) => prev + cur, 0);
+    setCPUTimeElapsed(window.performance.now() - timeStart);
+    setCPUResult(sum);
 
-      const world = new World(canvas, {
-        engineOptions: {
-          supportCompute: true,
-        },
-      });
+    const world = new World({
+      engineOptions: {
+        supportCompute: true,
+      },
+    });
 
-      timeStart = window.performance.now();
-      const compute = world.createComputePipeline({
-        shader: gCode,
-        dispatch: [1024 * 10, 1, 1],
-        onCompleted: (result) => {
-          setGPUTimeElapsed(window.performance.now() - timeStart);
-          setGPUResult(result.reduce((cur, prev) => prev + cur, 0));
-          // 计算完成后销毁相关 GPU 资源
-          world.destroy();
-        },
-      });
+    timeStart = window.performance.now();
+    const compute = world.createComputePipeline({
+      shader: gCode,
+      dispatch: [1024 * 10, 1, 1],
+      onCompleted: (result) => {
+        setGPUTimeElapsed(window.performance.now() - timeStart);
+        setGPUResult(result.reduce((cur, prev) => prev + cur, 0));
+        // 计算完成后销毁相关 GPU 资源
+        world.destroy();
+      },
+    });
 
-      world.setBinding(compute, 'gData', data);
-    }
+    world.setBinding(compute, 'gData', data);
   }, []);
 
   return (
@@ -82,7 +79,6 @@ const App = React.memo(function Add2Vectors() {
         <li>CPUResult: {CPUResult}</li>
         <li>GPUResult: {GPUResult}</li>
       </ul>
-      <canvas id="application" style={{ display: 'none' }} />
     </>
   );
 });

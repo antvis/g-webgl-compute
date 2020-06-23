@@ -11,10 +11,7 @@ https://gwebgpu.antv.vision/zh/docs/api/gwebgpu
 我们提供了一些内置的计算模型，你可以使用任何渲染技术对于计算结果进行展示（当然也可以用我们的渲染 API）。
 
 ```typescript
-// 获取 HTMLCanvasElement
-const canvas = document.getElementById('application');
-
-const world = new World(canvas, {
+const world = new World({
   engineOptions: {
     supportCompute: true,
   },

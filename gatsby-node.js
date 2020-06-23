@@ -14,6 +14,13 @@ exports.onCreateWebpackConfig = ({ getConfig }) => {
     ],
   });
 
+  config.module.rules.push({
+    test: /\.worker\.ts$/,
+    use: {
+      loader: 'worker-loader',
+    },
+  });
+
   // config.module.rules.push({
   //   test: /\.(ts|tsx)$/,
   //   loader: require.resolve('awesome-typescript-loader'),

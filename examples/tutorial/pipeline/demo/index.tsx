@@ -165,88 +165,83 @@ const App = React.memo(function Fruchterman() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   useEffect(() => {
     (async () => {
-      const canvas = document.getElementById(
-        'application',
-      ) as HTMLCanvasElement;
-      if (canvas) {
-        // @see https://g6.antv.vision/en/examples/net/forceDirected/#basicForceDirected
-        const data = await (
-          await fetch(
-            'https://gw.alipayobjects.com/os/basement_prod/7bacd7d1-4119-4ac1-8be3-4c4b9bcbc25f.json',
-          )
-        ).json();
+      // @see https://g6.antv.vision/en/examples/net/forceDirected/#basicForceDirected
+      const data = await (
+        await fetch(
+          'https://gw.alipayobjects.com/os/basement_prod/7bacd7d1-4119-4ac1-8be3-4c4b9bcbc25f.json',
+        )
+      ).json();
 
-        const nodes = data.nodes.map((n) => ({
-          x: (Math.random() * 2 - 1) / 10,
-          y: (Math.random() * 2 - 1) / 10,
-          id: n.id,
-        }));
-        const edges = data.edges;
-        const numParticles = nodes.length;
-        const nodesEdgesArray = buildTextureData(nodes, edges);
+      const nodes = data.nodes.map((n) => ({
+        x: (Math.random() * 2 - 1) / 10,
+        y: (Math.random() * 2 - 1) / 10,
+        id: n.id,
+      }));
+      const edges = data.edges;
+      const numParticles = nodes.length;
+      const nodesEdgesArray = buildTextureData(nodes, edges);
 
-        const world = new World(canvas, {
-          engineOptions: {
-            supportCompute: true,
-          },
-        });
+      const world = new World({
+        engineOptions: {
+          supportCompute: true,
+        },
+      });
 
-        const timeStart = window.performance.now();
-        const compute = world.createComputePipeline({
-          shader: gCode,
-          dispatch: [numParticles, 1, 1],
-          maxIteration: MAX_ITERATION,
-          onIterationCompleted: async () => {
-            world.setBinding(compute2, 'u_Data', {
-              entity: compute,
-            });
-          },
-          onCompleted: (finalParticleData) => {
-            setTimeElapsed(window.performance.now() - timeStart);
-            // draw with G
-            renderCircles(finalParticleData, numParticles);
-          },
-        });
+      const timeStart = window.performance.now();
+      const compute = world.createComputePipeline({
+        shader: gCode,
+        dispatch: [numParticles, 1, 1],
+        maxIteration: MAX_ITERATION,
+        onIterationCompleted: async () => {
+          world.setBinding(compute2, 'u_Data', {
+            entity: compute,
+          });
+        },
+        onCompleted: (finalParticleData) => {
+          setTimeElapsed(window.performance.now() - timeStart);
+          // draw with G
+          renderCircles(finalParticleData, numParticles);
+        },
+      });
 
-        world.setBinding(compute, 'u_Data', nodesEdgesArray);
-        world.setBinding(
-          compute,
-          'u_K',
-          Math.sqrt((numParticles * numParticles) / (numParticles + 1) / 300),
-        );
-        world.setBinding(
-          compute,
-          'u_K2',
-          (numParticles * numParticles) / (numParticles + 1) / 300 / 300,
-        );
-        world.setBinding(compute, 'u_Gravity', 50);
-        world.setBinding(compute, 'u_Speed', 0.1);
-        world.setBinding(
-          compute,
-          'u_MaxDisplace',
-          Math.sqrt(numParticles * numParticles) / 10,
-        );
-        world.setBinding(compute, 'MAX_EDGE_PER_VERTEX', maxEdgePerVetex);
-        world.setBinding(compute, 'VERTEX_COUNT', numParticles);
-        world.setBinding(compute, 'u_Center', [0, 0]);
+      world.setBinding(compute, 'u_Data', nodesEdgesArray);
+      world.setBinding(
+        compute,
+        'u_K',
+        Math.sqrt((numParticles * numParticles) / (numParticles + 1) / 300),
+      );
+      world.setBinding(
+        compute,
+        'u_K2',
+        (numParticles * numParticles) / (numParticles + 1) / 300 / 300,
+      );
+      world.setBinding(compute, 'u_Gravity', 50);
+      world.setBinding(compute, 'u_Speed', 0.1);
+      world.setBinding(
+        compute,
+        'u_MaxDisplace',
+        Math.sqrt(numParticles * numParticles) / 10,
+      );
+      world.setBinding(compute, 'MAX_EDGE_PER_VERTEX', maxEdgePerVetex);
+      world.setBinding(compute, 'VERTEX_COUNT', numParticles);
+      world.setBinding(compute, 'u_Center', [0, 0]);
 
-        const compute2 = world.createComputePipeline({
-          shader: gCode2,
-          dispatch: [1, 1, 1],
-          maxIteration: MAX_ITERATION,
-          onIterationCompleted: async () => {
-            world.setBinding(compute, 'u_Center', {
-              entity: compute2,
-            });
-          },
-          onCompleted: (finalParticleData) => {
-            console.log('center: ', finalParticleData);
-            world.destroy();
-          },
-        });
-        world.setBinding(compute2, 'u_Data', nodesEdgesArray);
-        world.setBinding(compute2, 'VERTEX_COUNT', numParticles);
-      }
+      const compute2 = world.createComputePipeline({
+        shader: gCode2,
+        dispatch: [1, 1, 1],
+        maxIteration: MAX_ITERATION,
+        onIterationCompleted: async () => {
+          world.setBinding(compute, 'u_Center', {
+            entity: compute2,
+          });
+        },
+        onCompleted: (finalParticleData) => {
+          console.log('center: ', finalParticleData);
+          world.destroy();
+        },
+      });
+      world.setBinding(compute2, 'u_Data', nodesEdgesArray);
+      world.setBinding(compute2, 'VERTEX_COUNT', numParticles);
     })();
   }, []);
 

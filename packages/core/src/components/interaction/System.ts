@@ -1,4 +1,4 @@
-import Hammer from 'hammerjs';
+// import Hammer from 'hammerjs';
 import { inject, injectable } from 'inversify';
 import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
@@ -27,7 +27,7 @@ export class InteractionSystem implements ISystem {
   private deltaY: number = 0;
   private deltaZ: number = 0;
 
-  private hammertime: HammerManager;
+  // private hammertime: HammerManager;
   private canvas: HTMLCanvasElement;
 
   @inject(IDENTIFIER.SceneComponentManager)
@@ -37,75 +37,73 @@ export class InteractionSystem implements ISystem {
   private readonly camera: ComponentManager<CameraComponent>;
 
   public initialize(canvas: HTMLCanvasElement) {
-    const hammertime = new Hammer(canvas);
-    hammertime.get('pan').set({ direction: Hammer.DIRECTION_ALL });
-    hammertime.get('pinch').set({ enable: true });
-
-    hammertime.on('panstart', this.onPanstart);
-    hammertime.on('panmove', this.onPanmove);
-    hammertime.on('panend', this.onPanend);
-    hammertime.on('pinch', this.onPinch);
-    this.hammertime = hammertime;
-
-    canvas.addEventListener('wheel', this.onMousewheel);
-    this.canvas = canvas;
+    // const hammertime = new Hammer(canvas);
+    // hammertime.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+    // hammertime.get('pinch').set({ enable: true });
+    // hammertime.on('panstart', this.onPanstart);
+    // hammertime.on('panmove', this.onPanmove);
+    // hammertime.on('panend', this.onPanend);
+    // hammertime.on('pinch', this.onPinch);
+    // this.hammertime = hammertime;
+    // canvas.addEventListener('wheel', this.onMousewheel);
+    // this.canvas = canvas;
   }
 
   public tearDown() {
-    this.hammertime.off('panstart', this.onPanstart);
-    this.hammertime.off('panmove', this.onPanmove);
-    this.hammertime.off('panend', this.onPanend);
-    this.hammertime.off('pinch', this.onPinch);
-    this.canvas.removeEventListener('wheel', this.onMousewheel);
+    // this.hammertime.off('panstart', this.onPanstart);
+    // this.hammertime.off('panmove', this.onPanmove);
+    // this.hammertime.off('panend', this.onPanend);
+    // this.hammertime.off('pinch', this.onPinch);
+    // this.canvas.removeEventListener('wheel', this.onMousewheel);
   }
 
-  private onPanend = (e: HammerInput) => {
-    this.isMoving = false;
-  };
+  // private onPanend = (e: HammerInput) => {
+  //   this.isMoving = false;
+  // };
 
-  private onPanstart = (e: HammerInput) => {
-    this.lastX = e.center.x;
-    this.lastY = e.center.y;
-    this.isMoving = true;
-    this.deltaZ = 0;
-  };
+  // private onPanstart = (e: HammerInput) => {
+  //   this.lastX = e.center.x;
+  //   this.lastY = e.center.y;
+  //   this.isMoving = true;
+  //   this.deltaZ = 0;
+  // };
 
-  private onPanmove = (e: HammerInput) => {
-    if (this.isMoving) {
-      this.deltaX = e.center.x - this.lastX;
-      this.deltaY = e.center.y - this.lastY;
+  // private onPanmove = (e: HammerInput) => {
+  //   if (this.isMoving) {
+  //     this.deltaX = e.center.x - this.lastX;
+  //     this.deltaY = e.center.y - this.lastY;
 
-      this.lastX = e.center.x;
-      this.lastY = e.center.y;
+  //     this.lastX = e.center.x;
+  //     this.lastY = e.center.y;
 
-      this.onChangeCamera({
-        deltaX: this.deltaX,
-        deltaY: this.deltaY,
-        deltaZ: this.deltaZ,
-      });
-    }
-  };
+  //     this.onChangeCamera({
+  //       deltaX: this.deltaX,
+  //       deltaY: this.deltaY,
+  //       deltaZ: this.deltaZ,
+  //     });
+  //   }
+  // };
 
-  private onMousewheel = (e: WheelEvent) => {
-    this.deltaZ = e.deltaY;
-    this.onChangeCamera({
-      deltaX: this.deltaX,
-      deltaY: this.deltaY,
-      deltaZ: this.deltaZ,
-    });
-  };
+  // private onMousewheel = (e: WheelEvent) => {
+  //   this.deltaZ = e.deltaY;
+  //   this.onChangeCamera({
+  //     deltaX: this.deltaX,
+  //     deltaY: this.deltaY,
+  //     deltaZ: this.deltaZ,
+  //   });
+  // };
 
-  private onPinch = (e: HammerInput) => {
-    this.deltaZ = (1 - e.scale) * 10;
-  };
+  // private onPinch = (e: HammerInput) => {
+  //   this.deltaZ = (1 - e.scale) * 10;
+  // };
 
-  private onChangeCamera = (data: IMouseData) => {
-    const { deltaX, deltaY, deltaZ } = data;
-    this.scene.forEach((entity, scene) => {
-      const camera = this.camera.getComponentByEntity(scene.camera)!;
+  // private onChangeCamera = (data: IMouseData) => {
+  //   const { deltaX, deltaY, deltaZ } = data;
+  //   this.scene.forEach((entity, scene) => {
+  //     const camera = this.camera.getComponentByEntity(scene.camera)!;
 
-      camera.rotate(deltaX, deltaY, 0);
-      camera.dolly(deltaZ);
-    });
-  };
+  //     camera.rotate(deltaX, deltaY, 0);
+  //     camera.dolly(deltaZ);
+  //   });
+  // };
 }

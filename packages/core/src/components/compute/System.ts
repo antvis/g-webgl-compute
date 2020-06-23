@@ -103,7 +103,20 @@ export class ComputeSystem implements ISystem {
     precompiled?: boolean;
     dispatch: [number, number, number];
     maxIteration?: number;
-    onCompleted?: ((particleData: ArrayBufferView) => void) | null;
+    onCompleted?:
+      | ((
+          particleData:
+            | Float32Array
+            | Float64Array
+            | Int8Array
+            | Uint8Array
+            | Uint8ClampedArray
+            | Int16Array
+            | Uint16Array
+            | Int32Array
+            | Uint32Array,
+        ) => void)
+      | null;
     onIterationCompleted?: ((iteration: number) => Promise<void>) | null;
   }) {
     const entity = createEntity();

@@ -5,7 +5,8 @@ module.exports = {
       options: {
         GATrackingId: 'UA-148148901-9'
       }
-    }
+    },
+    // 'gatsby-plugin-workerize-loader',
   ],
   siteMetadata: {
     title: 'GWebGPU',

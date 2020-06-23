@@ -12,9 +12,7 @@ You can try to solve some compute-intensive tasks like layout & particle effects
 Use any rendering techniques(d3, g, Three.js or ours' rendering API if you like) when calculation is completed.
 
 ```typescript
-const canvas = document.getElementById('application');
-
-const world = new World(canvas, {
+const world = new World({
   engineOptions: {
     supportCompute: true,
   },

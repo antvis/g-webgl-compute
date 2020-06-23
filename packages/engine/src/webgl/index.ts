@@ -208,7 +208,8 @@ export class WebGLEngine implements IRenderEngine {
 
     this.gl = await new Promise((resolve, reject) => {
       regl({
-        container: this.canvas,
+        // @ts-ignore
+        canvas: this.canvas,
         attributes: {
           alpha: true,
           // use TAA instead of MSAA

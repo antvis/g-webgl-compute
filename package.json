@@ -98,6 +98,7 @@
     "eslint-plugin-html": "^6.0.0",
     "gatsby": "^2.19.15",
     "gatsby-plugin-google-analytics": "^2.1.27",
+    "gatsby-plugin-workerize-loader": "^1.5.0",
     "gatsby-remark-prettier": "^1.0.0",
     "gh-pages": "^2.1.1",
     "html-webpack-plugin": "^3.2.0",
@@ -138,7 +139,8 @@
     "webpack": "^4.17.1",
     "webpack-cli": "^3.1.0",
     "webpack-dev-server": "^3.1.7",
-    "webpack-merge": "^4.1.4"
+    "webpack-merge": "^4.1.4",
+    "worker-loader": "^2.0.0"
   },
   "workspaces": [
     "packages/*",
@@ -158,5 +160,5 @@
   "tnpm": {
     "mode": "yarn"
   },
-  "version": "0.2.0"
+  "version": "0.3.0"
 }

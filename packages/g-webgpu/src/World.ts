@@ -27,6 +27,7 @@ import {
 import { WebGLEngine, WebGPUEngine } from '@antv/g-webgpu-engine';
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
+import { createCanvas } from './utils/canvas';
 
 interface ILifeCycle {
   init(canvas: HTMLCanvasElement): void;
@@ -51,8 +52,9 @@ export class World implements ILifeCycle {
   private renderBundle: GPURenderBundle;
 
   constructor(
-    canvas: HTMLCanvasElement,
     options: Partial<{
+      container: HTMLElement;
+      canvas: HTMLCanvasElement;
       useRenderBundle: boolean;
       engineOptions: IWebGPUEngineOptions;
       onInit: (engine: IRenderEngine) => void;
@@ -77,8 +79,8 @@ export class World implements ILifeCycle {
       IDENTIFIER.ForwardRenderPath,
     );
 
-    this.canvas = canvas;
-    this.init(canvas, options.engineOptions);
+    this.canvas = options.canvas || createCanvas();
+    this.init(this.canvas, options.engineOptions);
     if (options.onInit) {
       this.onInit = options.onInit;
     }
@@ -205,7 +207,20 @@ export class World implements ILifeCycle {
     shader: string;
     dispatch: [number, number, number];
     maxIteration?: number;
-    onCompleted?: ((particleData: ArrayBufferView) => void) | null;
+    onCompleted?:
+      | ((
+          particleData:
+            | Float32Array
+            | Float64Array
+            | Int8Array
+            | Uint8Array
+            | Uint8ClampedArray
+            | Int16Array
+            | Uint16Array
+            | Int32Array
+            | Uint32Array,
+        ) => void)
+      | null;
     onIterationCompleted?: ((iteration: number) => Promise<void>) | null;
   }) {
     const computeSystem = container.getNamed<ComputeSystem>(
@@ -345,7 +360,8 @@ export class World implements ILifeCycle {
       }
     });
 
-    this.rafHandle = window.requestAnimationFrame(this.update);
+    // 考虑运行在 Worker 中，不能使用 window.requestAnimationFrame
+    this.rafHandle = requestAnimationFrame(this.update);
   };
 
   public destroy() {
@@ -356,7 +372,7 @@ export class World implements ILifeCycle {
       }
     });
 
-    window.cancelAnimationFrame(this.rafHandle);
+    cancelAnimationFrame(this.rafHandle);
   }
 
   private async render() {

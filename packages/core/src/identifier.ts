@@ -19,7 +19,7 @@ export const IDENTIFIER = {
   PassNodeComponentManager: Symbol('PassNodeComponentManager'),
 
   // Interaction
-  InteractionSystem: Symbol('InteractionSystem'),
+  // InteractionSystem: Symbol('InteractionSystem'),
 
   // Mesh
   MeshSystem: Symbol('MeshSystem'),
