@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.4.1](https://github.com/xiaoiver/GWebGPUEngine/compare/v0.4.0...v0.4.1) (2020-06-24)
+
+
+### Bug Fixes
+
+* export type/interface not found [#28](https://github.com/xiaoiver/GWebGPUEngine/issues/28) ([9dc7eaf](https://github.com/xiaoiver/GWebGPUEngine/commit/9dc7eafc8ed4ec9fcc2cf84a51612015438db45a))
+
+
+
+
+
 # [0.4.0](https://github.com/xiaoiver/GWebGPUEngine/compare/v0.3.0...v0.4.0) (2020-06-24)
 
 
