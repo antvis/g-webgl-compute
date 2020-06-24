@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/xiaoiver/GWebGPUEngine/compare/v0.3.0...v0.4.0) (2020-06-24)
+
+
+### Features
+
+* 支持在 WebWorker 中运行 [#23](https://github.com/xiaoiver/GWebGPUEngine/issues/23) ([1e87b0f](https://github.com/xiaoiver/GWebGPUEngine/commit/1e87b0f0702a9082c8cdfba834532f23dd72700c))
+
+
+
+
+
 # [0.2.0](https://github.com/xiaoiver/GWebGPUEngine/compare/v0.1.2...v0.2.0) (2020-06-12)
 
 
