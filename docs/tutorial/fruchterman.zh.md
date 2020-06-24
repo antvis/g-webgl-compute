@@ -167,6 +167,10 @@ class Fruchterman {
 
 下面我们来看一下具体的做法。
 
+Online DEMO：https://xiaoiver.github.io/FruchtermanWorkerDemo/
+
+GitHub：https://github.com/xiaoiver/FruchtermanWorkerDemo/
+
 ## 创建 WebWorker
 
 创建 WebWorker 的过程有三点需要注意：
@@ -241,6 +245,16 @@ worker.addEventListener('message', (e: MessageEvent) => {
   renderLines(edges);
 });
 ```
+
+## 最终效果
+
+Online DEMO：https://xiaoiver.github.io/FruchtermanWorkerDemo/
+
+GitHub：https://github.com/xiaoiver/FruchtermanWorkerDemo/
+
+可以看出主线程不会出现“卡住”的情景了，在 Worker 计算完成前我们可以使用 loading 展示。
+
+![Jun-24-2020 15-59-41](https://user-images.githubusercontent.com/3608471/85519314-e3d20280-b633-11ea-8add-ca10d27c4d9e.gif)
 
 # Benchmarks
 
