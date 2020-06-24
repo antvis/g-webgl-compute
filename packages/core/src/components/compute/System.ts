@@ -16,8 +16,9 @@ import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
 import { isSafari } from '../../utils/isSafari';
-import { ComputeComponent, ComputeType } from './ComputeComponent';
+import { ComputeComponent } from './ComputeComponent';
 import { IComputeStrategy } from './IComputeStrategy';
+import { ComputeType } from './interface';
 
 @injectable()
 export class ComputeSystem implements ISystem {

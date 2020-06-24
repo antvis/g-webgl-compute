@@ -2,20 +2,9 @@ import { GLSLContext, Target } from '@antv/g-webgpu-compiler';
 import { Component, Entity } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
 import { IComputeStrategy } from './IComputeStrategy';
+import { ComputeType } from './interface';
 
-type ComputeType = 'particle' | 'layout';
-type TypedArrayConstructor =
-  | Int8ArrayConstructor
-  | Uint8ArrayConstructor
-  | Uint8ClampedArrayConstructor
-  | Int16ArrayConstructor
-  | Uint16ArrayConstructor
-  | Int32ArrayConstructor
-  | Uint32ArrayConstructor
-  | Float32ArrayConstructor
-  | Float64ArrayConstructor;
-
-class ComputeComponent extends Component<ComputeComponent> {
+export class ComputeComponent extends Component<ComputeComponent> {
   public type: ComputeType = 'layout';
 
   public strategy: IComputeStrategy;
@@ -100,5 +89,3 @@ class ComputeComponent extends Component<ComputeComponent> {
     Object.assign(this, data);
   }
 }
-
-export { ComputeType, ComputeComponent };

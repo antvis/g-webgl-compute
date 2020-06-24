@@ -5,22 +5,10 @@ import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
 import { getLengthFromFormat } from '../../utils/shader';
-import { IUniform, MaterialComponent } from './MaterialComponent';
+import { IMaterialParams, IUniform } from './interface';
+import { MaterialComponent } from './MaterialComponent';
 import fragmentShaderGLSL from './shaders/basic.frag.glsl';
 import vertexShaderGLSL from './shaders/basic.vert.glsl';
-
-export interface IMaterialParams {
-  colorStates: Pick<GPURenderPipelineDescriptor, 'colorStates'>;
-  primitiveTopology:
-    | 'point-list'
-    | 'line-list'
-    | 'line-strip'
-    | 'triangle-list'
-    | 'triangle-strip'
-    | undefined;
-  depthStencilState: GPUDepthStencilStateDescriptor;
-  rasterizationState: GPURasterizationStateDescriptor;
-}
 
 @injectable()
 export class MaterialSystem implements ISystem {

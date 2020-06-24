@@ -169,23 +169,30 @@ class Fruchterman {
 
 ## 创建 WebWorker
 
-创建 WebWorker 的过程有两点需要注意：
-1. 使用 [transferControlToOffscreen](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen) 将 Canvas 的控制权由主线程交给 Worker 线程
-2. 通常我们会通过 `postMessage` 的第一个参数向 Worker 传参，但由于 OffscreenCanvas 是 [Transferable](https://developer.mozilla.org/en-US/docs/Web/API/Transferable) 的，因此这里需要使用到第二个参数
+创建 WebWorker 的过程有三点需要注意：
+1. OffscreenCanvas 兼容性判断
+2. 使用 [transferControlToOffscreen](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen) 将 Canvas 的控制权由主线程交给 Worker 线程
+3. 通常我们会通过 `postMessage` 的第一个参数向 Worker 传参，但由于 OffscreenCanvas 是 [Transferable](https://developer.mozilla.org/en-US/docs/Web/API/Transferable) 的，因此这里需要使用到第二个参数
 
 ```typescript
 // 主线程代码
 import Worker from 'fruchterman.worker.ts';
 
-// 创建 Worker
-const worker = new Worker();
-
+// 1. OffscreenCanvas 兼容性判断
 const canvas = document.createElement('canvas');
-// 将 Canvas 控制权转交给 OffscreenCanvas
-const offscreen = canvas.transferControlToOffscreen();
+if (
+  !navigator.gpu && // WebGPU 还不支持 OffscreenCanvas
+  'OffscreenCanvas' in window &&
+  'transferControlToOffscreen' in canvas
+) {
+  // 创建 Worker
+  const worker = new Worker();
+  // 2. 将 Canvas 控制权转交给 OffscreenCanvas
+  const offscreen = canvas.transferControlToOffscreen();
 
-// 传递 OffscreenCanvas 给 worker，特别注意这里 postMessage 的第二个参数
-worker.postMessage({ canvas: offscreen }, [offscreen]);
+  // 3. 传递 OffscreenCanvas 给 worker，特别注意这里 postMessage 的第二个参数
+  worker.postMessage({ canvas: offscreen }, [offscreen]);
+}
 ```
 
 为了更方便地创建 WebWorker，推荐使用 Webpack 生态的 [worker-loader](https://github.com/webpack-contrib/worker-loader)，而目前 [workerize-loader](https://github.com/developit/workerize-loader/) 还不支持 `postMessage` 第二个参数 `transferable` [ISSUE](https://github.com/developit/workerize-loader/issues/51)，因此无法使用。

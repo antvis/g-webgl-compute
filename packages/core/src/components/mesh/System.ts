@@ -1,10 +1,7 @@
 import { mat3, mat4, vec3 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { Component, createEntity, Entity } from '../..';
-import {
-  ComponentManager,
-  NonFunctionProperties,
-} from '../../ComponentManager';
+import { createEntity } from '../..';
+import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
 import { AABB } from '../../shape/AABB';
@@ -19,10 +16,8 @@ import { HierarchyComponent } from '../scenegraph/HierarchyComponent';
 import { NameComponent } from '../scenegraph/NameComponent';
 import { TransformComponent } from '../scenegraph/TransformComponent';
 import { CullableComponent } from './CullableComponent';
+import { IMeshParams } from './interface';
 import { MeshComponent } from './MeshComponent';
-
-export interface IMeshParams
-  extends Partial<NonFunctionProperties<MeshComponent>> {}
 
 @injectable()
 export class MeshSystem implements ISystem {

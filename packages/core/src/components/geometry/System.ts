@@ -1,21 +1,15 @@
 import { vec3 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { Component, createEntity, Entity, IRenderEngine } from '../..';
+import { createEntity, Entity, IRenderEngine } from '../..';
 import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
 import { generateAABBFromVertices } from '../../utils/aabb';
 import { GeometryComponent } from './GeometryComponent';
+import { IBoxGeometryParams } from './interface';
 
 const primitiveUv1Padding = 4.0 / 64;
 const primitiveUv1PaddingScale = 1.0 - primitiveUv1Padding * 2;
-
-export interface IBoxGeometryParams {
-  halfExtents: vec3;
-  widthSegments: number;
-  heightSegments: number;
-  depthSegments: number;
-}
 
 @injectable()
 export class GeometrySystem implements ISystem {

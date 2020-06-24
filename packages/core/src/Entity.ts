@@ -1,5 +1,3 @@
-export type Entity = number;
-
 export const EMPTY = -1;
 
 let entitySequence = 1;

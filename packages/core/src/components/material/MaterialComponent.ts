@@ -1,21 +1,6 @@
 import { Component } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
-
-export interface IUniformBinding {
-  uniforms: IUniform[];
-  buffer?: GPUBuffer;
-  length: number;
-}
-
-export interface IUniform {
-  dirty: boolean;
-  data: unknown;
-  binding: number;
-  name: string;
-  format: string;
-  offset?: number;
-  length?: number;
-}
+import { IUniformBinding } from './interface';
 
 export class MaterialComponent extends Component<MaterialComponent> {
   public vertexShaderGLSL: string;
