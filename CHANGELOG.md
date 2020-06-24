@@ -12,9 +12,6 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 * 支持转译 WSL [#25](https://github.com/antvis/GWebGPUEngine/issues/25) ([00b4502](https://github.com/antvis/GWebGPUEngine/commit/00b4502b70ca085b38988756caf3e33936d3a732))
 
 
-
-
-
 # [0.2.0](https://github.com/antvis/GWebGPUEngine/compare/v0.1.2...v0.2.0) (2020-06-12)
 
 ### Features
