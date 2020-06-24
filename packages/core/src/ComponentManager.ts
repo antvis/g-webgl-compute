@@ -1,4 +1,5 @@
-import { EMPTY, Entity } from './Entity';
+import { Entity } from '.';
+import { EMPTY } from './Entity';
 
 type NonFunctionPropertyNames<T> = {
   [K in keyof T]: T[K] extends (args: unknown) => void ? never : K;

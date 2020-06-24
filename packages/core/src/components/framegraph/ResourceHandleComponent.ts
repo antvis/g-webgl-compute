@@ -1,6 +1,6 @@
-import { Component } from '../..';
+import { Component, Entity } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
-import { EMPTY, Entity } from '../../Entity';
+import { EMPTY } from '../../Entity';
 
 export class ResourceHandleComponent extends Component<
   ResourceHandleComponent

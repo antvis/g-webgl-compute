@@ -1,6 +1,5 @@
-import { Component } from '../..';
+import { Component, Entity } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
-import { Entity } from '../../Entity';
 
 export class PassNodeComponent extends Component<PassNodeComponent> {
   public writer: string;

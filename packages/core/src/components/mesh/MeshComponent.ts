@@ -1,6 +1,5 @@
-import { Component } from '../..';
+import { Component, Entity } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
-import { Entity } from '../../Entity';
 import { AABB } from '../../shape/AABB';
 
 export class MeshComponent extends Component<MeshComponent> {
