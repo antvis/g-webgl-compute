@@ -15,8 +15,14 @@ export const IDENTIFIER = {
 
   // FrameGraph
   FrameGraphSystem: Symbol('FrameGraphSystem'),
+  ResourcePool: Symbol('ResourcePool'),
   ResourceHandleComponentManager: Symbol('ResourceHandleComponentManager'),
   PassNodeComponentManager: Symbol('PassNodeComponentManager'),
+
+  // Renderer
+  RendererSystem: Symbol('RendererSystem'),
+  RenderPass: Symbol('RenderPass'),
+  RenderPassFactory: Symbol('Factory<IRenderPass>'),
 
   // Interaction
   // InteractionSystem: Symbol('InteractionSystem'),
@@ -49,4 +55,8 @@ export const IDENTIFIER = {
   RenderEngine: Symbol('RenderEngine'),
   WebGPUEngine: Symbol('WebGPUEngine'),
   WebGLEngine: Symbol('WebGLEngine'),
+
+  // Shader Module
+  ShaderModuleService: Symbol('ShaderModuleService'),
+  ConfigService: Symbol('ConfigService'),
 };

@@ -1,12 +1,12 @@
 import { inject, injectable } from 'inversify';
-import { Component, createEntity, Entity } from '../..';
-import { ComponentManager } from '../../ComponentManager';
-import { EMPTY } from '../../Entity';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
-import { NameComponent } from '../scenegraph/NameComponent';
-import { PassNodeComponent } from './PassNodeComponent';
-import { ResourceHandleComponent } from './ResourceHandleComponent';
+import { IRendererService } from '../renderer/IRendererService';
+import { FrameGraphHandle, TextureDescriptor } from './FrameGraphHandle';
+import { FrameGraphPass } from './FrameGraphPass';
+import { PassNode } from './PassNode';
+import { ResourceEntry } from './ResourceEntry';
+import { ResourceNode } from './ResourceNode';
 
 /**
  * ported from FrameGraph implemented by SakuraRender
@@ -15,259 +15,208 @@ import { ResourceHandleComponent } from './ResourceHandleComponent';
  */
 @injectable()
 export class FrameGraphSystem implements ISystem {
-  @inject(IDENTIFIER.NameComponentManager)
-  private readonly nameManager: ComponentManager<NameComponent>;
+  public passNodes: PassNode[] = [];
 
-  @inject(IDENTIFIER.PassNodeComponentManager)
-  private readonly passNodeManager: ComponentManager<PassNodeComponent>;
+  public resourceNodes: ResourceNode[] = [];
 
-  @inject(IDENTIFIER.ResourceHandleComponentManager)
-  private readonly resourceHandleManager: ComponentManager<
-    ResourceHandleComponent
-  >;
+  public frameGraphPasses: Array<FrameGraphPass<any>> = [];
 
-  // 保存 ref 为 0 的 passNodeEntity 列表
-  private rootNodes: Entity[] = [];
+  @inject(IDENTIFIER.RenderEngine)
+  private readonly engine: IRendererService;
 
   public async execute() {
-    // this.runTransformUpdateSystem();
+    // this.engine.beginFrame();
+    this.compile();
+    await this.executePassNodes();
+    // this.engine.endFrame();
   }
 
   public tearDown() {
-    this.passNodeManager.clear();
-    this.resourceHandleManager.clear();
+    this.reset();
   }
 
-  public setup() {
-    this.passNodeManager.forEach((entity, passNode) => {
-      passNode.setup();
-    });
+  public addPass<PassData>(
+    name: string,
+    setup: (
+      fg: FrameGraphSystem,
+      passNode: PassNode,
+      pass: FrameGraphPass<PassData>,
+    ) => void,
+    execute: (
+      fg: FrameGraphSystem,
+      pass: FrameGraphPass<PassData>,
+    ) => Promise<void>,
+  ) {
+    const frameGraphPass = new FrameGraphPass<PassData>();
+    frameGraphPass.execute = execute;
+    frameGraphPass.name = name;
+
+    const passNode = new PassNode();
+    passNode.name = name;
+    this.passNodes.push(passNode);
+
+    this.frameGraphPasses.push(frameGraphPass);
+
+    setup(this, passNode, frameGraphPass);
+
+    return frameGraphPass;
+  }
+
+  public getPass<T>(name: string): FrameGraphPass<T> | undefined {
+    return this.frameGraphPasses.find((p) => p.name === name);
   }
 
   public compile() {
-    this.passNodeManager.forEach((entity, passNode) => {
-      this.compilePassNode(entity, passNode);
-      passNode.compiled = true;
-    });
+    for (const pass of this.passNodes) {
+      pass.refCount = pass.writes.length + (pass.hasSideEffect ? 1 : 0);
 
-    // 保存根节点
-    this.rootNodes = [];
-    this.passNodeManager.forEach((entity, passNode) => {
-      if (passNode.prevs.length === 0) {
-        this.rootNodes.push(entity);
+      pass.reads.forEach((handle) => {
+        this.resourceNodes[handle.index].readerCount++;
+      });
+    }
+
+    const stack: ResourceNode[] = [];
+    for (const node of this.resourceNodes) {
+      if (node.readerCount === 0) {
+        stack.push(node);
       }
-    });
-  }
-
-  public getPassNodeEntityByName(passNodeName: string) {
-    const namedPassNodeIndex = this.nameManager.findIndex(
-      (c) => c.name === passNodeName,
-    );
-    const entity = this.nameManager.getEntityByComponentIndex(
-      namedPassNodeIndex,
-    );
-
-    if (this.passNodeManager.getComponentByEntity(entity)) {
-      return entity;
     }
-
-    return EMPTY;
-  }
-
-  public getResourceHandleEntityByName(resourceHandleName: string) {
-    const namedResourceHandleIndex = this.nameManager.findIndex(
-      (c) => c.name === resourceHandleName,
-    );
-    const entity = this.nameManager.getEntityByComponentIndex(
-      namedResourceHandleIndex,
-    );
-
-    if (this.resourceHandleManager.getComponentByEntity(entity)) {
-      return entity;
-    }
-
-    return EMPTY;
-  }
-
-  /**
-   * register a new PassNode
-   *
-   * @param passNodeName
-   * @param params
-   * @return entity of passNode
-   */
-  public registerPassNode(passNodeName: string, params: unknown) {
-    const existedPassNodeEntity = this.getPassNodeEntityByName(passNodeName);
-    if (existedPassNodeEntity === EMPTY) {
-      const entity = createEntity();
-      this.nameManager.create(entity, {
-        name: passNodeName,
-      });
-      this.passNodeManager.create(entity, {});
-      return entity;
-    } else {
-      return existedPassNodeEntity;
-    }
-  }
-
-  /**
-   * @example
-   * const entity = frameGraphSystem.registerPassNode('SSAOPass');
-   * frameGraphSystem.confirmInput(entity, ['GBuffer', 'DepthStencil']);
-   *
-   * @param entity entity of passNode
-   * @param resources ResourceNames eg. ['GBuffer', 'DepthStencil']
-   */
-  public confirmInput(entity: Entity, resources: string[]) {
-    const passNode = this.passNodeManager.getComponentByEntity(entity);
-    if (passNode) {
-      passNode.inputResources = [];
-      resources.forEach((resourceName) => {
-        const existedResourceHandleEntity = this.getResourceHandleEntityByName(
-          resourceName,
-        );
-        if (existedResourceHandleEntity === EMPTY) {
-          const resourceEntity = createEntity();
-          this.nameManager.create(resourceEntity, {
-            name: resourceName,
-          });
-          this.resourceHandleManager.create(resourceEntity, {});
-          passNode.inputResources.push(resourceEntity);
-        } else {
-          passNode.inputResources.push(existedResourceHandleEntity);
-        }
-      });
-    }
-  }
-
-  public confirmOutput(entity: Entity, resources: string[]) {
-    const passNode = this.passNodeManager.getComponentByEntity(entity);
-    if (passNode) {
-      passNode.outputResources = [];
-      resources.forEach((resourceName) => {
-        const existedResourceHandleEntity = this.getResourceHandleEntityByName(
-          resourceName,
-        );
-        if (existedResourceHandleEntity === EMPTY) {
-          const resourceEntity = createEntity();
-          this.nameManager.create(resourceEntity, {
-            name: resourceName,
-          });
-          this.resourceHandleManager.create(resourceEntity, {
-            writer: entity,
-          });
-          passNode.outputResources.push(resourceEntity);
-        } else {
-          passNode.outputResources.push(existedResourceHandleEntity);
-        }
-      });
-    }
-  }
-
-  private compilePassNode(
-    entity: Entity,
-    passNode: Component<PassNodeComponent> & PassNodeComponent,
-  ) {
-    // 处理输入资源节点
-    for (const resourceEntity of passNode.inputResources) {
-      const resource = this.resourceHandleManager.getComponentByEntity(
-        resourceEntity,
-      );
-      const resourceName = this.nameManager.getComponentByEntity(
-        resourceEntity,
-      );
-      if (resource) {
-        const parentPassNodeEntity = resource.writer;
-        const parentPassNode = this.passNodeManager.getComponentByEntity(
-          parentPassNodeEntity,
-        );
-
-        // 没有上游输入的资源可以直接跳过
-        if (!parentPassNode) {
-          continue;
-        }
-
-        if (!parentPassNode.compiled) {
-          // 首先编译父 PassNode
-          if (!this.compilePassNode(parentPassNodeEntity, parentPassNode)) {
-            return false;
+    while (stack.length) {
+      const pNode = stack.pop();
+      const writer = pNode && pNode.writer;
+      if (writer) {
+        if (--writer.refCount === 0) {
+          // this pass is culled
+          // assert(!writer->hasSideEffect);
+          for (const resource of writer.reads) {
+            const r = this.resourceNodes[resource.index];
+            if (--r.readerCount === 0) {
+              stack.push(r);
+            }
           }
         }
+      }
+    }
 
-        if (this.hasOutput(parentPassNode, resourceName?.name || '')) {
-          this.addInputPass(
-            passNode,
-            parentPassNode,
-            entity,
-            parentPassNodeEntity,
-          );
+    // update the final reference counts
+    this.resourceNodes.forEach((node) => {
+      node.resource.refs += node.readerCount;
+    });
+
+    for (const pass of this.passNodes) {
+      if (!pass.refCount) {
+        continue;
+      }
+      for (const resource of pass.reads) {
+        const pResource = this.resourceNodes[resource.index].resource;
+        pResource.first = pResource.first ? pResource.first : pass;
+        pResource.last = pass;
+      }
+      for (const resource of pass.writes) {
+        const pResource = this.resourceNodes[resource.index].resource;
+        pResource.first = pResource.first ? pResource.first : pass;
+        pResource.last = pass;
+      }
+    }
+
+    for (let priority = 0; priority < 2; priority++) {
+      for (const resoureNode of this.resourceNodes) {
+        const resource = resoureNode.resource;
+        if (resource.priority === priority && resource.refs) {
+          const pFirst = resource.first;
+          const pLast = resource.last;
+          if (pFirst && pLast) {
+            pFirst.devirtualize.push(resource);
+            pLast.destroy.push(resource);
+          }
         }
       }
     }
+  }
 
-    // 处理输出节点
-    for (const resourceEntity of passNode.outputResources) {
-      const resource = this.resourceHandleManager.getComponentByEntity(
-        resourceEntity,
-      );
-      if (resource) {
-        resource.writer = entity;
+  public async executePassNodes() {
+    for (const [index, node] of this.passNodes.entries()) {
+      if (node.refCount) {
+        for (const resource of node.devirtualize) {
+          resource.preExecuteDevirtualize(this.engine);
+        }
+
+        for (const resource of node.destroy) {
+          resource.preExecuteDestroy(this.engine);
+        }
+
+        await this.frameGraphPasses[index].execute(
+          this,
+          this.frameGraphPasses[index],
+        );
+
+        for (const resource of node.devirtualize) {
+          resource.postExecuteDevirtualize(this.engine);
+        }
+
+        for (const resource of node.destroy) {
+          resource.postExecuteDestroy(this.engine);
+        }
       }
     }
-
-    return true;
+    this.reset();
   }
 
-  private hasOutput(
-    passNode: Component<PassNodeComponent> & PassNodeComponent,
-    outputResourceName: string,
-  ) {
-    return !!passNode.outputResources.find((resourceEntity) => {
-      const resourceName = this.nameManager.getComponentByEntity(
-        resourceEntity,
-      );
-      return resourceName && resourceName.name === outputResourceName;
-    });
+  public reset() {
+    this.passNodes = [];
+    this.resourceNodes = [];
+    this.frameGraphPasses = [];
   }
 
-  private addInputPass(
-    passNode: PassNodeComponent,
-    inputPassNode: PassNodeComponent,
-    passNodeEntity: Entity,
-    inputPassNodeEntity: Entity,
+  public getResourceNode(r: FrameGraphHandle) {
+    return this.resourceNodes[r.index];
+  }
+
+  public createResourceNode(resourceEntry: ResourceEntry) {
+    const resourceNode = new ResourceNode();
+    resourceNode.resource = resourceEntry;
+    resourceNode.version = resourceEntry.version;
+
+    this.resourceNodes.push(resourceNode);
+
+    const fgh = new FrameGraphHandle();
+    fgh.index = this.resourceNodes.length - 1;
+
+    return fgh;
+  }
+
+  public createTexture(
+    passNode: PassNode,
+    name: string,
+    descriptor: TextureDescriptor,
   ) {
-    // 已经添加过
-    if (
-      inputPassNode.nexts.find((e) => {
-        const {
-          name: inputPassNodeName,
-        } = this.nameManager.getComponentByEntity(e) || { name: '' };
-        const {
-          name: passNodeName = '',
-        } = this.nameManager.getComponentByEntity(passNodeEntity) || {
-          name: '',
-        };
-        return inputPassNodeName === passNodeName;
-      }) ||
-      passNode.prevs.find((e) => {
-        const {
-          name: inputPassNodeName,
-        } = this.nameManager.getComponentByEntity(e) || { name: '' };
-        const {
-          name: passNodeName = '',
-        } = this.nameManager.getComponentByEntity(inputPassNodeEntity) || {
-          name: '',
-        };
-        return passNodeName === inputPassNodeName;
-      })
-    ) {
-      return;
-    }
+    const resource = new ResourceEntry();
+    resource.name = name;
+    resource.descriptor = descriptor;
+    return this.createResourceNode(resource);
+  }
 
-    inputPassNode.nexts.push(passNodeEntity);
-    passNode.prevs.push(inputPassNodeEntity);
+  public createRenderTarget(
+    passNode: PassNode,
+    name: string,
+    descriptor: TextureDescriptor,
+  ) {
+    const resource = new ResourceEntry();
+    resource.name = name;
+    resource.descriptor = descriptor;
+    return this.createResourceNode(resource);
+  }
 
-    // 更新引用计数
-    inputPassNode.ref++;
+  public present(input: FrameGraphHandle) {
+    this.addPass<{}>(
+      'Present',
+      (fg, passNode) => {
+        passNode.read(input);
+        passNode.hasSideEffect = true;
+      },
+      async () => {
+        // 不需要执行
+      },
+    );
   }
 }

@@ -1,6 +1,7 @@
 import { Component, Entity } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
 import { AABB } from '../../shape/AABB';
+import { IModel } from '../renderer/IModel';
 
 export class MeshComponent extends Component<MeshComponent> {
   public material: Entity;
@@ -18,6 +19,11 @@ export class MeshComponent extends Component<MeshComponent> {
    * transform 之后需要重新计算包围盒
    */
   public aabbDirty = true;
+
+  /**
+   * 实际渲染 Model
+   */
+  public model: IModel | undefined;
 
   constructor(data: Partial<NonFunctionProperties<MeshComponent>>) {
     super(data);

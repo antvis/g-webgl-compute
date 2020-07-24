@@ -19,7 +19,8 @@ export default class RotatingCube extends React.Component {
       this.initStats();
 
       // create a world
-      this.world = new World(canvas, {
+      this.world = new World({
+        canvas,
         onUpdate: () => {
           meshTransform.rotate(quat.fromEuler(quat.create(), 0, 1, 0));
 

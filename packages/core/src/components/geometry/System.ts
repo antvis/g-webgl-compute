@@ -1,10 +1,13 @@
 import { vec3 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { createEntity, Entity, IRenderEngine } from '../..';
+import { createEntity, Entity } from '../..';
 import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
 import { generateAABBFromVertices } from '../../utils/aabb';
+import { gl } from '../renderer/gl';
+import { IBuffer } from '../renderer/IBuffer';
+import { BufferData, IRendererService } from '../renderer/IRendererService';
 import { GeometryComponent } from './GeometryComponent';
 import { IBoxGeometryParams } from './interface';
 
@@ -17,23 +20,45 @@ export class GeometrySystem implements ISystem {
   private readonly geometry: ComponentManager<GeometryComponent>;
 
   @inject(IDENTIFIER.RenderEngine)
-  private readonly engine: IRenderEngine;
+  private readonly engine: IRendererService;
 
   public async execute() {
     this.geometry.forEach((entity, component) => {
       // build buffers for each geometry
       if (component.dirty) {
         component.attributes.forEach((attribute) => {
-          if (attribute.data) {
-            attribute.buffer = this.engine.createVertexBuffer(attribute.data);
+          if (attribute.dirty && attribute.data) {
+            if (!attribute.buffer) {
+              attribute.buffer = this.engine.createBuffer({
+                data: attribute.data,
+                type: gl.FLOAT,
+              });
+            } else {
+              attribute.buffer?.subData({
+                data: attribute.data,
+                // TODO: support offset in subdata
+                offset: 0,
+              });
+            }
+            attribute.dirty = false;
           }
         });
 
         // create index buffer if needed
         if (component.indices) {
-          component.indicesBuffer = this.engine.createIndexBuffer(
-            component.indices,
-          );
+          if (!component.indicesBuffer) {
+            component.indicesBuffer = this.engine.createElements({
+              data: component.indices,
+              count: component.indices.length,
+              type: gl.UNSIGNED_INT,
+              usage: gl.STATIC_DRAW,
+            });
+          } else {
+            component.indicesBuffer.subData({
+              data: component.indices,
+              offset: 0,
+            });
+          }
         }
         component.dirty = false;
       }
@@ -61,27 +86,42 @@ export class GeometrySystem implements ISystem {
   public setAttribute(
     entity: Entity,
     name: string,
-    data: ArrayBufferView,
+    data: BufferData,
     descriptor: GPUVertexBufferLayoutDescriptor,
-    bufferGetter?: () => GPUBuffer,
+    bufferGetter?: () => IBuffer,
   ) {
     const geometry = this.geometry.getComponentByEntity(entity);
 
     if (geometry) {
-      geometry.attributes.push({
-        name,
-        data,
-        ...descriptor,
-        bufferGetter,
-      });
+      const existed = geometry.attributes.find((a) => a.name === name);
+      if (!existed) {
+        geometry.attributes.push({
+          dirty: true,
+          name,
+          data,
+          ...descriptor,
+          bufferGetter,
+        });
+      } else {
+        existed.data = data;
+        existed.dirty = true;
+      }
+      geometry.dirty = true;
     }
   }
 
-  public setIndex(entity: Entity, data: ArrayBufferView) {
+  public setIndex(
+    entity: Entity,
+    data: number[] | Uint8Array | Uint16Array | Uint32Array,
+  ) {
     const geometry = this.geometry.getComponentByEntity(entity);
 
     if (geometry) {
-      geometry.indices = new Uint32Array(data.buffer);
+      geometry.indices = new Uint32Array(
+        // @ts-ignore
+        data.buffer ? data.buffer : (data as number[]),
+      );
+      geometry.dirty = true;
     }
   }
 
@@ -254,6 +294,7 @@ export class GeometrySystem implements ISystem {
       aabb,
       attributes: [
         {
+          dirty: true,
           name: 'position',
           data: Float32Array.from(positions),
           arrayStride: 4 * 3,
@@ -266,32 +307,34 @@ export class GeometrySystem implements ISystem {
             },
           ],
         },
-        {
-          name: 'normal',
-          data: Float32Array.from(normals),
-          arrayStride: 4 * 3,
-          stepMode: 'vertex',
-          attributes: [
-            {
-              shaderLocation: 1,
-              offset: 0,
-              format: 'float3',
-            },
-          ],
-        },
-        {
-          name: 'uv',
-          data: Float32Array.from(uvs),
-          arrayStride: 4 * 2,
-          stepMode: 'vertex',
-          attributes: [
-            {
-              shaderLocation: 2,
-              offset: 0,
-              format: 'float2',
-            },
-          ],
-        },
+        // {
+        //   dirty: true,
+        //   name: 'normal',
+        //   data: Float32Array.from(normals),
+        //   arrayStride: 4 * 3,
+        //   stepMode: 'vertex',
+        //   attributes: [
+        //     {
+        //       shaderLocation: 1,
+        //       offset: 0,
+        //       format: 'float3',
+        //     },
+        //   ],
+        // },
+        // {
+        //   dirty: true,
+        //   name: 'uv',
+        //   data: Float32Array.from(uvs),
+        //   arrayStride: 4 * 2,
+        //   stepMode: 'vertex',
+        //   attributes: [
+        //     {
+        //       shaderLocation: 2,
+        //       offset: 0,
+        //       format: 'float2',
+        //     },
+        //   ],
+        // },
       ],
     });
 

@@ -3,7 +3,8 @@
     "packages/compiler",
     "packages/core",
     "packages/engine",
-    "packages/g-webgpu"
+    "packages/g-webgpu",
+    "packages/unitchart"
   ],
   "command": {
     "publish": {

@@ -1,10 +1,14 @@
 
 // @ts-ignore
-import FruchtermanWorker from './examples/tutorial/fruchterman/worker/main.worker.ts';
+// import FruchtermanWorker from './examples/tutorial/fruchterman/worker/main.worker.ts';
 
 require('./site/css/demo.css');
 window.gCanvas = require('@antv/g-canvas');
 window.gWebgpu = require('@antv/g-webgpu');
+window.gWebgpuUnitchart = require('@antv/g-webgpu-unitchart');
 window.react = require('react');
 window.reactDom = require('react-dom');
-window.fruchtermanWorker = FruchtermanWorker;
+window.glMatrix = require('gl-matrix');
+window.stats = require('stats.js');
+window.dat = require('dat.gui');
+// window.fruchtermanWorker = FruchtermanWorker;

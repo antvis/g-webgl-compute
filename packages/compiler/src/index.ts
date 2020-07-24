@@ -73,6 +73,8 @@ export interface GLSLContext {
    * 程序名
    */
   name: string;
+
+  shader?: string;
   /**
    * size of thread grid
    * 即 WebGL 2 Compute 中的 dispatchCompute
@@ -545,8 +547,10 @@ export class Parser {
             `${p.typeAnnotation} ${p.name}`,
         )
         .join(',')}) {${FunctionPrependPlaceholder +
-        prepend}\n${this.compileBlockStatement(node.body, context)}\n${append ||
-        ''}}`;
+        (prepend || '')}\n${this.compileBlockStatement(
+        node.body,
+        context,
+      )}\n${append || ''}}`;
     }
     return '';
   }

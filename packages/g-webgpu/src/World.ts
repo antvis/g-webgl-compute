@@ -1,25 +1,29 @@
 // tslint:disable-next-line:no-reference
 /// <reference path="../../../node_modules/@webgpu/types/dist/index.d.ts" />
 import {
+  BufferData,
   CameraComponent,
   CameraSystem,
   ComponentManager,
   ComputeSystem,
   ComputeType,
-  container,
+  // container,
+  createContainerModule,
   Entity,
   GeometrySystem,
   IBoxGeometryParams,
+  IConfig,
+  IConfigService,
   IDENTIFIER,
-  IMaterialParams,
   IMeshParams,
-  IRenderEngine,
-  IRenderPath,
+  IRendererConfig,
+  IRendererService,
+  IShaderModuleService,
   ISystem,
   IUniform,
-  IWebGPUEngineOptions,
   MaterialSystem,
   MeshSystem,
+  PixelPickingPass,
   SceneGraphSystem,
   SceneSystem,
   TransformComponent,
@@ -27,6 +31,7 @@ import {
 import { WebGLEngine, WebGPUEngine } from '@antv/g-webgpu-engine';
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
+import { Container, ContainerModule } from 'inversify';
 import { createCanvas } from './utils/canvas';
 
 interface ILifeCycle {
@@ -38,46 +43,44 @@ interface ILifeCycle {
 export class World implements ILifeCycle {
   private systems: ISystem[];
 
-  private engine: IRenderEngine;
+  private engine: IRendererService;
   private canvas: HTMLCanvasElement;
 
-  private forwardRenderPath: IRenderPath;
-
   private inited: boolean = false;
-  private onInit: ((engine: IRenderEngine) => void) | null;
-  private onUpdate: ((engine: IRenderEngine) => void) | null;
+  private onInit: ((engine: IRendererService) => void) | null;
+  private onUpdate: ((engine: IRendererService) => void) | null;
   private rafHandle: number;
+  private containerModule: ContainerModule;
+  private container: Container;
   private useRenderBundle: boolean = false;
   private renderBundleRecorded: boolean = false;
   private renderBundle: GPURenderBundle;
 
-  constructor(
-    options: Partial<{
-      container: HTMLElement;
-      canvas: HTMLCanvasElement;
-      useRenderBundle: boolean;
-      engineOptions: IWebGPUEngineOptions;
-      onInit: (engine: IRenderEngine) => void;
-      onUpdate: (engine: IRenderEngine) => void;
-    }> = {},
-  ) {
+  constructor(options: Partial<IConfig> = {}) {
+    this.container = new Container();
+    const containerModule = createContainerModule();
+    this.containerModule = containerModule;
+    this.container.load(containerModule);
+
     // TODO: fallback to WebGL
     const engineClazz = !navigator.gpu ? WebGLEngine : WebGPUEngine;
 
-    if (!container.isBound(IDENTIFIER.RenderEngine)) {
-      container
-        .bind<IRenderEngine>(IDENTIFIER.RenderEngine)
+    if (!this.container.isBound(IDENTIFIER.RenderEngine)) {
+      this.container
+        .bind<IRendererService>(IDENTIFIER.RenderEngine)
         // @ts-ignore
         .to(engineClazz)
         .inSingletonScope();
     }
 
-    this.engine = container.get<IRenderEngine>(IDENTIFIER.RenderEngine);
+    this.engine = this.container.get<IRendererService>(IDENTIFIER.RenderEngine);
 
-    this.systems = container.getAll<ISystem>(IDENTIFIER.Systems);
-    this.forwardRenderPath = container.get<IRenderPath>(
-      IDENTIFIER.ForwardRenderPath,
+    const configService = this.container.get<IConfigService>(
+      IDENTIFIER.ConfigService,
     );
+    configService.set(options);
+
+    this.systems = this.container.getAll<ISystem>(IDENTIFIER.Systems);
 
     this.canvas = options.canvas || createCanvas();
     this.init(this.canvas, options.engineOptions);
@@ -91,21 +94,21 @@ export class World implements ILifeCycle {
   }
 
   public getCamera(entity: Entity) {
-    const manager = container.get<ComponentManager<CameraComponent>>(
+    const manager = this.container.get<ComponentManager<CameraComponent>>(
       IDENTIFIER.CameraComponentManager,
     );
     return manager.getComponentByEntity(entity);
   }
 
   public getTransform(entity: Entity) {
-    const manager = container.get<ComponentManager<TransformComponent>>(
+    const manager = this.container.get<ComponentManager<TransformComponent>>(
       IDENTIFIER.TransformComponentManager,
     );
     return manager.getComponentByEntity(entity);
   }
 
   public createScene(sceneParams: { camera: Entity }) {
-    const sceneSystem = container.getNamed<SceneSystem>(
+    const sceneSystem = this.container.getNamed<SceneSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.SceneSystem,
     );
@@ -118,7 +121,7 @@ export class World implements ILifeCycle {
     angle: number;
     aspect: number;
   }) {
-    const cameraSystem = container.getNamed<CameraSystem>(
+    const cameraSystem = this.container.getNamed<CameraSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.CameraSystem,
     );
@@ -126,7 +129,7 @@ export class World implements ILifeCycle {
   }
 
   public createMesh(params: IMeshParams) {
-    const meshSystem = container.getNamed<MeshSystem>(
+    const meshSystem = this.container.getNamed<MeshSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.MeshSystem,
     );
@@ -134,7 +137,7 @@ export class World implements ILifeCycle {
   }
 
   public createBoxGeometry(params: IBoxGeometryParams) {
-    const geometrySystem = container.getNamed<GeometrySystem>(
+    const geometrySystem = this.container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -142,7 +145,7 @@ export class World implements ILifeCycle {
   }
 
   public createBufferGeometry(params?: { vertexCount: number }) {
-    const geometrySystem = container.getNamed<GeometrySystem>(
+    const geometrySystem = this.container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -153,7 +156,7 @@ export class World implements ILifeCycle {
     maxInstancedCount: number;
     vertexCount: number;
   }) {
-    const geometrySystem = container.getNamed<GeometrySystem>(
+    const geometrySystem = this.container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -161,20 +164,18 @@ export class World implements ILifeCycle {
   }
 
   public createBasicMaterial() {
-    const materialSystem = container.getNamed<MaterialSystem>(
+    const materialSystem = this.container.getNamed<MaterialSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.MaterialSystem,
     );
     return materialSystem.createBasicMaterial();
   }
 
-  public createShaderMaterial(
-    params: {
-      vertexShader: string;
-      fragmentShader: string;
-    } & IMaterialParams,
-  ) {
-    const materialSystem = container.getNamed<MaterialSystem>(
+  public createShaderMaterial(params: {
+    vertexShader: string;
+    fragmentShader: string;
+  }) {
+    const materialSystem = this.container.getNamed<MaterialSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.MaterialSystem,
     );
@@ -184,11 +185,11 @@ export class World implements ILifeCycle {
   public setAttribute(
     entity: Entity,
     name: string,
-    data: ArrayBufferView,
+    data: BufferData,
     descriptor: GPUVertexBufferLayoutDescriptor,
     bufferGetter?: () => GPUBuffer,
   ) {
-    const geometrySystem = container.getNamed<GeometrySystem>(
+    const geometrySystem = this.container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -197,6 +198,7 @@ export class World implements ILifeCycle {
       name,
       data,
       descriptor,
+      // @ts-ignore
       bufferGetter,
     );
   }
@@ -223,7 +225,7 @@ export class World implements ILifeCycle {
       | null;
     onIterationCompleted?: ((iteration: number) => Promise<void>) | null;
   }) {
-    const computeSystem = container.getNamed<ComputeSystem>(
+    const computeSystem = this.container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.ComputeSystem,
     );
@@ -234,40 +236,38 @@ export class World implements ILifeCycle {
   }
 
   public getPrecompiledBundle(entity: Entity): string {
-    const computeSystem = container.getNamed<ComputeSystem>(
+    const computeSystem = this.container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.ComputeSystem,
     );
     return computeSystem.getPrecompiledBundle(entity);
   }
 
-  public addUniform(entity: Entity, uniform: IUniform) {
-    const materialSystem = container.getNamed<MaterialSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.MaterialSystem,
-    );
-    materialSystem.addUniform(entity, uniform);
-  }
+  // public addUniform(entity: Entity, uniform: IUniform) {
+  //   const materialSystem = container.getNamed<MaterialSystem>(
+  //     IDENTIFIER.Systems,
+  //     IDENTIFIER.MaterialSystem,
+  //   );
+  //   materialSystem.addUniform(entity, uniform);
+  // }
 
   public setUniform(
     materialEntity: Entity,
     uniformName: string,
-    data: unknown,
+    data: BufferData,
   ) {
-    const materialSystem = container.getNamed<MaterialSystem>(
+    const materialSystem = this.container.getNamed<MaterialSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.MaterialSystem,
     );
-    return materialSystem.setUniform(
-      materialEntity,
-      uniformName,
-      // @ts-ignore
-      data,
-    );
+    return materialSystem.setUniform(materialEntity, uniformName, data);
   }
 
-  public setIndex(entity: Entity, data: ArrayBufferView) {
-    const geometrySystem = container.getNamed<GeometrySystem>(
+  public setIndex(
+    entity: Entity,
+    data: number[] | Uint8Array | Uint16Array | Uint32Array,
+  ) {
+    const geometrySystem = this.container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -291,7 +291,7 @@ export class World implements ILifeCycle {
           entity: Entity;
         },
   ) {
-    const computeSystem = container.getNamed<ComputeSystem>(
+    const computeSystem = this.container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.ComputeSystem,
     );
@@ -300,7 +300,7 @@ export class World implements ILifeCycle {
   }
 
   public async readOutputData(entity: Entity) {
-    const computeSystem = container.getNamed<ComputeSystem>(
+    const computeSystem = this.container.getNamed<ComputeSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.ComputeSystem,
     );
@@ -308,17 +308,8 @@ export class World implements ILifeCycle {
     return computeSystem.readOutputData(entity);
   }
 
-  public getParticleBuffer(entity: Entity) {
-    const computeSystem = container.getNamed<ComputeSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.ComputeSystem,
-    );
-
-    return computeSystem.getParticleBuffer(entity);
-  }
-
   public add(sceneEntity: Entity, meshEntity: Entity) {
-    const sceneSystem = container.getNamed<SceneSystem>(
+    const sceneSystem = this.container.getNamed<SceneSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.SceneSystem,
     );
@@ -331,7 +322,7 @@ export class World implements ILifeCycle {
     parent: Entity,
     isChildAlreadyInLocalSpace?: boolean,
   ) {
-    const sceneGraphSystem = container.getNamed<SceneGraphSystem>(
+    const sceneGraphSystem = this.container.getNamed<SceneGraphSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.SceneGraphSystem,
     );
@@ -341,13 +332,24 @@ export class World implements ILifeCycle {
 
   public async init(
     canvas: HTMLCanvasElement,
-    engineOptions?: IWebGPUEngineOptions,
+    engineOptions?: IRendererConfig,
   ) {
-    await this.engine.init(canvas, {
+    // TODO: 目前仅针对 WebGL 进行模块化处理
+    if (!this.engine.supportWebGPU) {
+      // 初始化 shader module
+      const shaderModule = this.container.get<IShaderModuleService>(
+        IDENTIFIER.ShaderModuleService,
+      );
+      shaderModule.registerBuiltinModules();
+    }
+
+    await this.engine.init({
+      canvas,
       swapChainFormat: WebGPUConstants.TextureFormat.BGRA8Unorm,
-      antialiasing: true,
+      antialiasing: false,
       ...engineOptions,
     });
+
     await this.update();
   }
 
@@ -365,7 +367,9 @@ export class World implements ILifeCycle {
   };
 
   public destroy() {
-    this.engine.dispose();
+    if (this.engine) {
+      this.engine.destroy();
+    }
     this.systems.forEach((system) => {
       if (system.tearDown) {
         system.tearDown();
@@ -373,13 +377,37 @@ export class World implements ILifeCycle {
     });
 
     cancelAnimationFrame(this.rafHandle);
+    this.container.unload(this.containerModule);
+  }
+
+  public setSize(width: number, height: number) {
+    const canvas = this.engine.getCanvas();
+    const pixelRatio = window.devicePixelRatio;
+    canvas.width = Math.floor(width * pixelRatio);
+    canvas.height = Math.floor(height * pixelRatio);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    this.engine.viewport({
+      x: 0,
+      y: 0,
+      width: canvas.width,
+      height: canvas.height,
+    });
+  }
+
+  public pick(position: { x: number; y: number }): number | undefined {
+    const pickingPass = this.container.getNamed(
+      IDENTIFIER.RenderPass,
+      PixelPickingPass.IDENTIFIER,
+    );
+
+    // @ts-ignore
+    return pickingPass.pick(position);
   }
 
   private async render() {
     this.engine.beginFrame();
-
-    // clear first, also start render & compute pass
-    this.engine.clear({ r: 0.0, g: 0.0, b: 0.0, a: 1.0 }, true, true, true);
 
     if (!this.inited) {
       this.systems.forEach((system) => {
@@ -399,24 +427,26 @@ export class World implements ILifeCycle {
       }
     }
 
-    // 录制一遍绘制命令，后续直接播放
-    if (this.useRenderBundle) {
-      if (!this.renderBundleRecorded) {
-        this.engine.startRecordBundle();
-        if (this.onUpdate) {
-          await this.onUpdate(this.engine);
-        }
-        this.renderBundle = this.engine.stopRecordBundle();
-        this.renderBundleRecorded = true;
-      }
-      this.engine.executeBundles([this.renderBundle]);
-    } else {
-      if (this.onUpdate) {
-        await this.onUpdate(this.engine);
-      }
-
-      this.forwardRenderPath.render();
+    if (this.onUpdate) {
+      await this.onUpdate(this.engine);
     }
+
+    // 录制一遍绘制命令，后续直接播放
+    // if (this.useRenderBundle) {
+    //   if (!this.renderBundleRecorded) {
+    //     this.engine.startRecordBundle();
+    //     if (this.onUpdate) {
+    //       await this.onUpdate(this.engine);
+    //     }
+    //     this.renderBundle = this.engine.stopRecordBundle();
+    //     this.renderBundleRecorded = true;
+    //   }
+    //   this.engine.executeBundles([this.renderBundle]);
+    // } else {
+    //   if (this.onUpdate) {
+    //     await this.onUpdate(this.engine);
+    //   }
+    // }
 
     this.engine.endFrame();
   }

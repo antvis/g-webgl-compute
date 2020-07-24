@@ -21,7 +21,7 @@ module.exports = {
   webpackFinal: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      'https://cdn.jsdelivr.net/npm/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js': path.resolve(__dirname, '../stub'),
+      // 'https://cdn.jsdelivr.net/npm/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js': path.resolve(__dirname, '../stub'),
       '@antv/g-webgpu': path.resolve(__dirname, '../packages/g-webgpu/src'),
       '@antv/g-webgpu-core': path.resolve(__dirname, '../packages/core/src'),
       '@antv/g-webgpu-engine': path.resolve(__dirname, '../packages/engine/src'),

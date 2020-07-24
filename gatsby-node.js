@@ -7,9 +7,7 @@ exports.onCreateWebpackConfig = ({ getConfig }) => {
     use: [
       {
         loader: 'raw-loader',
-        options: {
-          esModule: false,
-        },
+        options: {},
       },
     ],
   });
@@ -34,5 +32,6 @@ exports.onCreateWebpackConfig = ({ getConfig }) => {
     '@antv/g-webgpu-core': path.resolve(__dirname, 'packages/core/src'),
     '@antv/g-webgpu-engine': path.resolve(__dirname, 'packages/engine/src'),
     '@antv/g-webgpu-compiler': path.resolve(__dirname, 'packages/compiler/src'),
+    '@antv/g-webgpu-unitchart': path.resolve(__dirname, 'packages/unitchart/src'),
   };
 };

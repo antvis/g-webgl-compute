@@ -6,86 +6,47 @@ import {
   createEntity,
   IDENTIFIER,
 } from '../../..';
-import { NameComponent } from '../../scenegraph/NameComponent';
-import { PassNodeComponent } from '../PassNodeComponent';
-import { ResourceHandleComponent } from '../ResourceHandleComponent';
+import { FrameGraphHandle } from '../FrameGraphHandle';
 import { FrameGraphSystem } from '../System';
+
+interface RenderPassData {
+  output: FrameGraphHandle;
+  rt: FrameGraphHandle;
+}
 
 describe('FrameGraph', () => {
   const frameGraph = container.getNamed<FrameGraphSystem>(
     IDENTIFIER.Systems,
     IDENTIFIER.FrameGraphSystem,
   );
-  const passNodeManager = container.get<ComponentManager<PassNodeComponent>>(
-    IDENTIFIER.PassNodeComponentManager,
-  );
-  const resourceHandleManager = container.get<
-    ComponentManager<ResourceHandleComponent>
-  >(IDENTIFIER.ResourceHandleComponentManager);
-  const nameManager = container.get<ComponentManager<NameComponent>>(
-    IDENTIFIER.NameComponentManager,
-  );
-
-  afterEach(() => {
-    passNodeManager.clear();
-    nameManager.clear();
-    resourceHandleManager.clear();
-  });
 
   test('should add input & output resources correctly.', () => {
-    const deferredPassEntity = frameGraph.registerPassNode('Deferred', {});
-    frameGraph.confirmInput(deferredPassEntity, ['GBuffer1', 'GBuffer2']);
-    frameGraph.confirmOutput(deferredPassEntity, ['RT1']);
+    const renderPass = frameGraph.addPass<RenderPassData>(
+      'RenderPass',
+      (fg, passNode, pass) => {
+        const rt = fg.createRenderTarget(passNode, 'RT', {
+          width: 1,
+          height: 1,
+        });
+        const output = fg.createTexture(passNode, 'color buffer', {
+          width: 1,
+          height: 1,
+        });
 
-    const deferredPassComponent = passNodeManager.getComponentByEntity(
-      deferredPassEntity,
+        pass.data = {
+          output: passNode.write(fg, output),
+          rt,
+        };
+      },
+      async () => {
+        //
+      },
     );
 
-    expect(nameManager.getComponentByEntity(deferredPassEntity)?.name).toBe(
-      'Deferred',
-    );
-
-    expect(deferredPassComponent?.inputResources.length).toBe(2);
-    expect(deferredPassComponent?.outputResources.length).toBe(1);
-
-    const inputResourceEntity = deferredPassComponent?.inputResources[0];
-    expect(nameManager.getComponentByEntity(inputResourceEntity!)?.name).toBe(
-      'GBuffer1',
-    );
-    const inputResourceEntity2 = deferredPassComponent?.inputResources[1];
-    expect(nameManager.getComponentByEntity(inputResourceEntity2!)?.name).toBe(
-      'GBuffer2',
-    );
-    const outputResourceEntity = deferredPassComponent?.outputResources[0];
-    expect(nameManager.getComponentByEntity(outputResourceEntity!)?.name).toBe(
-      'RT1',
-    );
-  });
-
-  test('should construct a DAG correctly.', () => {
-    const deferredPassEntity = frameGraph.registerPassNode('Deferred', {});
-    frameGraph.confirmInput(deferredPassEntity, ['GBuffer1', 'GBuffer2']);
-    frameGraph.confirmOutput(deferredPassEntity, ['RT1']);
-
-    const postProcessingPassEntity = frameGraph.registerPassNode(
-      'PostProcessing',
-      {},
-    );
-    frameGraph.confirmInput(postProcessingPassEntity, ['RT1']);
-    frameGraph.confirmOutput(postProcessingPassEntity, ['RT2']);
-
-    // compile DAG
+    frameGraph.present(renderPass.data.output);
     frameGraph.compile();
 
-    // DeferredPass 被引用次数为 1
-    expect(passNodeManager.getComponentByEntity(deferredPassEntity)?.ref).toBe(
-      1,
-    );
-    expect(
-      passNodeManager.getComponentByEntity(deferredPassEntity)?.nexts[0],
-    ).toBe(postProcessingPassEntity);
-    expect(
-      passNodeManager.getComponentByEntity(postProcessingPassEntity)?.prevs[0],
-    ).toBe(deferredPassEntity);
+    expect(frameGraph.passNodes[0].refCount).toBe(1);
+    expect(frameGraph.passNodes[1].refCount).toBe(1);
   });
 });

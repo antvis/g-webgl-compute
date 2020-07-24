@@ -5,17 +5,12 @@ import {
 } from '@antv/g-webgpu-compiler';
 import { inject, injectable } from 'inversify';
 import { isArray, isNumber, isTypedArray } from 'lodash';
-import {
-  Component,
-  container,
-  createEntity,
-  Entity,
-  IRenderEngine,
-} from '../..';
+import { Component, container, createEntity, Entity } from '../..';
 import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
 import { isSafari } from '../../utils/isSafari';
+import { IRendererService } from '../renderer/IRendererService';
 import { ComputeComponent } from './ComputeComponent';
 import { IComputeStrategy } from './IComputeStrategy';
 import { ComputeType } from './interface';
@@ -26,11 +21,14 @@ export class ComputeSystem implements ISystem {
   private readonly compute: ComponentManager<ComputeComponent>;
 
   @inject(IDENTIFIER.RenderEngine)
-  private readonly engine: IRenderEngine;
+  private readonly engine: IRendererService;
 
   private parser: Parser = new Parser();
 
   public async execute() {
+    // 首先开启当前 frame 的 compute pass
+    this.engine.clear({});
+
     // 考虑多个计算程序之间的依赖关系
     // 先找到多个计算程序中最大的迭代次数，然后按顺序执行
     let maxIteration = 0;
@@ -46,7 +44,6 @@ export class ComputeSystem implements ISystem {
       if (!component.finished) {
         if (component.dirty) {
           await this.compile(component);
-          component.strategy.init(component.compiledBundle.context);
           component.dirty = false;
         }
       }
@@ -57,25 +54,15 @@ export class ComputeSystem implements ISystem {
         const component = this.compute.getComponent(j);
         if (!component.finished) {
           if (component.iteration <= component.maxIteration - 1) {
-            this.engine.setComputePipeline(
-              `compute-${this.compute.getEntity(j)}`,
-              {
-                layout: component.pipelineLayout,
-                ...component.stageDescriptor,
-              },
-            );
-            this.engine.setComputeBindGroups([
-              component.strategy.getBindingGroup(),
-            ]);
-
-            await component.strategy.run();
+            component.model.run();
+            if (component.onIterationCompleted) {
+              await component.onIterationCompleted(component.iteration);
+            }
             component.iteration++;
           } else {
             component.finished = true;
             if (component.onCompleted) {
-              component.onCompleted(
-                await this.engine.readData(component.compiledBundle.context),
-              );
+              component.onCompleted(await component.model.readData());
             }
           }
         }
@@ -85,7 +72,7 @@ export class ComputeSystem implements ISystem {
 
   public tearDown() {
     this.compute.forEach((_, compute) => {
-      compute.strategy.destroy();
+      compute.model.destroy();
     });
     this.compute.clear();
   }
@@ -121,14 +108,9 @@ export class ComputeSystem implements ISystem {
     onIterationCompleted?: ((iteration: number) => Promise<void>) | null;
   }) {
     const entity = createEntity();
-    const strategy = container.getNamed<IComputeStrategy>(
-      IDENTIFIER.ComputeStrategy,
-      type,
-    );
 
     this.compute.create(entity, {
       type,
-      strategy,
       rawShaderCode: shader,
       precompiled,
       dispatch,
@@ -136,8 +118,6 @@ export class ComputeSystem implements ISystem {
       onCompleted,
       onIterationCompleted,
     });
-
-    strategy.component = this.compute.getComponentByEntity(entity)!;
 
     return entity;
   }
@@ -175,7 +155,7 @@ export class ComputeSystem implements ISystem {
             existedBinding.data = data;
 
             // @ts-ignore
-            compute.strategy.updateUniformGPUBuffer(name, data);
+            compute.model.updateUniform(name, data);
           } else {
             const existedIndex = compute.bindings.findIndex(
               (b) => b.name === name,
@@ -196,12 +176,9 @@ export class ComputeSystem implements ISystem {
             };
 
             const referCompute = this.compute.getComponentByEntity(referEntity);
-            const referContextName = referCompute?.compiledBundle.context.name;
-            // @ts-ignore
-            const contextName = compute?.compiledBundle.context.name;
-
-            if (referContextName) {
-              this.engine.confirmInput(contextName, name, referContextName);
+            if (referCompute) {
+              // 连接两个计算程序
+              compute.model.confirmInput(referCompute.model, name);
             }
           }
         }
@@ -219,12 +196,7 @@ export class ComputeSystem implements ISystem {
 
   public async readOutputData(entity: Entity) {
     const compute = this.compute.getComponentByEntity(entity)!;
-    return this.engine.readData(compute.compiledBundle.context);
-  }
-
-  public getParticleBuffer(entity: Entity) {
-    const compute = this.compute.getComponentByEntity(entity)!;
-    return compute.strategy.getGPUBuffer();
+    return compute.model.readData();
   }
 
   public getPrecompiledBundle(entity: Entity): string {
@@ -253,6 +225,8 @@ export class ComputeSystem implements ISystem {
         delete uniform.data;
       }
     });
+    // Shader 也不需要重复序列化
+    delete component.compiledBundle.context.shader;
     return JSON.stringify(component.compiledBundle).replace(/\\n/g, '\\\\n');
   }
 
@@ -305,21 +279,24 @@ export class ComputeSystem implements ISystem {
       )
       .join('\n');
 
-    component.stageDescriptor = await this.engine.compileComputePipelineStageDescriptor(
-      // 添加运行时 define 常量
-      `${(!isSafari && runtimeDefines) || ''}
-      ${
-        component.compiledBundle.shaders[
-          this.engine.supportWebGPU
-            ? isSafari
-              ? Target.WHLSL
-              : Target.WebGPU
-            : Target.WebGL
-        ]
-      }`.replace(
-        new RegExp(FunctionPrependPlaceholder, 'g'),
-        isSafari ? runtimeDefines : '',
-      ),
+    // 添加运行时 define 常量
+    const shader = `${(!isSafari && runtimeDefines) || ''}
+    ${
+      component.compiledBundle.shaders[
+        this.engine.supportWebGPU
+          ? isSafari
+            ? Target.WHLSL
+            : Target.WebGPU
+          : Target.WebGL
+      ]
+    }`.replace(
+      new RegExp(FunctionPrependPlaceholder, 'g'),
+      isSafari ? runtimeDefines : '',
+    );
+
+    component.compiledBundle.context.shader = shader;
+
+    component.model = await this.engine.createComputeModel(
       component.compiledBundle.context,
     );
 

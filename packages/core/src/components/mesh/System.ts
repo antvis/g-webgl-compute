@@ -121,11 +121,6 @@ export class MeshSystem implements ISystem {
     this.mesh.create(entity, params);
     this.transform.create(entity);
     this.cullable.create(entity);
-    // if (name) {
-    //   this.nameManager.create(entity, {
-    //     name,
-    //   });
-    // }
     return entity;
   }
 

@@ -78,14 +78,15 @@ function test(a: float, b: vec3): float {
     );
 
     expect(result).toContain(`
-float test(float a,vec3 b) {
+float test(float a,vec3 b) {__FunctionPrependPlaceholder__
 bool a = true;
 a = float((b * float((c + float(d)))));
 if ((c == 2) && (d != 3)) {c = d;}
 for (int i = 0; (i < int(10)); i++) {c = d;
 break;}
 a = float((func(c,d(2)) + float(2.0)));
-return c;}`);
+return c;
+}`);
   });
 
   test('should generate void main() correctly.', () => {
@@ -261,7 +262,7 @@ return c;`);
     }
     `)!;
 
-    expect(parser.generateCode(result)).toContain('bool repulsiveF = dist[0];');
+    expect(parser.generateCode(result)).toContain('bool repulsiveF = dist.x;');
   });
 
   test("should infer variable's type from swizzling correctly.", () => {

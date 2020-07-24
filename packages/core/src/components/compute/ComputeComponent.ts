@@ -1,13 +1,14 @@
 import { GLSLContext, Target } from '@antv/g-webgpu-compiler';
 import { Component, Entity } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
+import { IComputeModel } from '../renderer/IComputeModel';
 import { IComputeStrategy } from './IComputeStrategy';
 import { ComputeType } from './interface';
 
 export class ComputeComponent extends Component<ComputeComponent> {
-  public type: ComputeType = 'layout';
+  public model: IComputeModel;
 
-  public strategy: IComputeStrategy;
+  public type: ComputeType = 'layout';
 
   public dirty: boolean = true;
 
@@ -23,10 +24,6 @@ export class ComputeComponent extends Component<ComputeComponent> {
     context: GLSLContext;
   };
 
-  public stageDescriptor: Pick<GPUComputePipelineDescriptor, 'computeStage'>;
-
-  public pipelineLayout: GPUPipelineLayout;
-
   public bindings: Array<{
     name: string;
     data?: ArrayBufferView | number[] | number;
@@ -41,9 +38,6 @@ export class ComputeComponent extends Component<ComputeComponent> {
    * size of thread grid
    */
   public dispatch: [number, number, number];
-
-  public particleBuffers: GPUBuffer[] = new Array(2);
-  public particleBindGroups = new Array(2);
 
   /**
    * current iteration, start from 0
