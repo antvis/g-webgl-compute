@@ -1,5 +1,5 @@
 {
-  "name": "@antv/g-webgpu-compiler",
+  "name": "@antv/g-webgpu-raytracer",
   "version": "0.4.1",
   "description": "",
   "main": "lib/index.js",
@@ -17,18 +17,22 @@
     "build": "run-p build:*",
     "build:cjs": "BABEL_ENV=cjs babel src --root-mode upward --out-dir lib --source-maps --extensions .ts,.tsx --delete-dir-on-start",
     "build:esm": "BABEL_ENV=esm babel src --root-mode upward --out-dir es --source-maps --extensions .ts,.tsx --delete-dir-on-start",
-    "watch": "BABEL_ENV=esm babel src --watch --root-mode upward --out-dir es --source-maps --extensions .ts,.tsx --delete-dir-on-start",
-    "pegjs": "node scripts/generate-parser"
+    "watch": "BABEL_ENV=esm babel src --watch --root-mode upward --out-dir es --source-maps --extensions .ts,.tsx --delete-dir-on-start"
   },
   "author": "xiaoiver",
   "license": "ISC",
   "dependencies": {
-    "lodash": "^4.17.15"
+    "@antv/g-webgpu-engine": "^0.4.1",
+    "@webgpu/glslang": "^0.0.15",
+    "@webgpu/types": "^0.0.31",
+    "gl-matrix": "^3.1.0",
+    "hammerjs": "^2.0.8",
+    "probe.gl": "^3.1.1"
   },
   "devDependencies": {
-    "@webgpu/types": "^0.0.31",
-    "pegjs": "^0.10.0",
-    "ts-pegjs": "^0.2.6"
+    "@types/gl-matrix": "^2.4.5",
+    "@types/hammerjs": "^2.0.36",
+    "@types/lodash": "^4.14.138"
   },
   "publishConfig": {
     "access": "public"

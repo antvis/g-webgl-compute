@@ -107,18 +107,31 @@ export class WebGPUEngine implements IRendererService {
   public clear = (options: IClearOptions): void => {
     const { color, depth, stencil } = options;
 
+    // if (this.options.supportCompute) {
+    //   this.startComputePass();
+    // } else {
+    //   this.mainColorAttachments[0].loadValue =
+    //     color || WebGPUConstants.LoadOp.Load;
+
+    //   this.mainDepthAttachment.depthLoadValue =
+    //     depth || WebGPUConstants.LoadOp.Load;
+    //   this.mainDepthAttachment.stencilLoadValue =
+    //     stencil || WebGPUConstants.LoadOp.Load;
+    //   this.startMainRenderPass();
+    // }
+
     if (this.options.supportCompute) {
       this.startComputePass();
-    } else {
-      this.mainColorAttachments[0].loadValue =
-        color || WebGPUConstants.LoadOp.Load;
-
-      this.mainDepthAttachment.depthLoadValue =
-        depth || WebGPUConstants.LoadOp.Load;
-      this.mainDepthAttachment.stencilLoadValue =
-        stencil || WebGPUConstants.LoadOp.Load;
-      this.startMainRenderPass();
     }
+
+    this.mainColorAttachments[0].loadValue =
+      color || WebGPUConstants.LoadOp.Load;
+
+    this.mainDepthAttachment.depthLoadValue =
+      depth || WebGPUConstants.LoadOp.Load;
+    this.mainDepthAttachment.stencilLoadValue =
+      stencil || WebGPUConstants.LoadOp.Load;
+    this.startMainRenderPass();
   };
 
   public createModel = async (
@@ -200,8 +213,10 @@ export class WebGPUEngine implements IRendererService {
       this.mainTexture.destroy();
     }
     if (this.depthTexture) {
-      this.depthTexture.destroy();
+      // this.depthTexture.destroy();
     }
+    this.tempBuffers.forEach((buffer) => buffer.destroy());
+    this.tempBuffers = [];
   }
 
   public beginFrame() {
@@ -219,11 +234,16 @@ export class WebGPUEngine implements IRendererService {
   public endFrame() {
     // this.endRenderPass();
 
+    // if (this.options.supportCompute) {
+    //   this.endComputePass();
+    // } else {
+    //   this.endRenderPass();
+    // }
+
     if (this.options.supportCompute) {
       this.endComputePass();
-    } else {
-      this.endRenderPass();
     }
+    this.endRenderPass();
 
     this.commandBuffers[0] = this.uploadEncoder.finish();
     this.commandBuffers[1] = this.renderEncoder.finish();
@@ -235,15 +255,12 @@ export class WebGPUEngine implements IRendererService {
     } else {
       this.device.defaultQueue.submit(this.commandBuffers);
     }
-
-    this.tempBuffers.forEach((buffer) => buffer.destroy());
-    this.tempBuffers = [];
   }
 
   private async initGlslang() {
     this.glslang = await glslang();
     this.adapter = (await navigator?.gpu?.requestAdapter()) as GPUAdapter;
-    this.device = await this.adapter.requestDevice();
+    this.device = (await this.adapter.requestDevice()) as GPUDevice;
   }
 
   private initContextAndSwapChain() {

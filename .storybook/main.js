@@ -26,6 +26,7 @@ module.exports = {
       '@antv/g-webgpu-core': path.resolve(__dirname, '../packages/core/src'),
       '@antv/g-webgpu-engine': path.resolve(__dirname, '../packages/engine/src'),
       '@antv/g-webgpu-compiler': path.resolve(__dirname, '../packages/compiler/src'),
+      '@antv/g-webgpu-raytracer': path.resolve(__dirname, '../packages/raytracer/src'),
     };
 
     config.module.rules.push({

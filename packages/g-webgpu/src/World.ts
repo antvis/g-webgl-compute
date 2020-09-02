@@ -47,6 +47,7 @@ export class World implements ILifeCycle {
   private canvas: HTMLCanvasElement;
 
   private inited: boolean = false;
+  private destroyed: boolean = false;
   private onInit: ((engine: IRendererService) => void) | null;
   private onUpdate: ((engine: IRendererService) => void) | null;
   private rafHandle: number;
@@ -354,6 +355,10 @@ export class World implements ILifeCycle {
   }
 
   public update = async () => {
+    if (this.destroyed) {
+      return;
+    }
+
     await this.render();
 
     this.systems.forEach((system) => {
@@ -367,6 +372,7 @@ export class World implements ILifeCycle {
   };
 
   public destroy() {
+    this.destroyed = true;
     if (this.engine) {
       this.engine.destroy();
     }

@@ -369,7 +369,7 @@ export class Mark {
       instancedPickingColors: number[];
     },
   ) {
-    container.contents.forEach((childContainer) => {
+    container.children.forEach((childContainer) => {
       if (!this.isContainer(childContainer)) {
         this.buildMark(container, rootContainer, attributes);
       } else {
@@ -380,7 +380,7 @@ export class Mark {
 
   private isContainer(container: Container) {
     if (
-      container.hasOwnProperty('contents') &&
+      container.hasOwnProperty('data') &&
       container.hasOwnProperty('visualspace') &&
       container.hasOwnProperty('parent')
     ) {
@@ -410,7 +410,7 @@ export class Mark {
     } = container.parent!.visualspace;
     const { width: rootWidth, height: rootHeight } = rootContainer.visualspace;
 
-    const index = Number(container.contents[0].$unitChartId);
+    const index = Number(container.data[0].$unitChartId);
 
     attributes.instancedStartSizes[index] = width / 2;
     attributes.instancedEndSizes[index] = width / 2;
@@ -418,46 +418,49 @@ export class Mark {
     // attributes.instancedStartSizes.push(width / 2);
     // attributes.instancedEndSizes.push(width / 2);
 
-    const { r, g, b } = d3
-      .color(this.colorScale(container.contents[0][this.options.color.key]))
+    const color = d3
+      // @ts-ignore
+      .color(this.colorScale(container.data[0][this.options.color.key]))
       ?.rgb();
+    if (color) {
+      const { r, g, b } = color;
+      attributes.instancedColors[index * 4] = r / 255;
+      attributes.instancedColors[index * 4 + 1] = g / 255;
+      attributes.instancedColors[index * 4 + 2] = b / 255;
+      attributes.instancedColors[index * 4 + 3] = 1;
+      // attributes.instancedColors.push(r / 255, g / 255, b / 255, 1);
 
-    attributes.instancedColors[index * 4] = r / 255;
-    attributes.instancedColors[index * 4 + 1] = g / 255;
-    attributes.instancedColors[index * 4 + 2] = b / 255;
-    attributes.instancedColors[index * 4 + 3] = 1;
-    // attributes.instancedColors.push(r / 255, g / 255, b / 255, 1);
+      // attributes.instancedEndOffsets.push(
+      //   this.convertCanvas2WebGLCoord(posX + parentPosX, rootWidth),
+      //   -this.convertCanvas2WebGLCoord(posY + parentPosY, rootHeight),
+      // );
+      // attributes.instancedStartOffsets.push(
+      //   Math.random() * 2 - 1,
+      //   Math.random() * 2 - 1,
+      // );
+      attributes.instancedEndOffsets[index * 2] = this.convertCanvas2WebGLCoord(
+        posX + parentPosX,
+        rootWidth,
+      );
+      attributes.instancedEndOffsets[
+        index * 2 + 1
+      ] = -this.convertCanvas2WebGLCoord(posY + parentPosY, rootHeight);
+      attributes.instancedStartOffsets[index * 2] = Math.random() * 2 - 1;
+      attributes.instancedStartOffsets[index * 2 + 1] = Math.random() * 2 - 1;
 
-    // attributes.instancedEndOffsets.push(
-    //   this.convertCanvas2WebGLCoord(posX + parentPosX, rootWidth),
-    //   -this.convertCanvas2WebGLCoord(posY + parentPosY, rootHeight),
-    // );
-    // attributes.instancedStartOffsets.push(
-    //   Math.random() * 2 - 1,
-    //   Math.random() * 2 - 1,
-    // );
-    attributes.instancedEndOffsets[index * 2] = this.convertCanvas2WebGLCoord(
-      posX + parentPosX,
-      rootWidth,
-    );
-    attributes.instancedEndOffsets[
-      index * 2 + 1
-    ] = -this.convertCanvas2WebGLCoord(posY + parentPosY, rootHeight);
-    attributes.instancedStartOffsets[index * 2] = Math.random() * 2 - 1;
-    attributes.instancedStartOffsets[index * 2 + 1] = Math.random() * 2 - 1;
+      // attributes.instancedShapes.push(0);
+      attributes.instancedShapes[index] = 0;
 
-    // attributes.instancedShapes.push(0);
-    attributes.instancedShapes[index] = 0;
-
-    // attributes.instancedPickingColors.push(
-    //   ...encodePickingColor(Number(container.contents[0].$unitChartId)),
-    // );
-    const [encodedR, encodedG, encodedB] = encodePickingColor(
-      Number(container.contents[0].$unitChartId),
-    );
-    attributes.instancedPickingColors[index * 3] = encodedR;
-    attributes.instancedPickingColors[index * 3 + 1] = encodedG;
-    attributes.instancedPickingColors[index * 3 + 2] = encodedB;
+      // attributes.instancedPickingColors.push(
+      //   ...encodePickingColor(Number(container.contents[0].$unitChartId)),
+      // );
+      const [encodedR, encodedG, encodedB] = encodePickingColor(
+        Number(container.data[0].$unitChartId),
+      );
+      attributes.instancedPickingColors[index * 3] = encodedR;
+      attributes.instancedPickingColors[index * 3 + 1] = encodedG;
+      attributes.instancedPickingColors[index * 3 + 2] = encodedB;
+    }
   }
 
   private convertCanvas2WebGLCoord(c: number, size: number) {

@@ -70,7 +70,7 @@ export default class WebGPUComputeModel implements IComputeModel {
 
       bindGroupLayoutEntries.push({
         binding: 0,
-        visibility: 4,
+        visibility: WebGPUConstants.ShaderStage.Compute,
         type: 'uniform-buffer',
       });
 
@@ -88,21 +88,16 @@ export default class WebGPUComputeModel implements IComputeModel {
     buffers.forEach((buffer) => {
       if (buffer.data) {
         if (buffer.type === 'sampler2D') {
-          // 如果添加了 MapRead，Chrome 会报错
-          const bufferUsage = isSafari
-            ? WebGPUConstants.BufferUsage.Vertex |
-              WebGPUConstants.BufferUsage.CopyDst |
-              WebGPUConstants.BufferUsage.MapRead
-            : WebGPUConstants.BufferUsage.Vertex |
-              WebGPUConstants.BufferUsage.CopyDst |
-              WebGPUConstants.BufferUsage.CopySrc;
-          const gpuBuffer = new WebGPUBuffer(this.engine, {
-            // @ts-ignore
-            data: isFinite(Number(buffer.data)) ? [buffer.data] : buffer.data,
-            usage: bufferUsage | WebGPUConstants.BufferUsage.Storage,
-          });
-          this.vertexBuffers.push(gpuBuffer);
+          let gpuBuffer;
           if (buffer.name === this.context.output.name) {
+            gpuBuffer = new WebGPUBuffer(this.engine, {
+              // @ts-ignore
+              data: isFinite(Number(buffer.data)) ? [buffer.data] : buffer.data,
+              usage:
+                WebGPUConstants.BufferUsage.Storage |
+                WebGPUConstants.BufferUsage.CopyDst |
+                WebGPUConstants.BufferUsage.CopySrc,
+            });
             this.context.output = {
               name: buffer.name,
               // @ts-ignore
@@ -110,7 +105,16 @@ export default class WebGPUComputeModel implements IComputeModel {
               typedArrayConstructor: Float32Array,
               gpuBuffer: gpuBuffer.get(),
             };
+          } else {
+            gpuBuffer = new WebGPUBuffer(this.engine, {
+              // @ts-ignore
+              data: isFinite(Number(buffer.data)) ? [buffer.data] : buffer.data,
+              usage:
+                WebGPUConstants.BufferUsage.Storage |
+                WebGPUConstants.BufferUsage.CopyDst,
+            });
           }
+          this.vertexBuffers.push(gpuBuffer);
           bindGroupEntries.push({
             binding: bufferBindingIndex,
             resource: {
@@ -127,8 +131,10 @@ export default class WebGPUComputeModel implements IComputeModel {
           });
           bindGroupLayoutEntries.push({
             binding: bufferBindingIndex,
-            visibility: 4,
-            type: 'storage-buffer',
+            visibility: WebGPUConstants.ShaderStage.Compute,
+            type: buffer.readonly
+              ? 'readonly-storage-buffer'
+              : 'storage-buffer',
           });
 
           bufferBindingIndex++;
@@ -219,39 +225,38 @@ export default class WebGPUComputeModel implements IComputeModel {
     if (output) {
       const { length, typedArrayConstructor, gpuBuffer } = output;
       if (gpuBuffer) {
-        let arraybuffer;
-        if (isSafari) {
-          arraybuffer = await gpuBuffer.mapReadAsync();
-        } else {
-          const byteCount = length! * typedArrayConstructor!.BYTES_PER_ELEMENT;
-          const gpuReadBuffer = this.engine.device.createBuffer({
-            size: byteCount,
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-          });
+        // await gpuBuffer.mapAsync(WebGPUConstants.MapMode.Read);
+        // const arraybuffer = gpuBuffer.getMappedRange();
+        // let arraybuffer;
 
-          this.engine.uploadEncoder.copyBufferToBuffer(
-            gpuBuffer,
-            0,
-            gpuReadBuffer,
-            0,
-            byteCount,
-          );
+        // if (isSafari) {
+        //   arraybuffer = await gpuBuffer.mapReadAsync();
+        // } else {
+        const byteCount = length! * typedArrayConstructor!.BYTES_PER_ELEMENT;
+        const gpuReadBuffer = this.engine.device.createBuffer({
+          size: byteCount,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+        const encoder = this.engine.device.createCommandEncoder();
+        this.engine.uploadEncoder.copyBufferToBuffer(
+          gpuBuffer,
+          0,
+          gpuReadBuffer,
+          0,
+          byteCount,
+        );
+        const queue: GPUQueue = isSafari
+          ? // @ts-ignore
+            this.engine.device.getQueue()
+          : this.engine.device.defaultQueue;
+        queue.submit([encoder.finish()]);
 
-          // submit copy command
-          this.engine.commandBuffers[0] = this.engine.uploadEncoder.finish();
-          // filter undefined buffers
-          this.engine.device.defaultQueue.submit(
-            this.engine.commandBuffers.filter((b) => b),
-          );
-          this.engine.uploadEncoder = this.engine.device.createCommandEncoder(
-            this.engine.uploadEncoderDescriptor,
-          );
+        await gpuReadBuffer.mapAsync(WebGPUConstants.MapMode.Read);
+        const arraybuffer = gpuReadBuffer.getMappedRange();
+        const typedArray = new typedArrayConstructor!(arraybuffer.slice(0));
+        gpuReadBuffer.unmap();
 
-          arraybuffer = await gpuReadBuffer.mapReadAsync();
-          // destroy read buffer later
-          this.engine.tempBuffers.push(gpuReadBuffer);
-        }
-        return new typedArrayConstructor!(arraybuffer);
+        return typedArray;
       }
     }
     return new Float32Array();

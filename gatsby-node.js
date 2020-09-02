@@ -33,5 +33,6 @@ exports.onCreateWebpackConfig = ({ getConfig }) => {
     '@antv/g-webgpu-engine': path.resolve(__dirname, 'packages/engine/src'),
     '@antv/g-webgpu-compiler': path.resolve(__dirname, 'packages/compiler/src'),
     '@antv/g-webgpu-unitchart': path.resolve(__dirname, 'packages/unitchart/src'),
+    '@antv/g-webgpu-raytracer': path.resolve(__dirname, 'packages/raytracer/src'),
   };
 };

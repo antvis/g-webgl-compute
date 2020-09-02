@@ -6,6 +6,7 @@ import {
   container,
   createEntity,
   IDENTIFIER,
+  // @ts-ignore
   IRenderEngine,
 } from '../../..';
 import { AABB } from '../../../shape/AABB';

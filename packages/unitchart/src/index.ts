@@ -1,3 +1,5 @@
 import { Chart } from './Chart';
+import { Container } from './Container';
+import { Layout } from './Layout';
 
-export { Chart };
+export { Chart, Layout, Container };

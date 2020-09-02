@@ -1,7 +1,7 @@
 import { inject, injectable } from 'inversify';
 import { IDENTIFIER } from '../../../identifier';
-import copyFrag from '../../../shader-module/shaders/webgl.copy.frag.glsl';
-import copyVert from '../../../shader-module/shaders/webgl.copy.vert.glsl';
+import copyFrag from '../../../services/shader-module/shaders/webgl.copy.frag.glsl';
+import copyVert from '../../../services/shader-module/shaders/webgl.copy.vert.glsl';
 import { FrameGraphHandle } from '../../framegraph/FrameGraphHandle';
 import { FrameGraphPass } from '../../framegraph/FrameGraphPass';
 import { PassNode } from '../../framegraph/PassNode';

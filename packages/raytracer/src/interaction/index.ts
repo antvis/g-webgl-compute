@@ -1,10 +1,5 @@
+import { CameraComponent } from '@antv/g-webgpu-core';
 import Hammer from 'hammerjs';
-import { inject, injectable } from 'inversify';
-import { ComponentManager } from '../../ComponentManager';
-import { IDENTIFIER } from '../../identifier';
-import { ISystem } from '../../ISystem';
-import { CameraComponent } from '../camera/CameraComponent';
-import { SceneComponent } from '../scene/SceneComponent';
 
 export interface IMouseData {
   deltaX: number;
@@ -12,8 +7,7 @@ export interface IMouseData {
   deltaZ: number;
 }
 
-@injectable()
-export class InteractionSystem implements ISystem {
+export class InteractionSystem {
   public static UP_EVENT = 'mouseup';
   public static MOVE_EVENT = 'mousemove';
   public static DOWN_EVENT = 'mousedown';
@@ -28,16 +22,15 @@ export class InteractionSystem implements ISystem {
   private deltaZ: number = 0;
 
   private hammertime: HammerManager;
-  private canvas: HTMLCanvasElement;
 
-  @inject(IDENTIFIER.SceneComponentManager)
-  private readonly scene: ComponentManager<SceneComponent>;
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private camera: CameraComponent,
+    private onCameraChanged: () => void,
+  ) {}
 
-  @inject(IDENTIFIER.CameraComponentManager)
-  private readonly camera: ComponentManager<CameraComponent>;
-
-  public initialize(canvas: HTMLCanvasElement) {
-    const hammertime = new Hammer(canvas);
+  public initialize() {
+    const hammertime = new Hammer(this.canvas);
     hammertime.get('pan').set({ direction: Hammer.DIRECTION_ALL });
     hammertime.get('pinch').set({ enable: true });
     hammertime.on('panstart', this.onPanstart);
@@ -45,8 +38,7 @@ export class InteractionSystem implements ISystem {
     hammertime.on('panend', this.onPanend);
     hammertime.on('pinch', this.onPinch);
     this.hammertime = hammertime;
-    canvas.addEventListener('wheel', this.onMousewheel);
-    this.canvas = canvas;
+    this.canvas.addEventListener('wheel', this.onMousewheel);
   }
 
   public tearDown() {
@@ -78,7 +70,8 @@ export class InteractionSystem implements ISystem {
 
       this.onChangeCamera({
         deltaX: this.deltaX,
-        deltaY: this.deltaY,
+        // deltaY: this.deltaY,
+        deltaY: 0,
         deltaZ: this.deltaZ,
       });
     }
@@ -99,11 +92,8 @@ export class InteractionSystem implements ISystem {
 
   private onChangeCamera = (data: IMouseData) => {
     const { deltaX, deltaY, deltaZ } = data;
-    this.scene.forEach((entity, scene) => {
-      const camera = this.camera.getComponentByEntity(scene.camera)!;
-
-      camera.rotate(deltaX, deltaY, 0);
-      camera.dolly(deltaZ);
-    });
+    this.camera.rotate(deltaX, deltaY, 0);
+    this.camera.dolly(deltaZ);
+    this.onCameraChanged();
   };
 }

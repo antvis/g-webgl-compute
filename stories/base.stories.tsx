@@ -10,11 +10,13 @@ import Reduction from './GPGPU/Reduction';
 import VectorAdd from './GPGPU/VectorAdd';
 
 // import Instanced from './Rendering/Instanced';
+import RayTracer from './Raytracing/RayTracer';
 import RotatingCube from './Rendering/RotatingCube';
 // import RotatingCubeWithRecordBundle from './Rendering/RotatingCubeWithRecordBundle';
 // import TriangleMSAA from './Rendering/TriangleMSAA';
 
 // @ts-ignore
+storiesOf('RayTracing', module).add('RayTracing', () => <RayTracer />);
 storiesOf('Rendering', module).add('RotatingCube', () => <RotatingCube />);
 //   .add('TriangleMSAA', () => <TriangleMSAA />)
 //   .add('RotatingCubeWithRecordBundle', () => <RotatingCubeWithRecordBundle />)

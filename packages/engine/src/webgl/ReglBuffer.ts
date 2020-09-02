@@ -16,6 +16,7 @@ export default class ReglBuffer implements IBuffer {
 
   constructor(reGl: regl.Regl, options: IBufferInitializationOptions) {
     const { data, usage, type } = options;
+    // @ts-ignore
     this.buffer = reGl.buffer({
       data,
       usage: usageMap[usage || gl.STATIC_DRAW],
@@ -33,6 +34,7 @@ export default class ReglBuffer implements IBuffer {
   }
 
   public subData({ data, offset }: { data: BufferData; offset: number }) {
+    // @ts-ignore
     this.buffer.subdata(data, offset);
   }
 }

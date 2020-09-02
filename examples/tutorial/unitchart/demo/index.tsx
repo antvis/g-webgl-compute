@@ -1,15 +1,20 @@
-import { Chart } from '@antv/g-webgpu-unitchart';
+import { Chart, Container, Layout } from '@antv/g-webgpu-unitchart';
+import * as d3 from 'd3';
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 
 let chart;
 
 const App = React.memo(function Fruchterman() {
-  const [item, setItem] = useState();
-  const [tooltipPos, setTooltipPos] = useState([0, 0]);
+  const [item, setItem] = useState<object>();
+  const [tooltipPos, setTooltipPos] = useState<[number, number]>([0, 0]);
 
   useEffect(() => {
     (async () => {
+      const rawData = await d3.csv(
+        'https://intuinno.github.io/unit/data/titanic.csv',
+      );
+
       const canvas = document.getElementById(
         'application',
       ) as HTMLCanvasElement;
@@ -194,7 +199,7 @@ const App = React.memo(function Fruchterman() {
       chart = new Chart({
         canvas,
         title: 'Titanic',
-        data: 'https://intuinno.github.io/unit/data/titanic.csv',
+        data: rawData,
         width: 600,
         height: 600,
         padding: {
@@ -220,8 +225,8 @@ const App = React.memo(function Fruchterman() {
           },
           isColorScaleShared: true,
         },
-        onPick: (item, position) => {
-          setItem(item);
+        onPick: (dataItem, position) => {
+          setItem(dataItem);
           setTooltipPos(position);
         },
       });
@@ -233,7 +238,9 @@ const App = React.memo(function Fruchterman() {
     })();
 
     return function cleanup() {
-      chart.destroy();
+      if (chart) {
+        chart.destroy();
+      }
     };
   }, []);
 
