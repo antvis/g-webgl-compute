@@ -76,6 +76,14 @@ export interface ITexture2DInitializationOptions {
   colorSpace?: gl.NONE | gl.BROWSER_DEFAULT_WEBGL;
 
   mipmap?: boolean | gl.DONT_CARE | gl.NICEST | gl.FASTEST;
+
+  // @see https://gpuweb.github.io/gpuweb/#gputextureusage
+  usage?:
+    | gl.COPY_DST
+    | gl.COPY_SRC
+    | gl.RENDER_ATTACHMENT
+    | gl.STORAGE
+    | gl.SAMPLED;
 }
 
 export interface ITexture2D {

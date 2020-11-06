@@ -90,6 +90,37 @@ export const blendFuncMap: {
   [gl.SRC_ALPHA_SATURATE]: WebGPUConstants.BlendFactor.SrcAlphaSaturated,
 };
 
+// @see https://gpuweb.github.io/gpuweb/#texture-formats
+export const formatMap: {
+  [key: string]:
+    | 'r8unorm'
+    | 'rgba8unorm'
+    | 'depth32float'
+    | 'depth24plus-stencil8';
+} = {
+  [gl.ALPHA]: 'r8unorm',
+  [gl.RGBA]: 'rgba8unorm',
+  [gl.DEPTH_COMPONENT]: 'depth32float',
+  [gl.DEPTH_STENCIL]: 'depth24plus-stencil8',
+};
+
+// @see https://gpuweb.github.io/gpuweb/#enumdef-gpufiltermode
+export const filterMap: {
+  [key: string]: 'nearest' | 'linear';
+} = {
+  [gl.NEAREST]: 'nearest',
+  [gl.LINEAR]: 'linear',
+};
+
+// @see https://gpuweb.github.io/gpuweb/#enumdef-gpuaddressmode
+export const wrapModeMap: {
+  [key: string]: 'repeat' | 'clamp-to-edge' | 'mirror-repeat';
+} = {
+  [gl.REPEAT]: 'repeat',
+  [gl.CLAMP_TO_EDGE]: 'clamp-to-edge',
+  [gl.MIRRORED_REPEAT]: 'mirror-repeat',
+};
+
 export function getCullMode({
   cull,
 }: Pick<IModelInitializationOptions, 'cull'>):

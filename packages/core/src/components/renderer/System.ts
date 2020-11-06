@@ -2,7 +2,9 @@ import { inject, injectable, named } from 'inversify';
 import { IConfigService } from '../..';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
+import { ResourcePool } from '../framegraph/ResourcePool';
 import { FrameGraphSystem } from '../framegraph/System';
+import { IView } from './IRendererService';
 import { CopyPass, CopyPassData } from './passes/CopyPass';
 import { IRenderPass } from './passes/IRenderPass';
 import {
@@ -23,43 +25,53 @@ export class RendererSystem implements ISystem {
   @inject(IDENTIFIER.ConfigService)
   private readonly configService: IConfigService;
 
-  public async execute() {
-    if (!this.configService.get().engineOptions?.supportCompute) {
-      const {
-        setup: setupPixelPickingPass,
-        execute: executePixelPickingPass,
-      } = this.renderPassFactory<PixelPickingPassData>(
-        PixelPickingPass.IDENTIFIER,
-      );
-      const pixelPickingPass = this.frameGraphSystem.addPass<
-        PixelPickingPassData
-      >(
-        PixelPickingPass.IDENTIFIER,
-        setupPixelPickingPass,
-        executePixelPickingPass,
-      );
+  @inject(IDENTIFIER.ResourcePool)
+  private readonly resourcePool: ResourcePool;
 
-      const {
-        setup: setupRenderPass,
-        execute: executeRenderPass,
-      } = this.renderPassFactory<RenderPassData>(RenderPass.IDENTIFIER);
-      const renderPass = this.frameGraphSystem.addPass<RenderPassData>(
-        RenderPass.IDENTIFIER,
-        setupRenderPass,
-        executeRenderPass,
-      );
+  public async execute(view: IView) {
+    // const {
+    //   setup: setupPixelPickingPass,
+    //   execute: executePixelPickingPass,
+    //   tearDown: tearDownPickingPass,
+    // } = this.renderPassFactory<PixelPickingPassData>(
+    //   PixelPickingPass.IDENTIFIER,
+    // );
+    // const pixelPickingPass = this.frameGraphSystem.addPass<
+    //   PixelPickingPassData
+    // >(
+    //   PixelPickingPass.IDENTIFIER,
+    //   setupPixelPickingPass,
+    //   executePixelPickingPass,
+    //   tearDownPickingPass,
+    // );
 
-      const {
-        setup: setupCopyPass,
-        execute: executeCopyPass,
-      } = this.renderPassFactory<CopyPassData>(CopyPass.IDENTIFIER);
-      const copyPass = this.frameGraphSystem.addPass<CopyPassData>(
-        CopyPass.IDENTIFIER,
-        setupCopyPass,
-        executeCopyPass,
-      );
+    const {
+      setup: setupRenderPass,
+      execute: executeRenderPass,
+    } = this.renderPassFactory<RenderPassData>(RenderPass.IDENTIFIER);
+    const renderPass = this.frameGraphSystem.addPass<RenderPassData>(
+      RenderPass.IDENTIFIER,
+      setupRenderPass,
+      executeRenderPass,
+    );
 
-      this.frameGraphSystem.present(copyPass.data.output);
-    }
+    const {
+      setup: setupCopyPass,
+      execute: executeCopyPass,
+      tearDown: tearDownCopyPass,
+    } = this.renderPassFactory<CopyPassData>(CopyPass.IDENTIFIER);
+    const copyPass = this.frameGraphSystem.addPass<CopyPassData>(
+      CopyPass.IDENTIFIER,
+      setupCopyPass,
+      executeCopyPass,
+      tearDownCopyPass,
+    );
+
+    this.frameGraphSystem.present(copyPass.data.output);
+    // this.frameGraphSystem.present(renderPass.data.output);
+  }
+
+  public tearDown() {
+    this.resourcePool.clean();
   }
 }

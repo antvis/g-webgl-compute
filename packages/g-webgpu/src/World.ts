@@ -1,144 +1,95 @@
 // tslint:disable-next-line:no-reference
 /// <reference path="../../../node_modules/@webgpu/types/dist/index.d.ts" />
 import {
-  BufferData,
-  CameraComponent,
-  CameraSystem,
   ComponentManager,
-  ComputeSystem,
-  ComputeType,
-  // container,
-  createContainerModule,
+  createEntity,
   Entity,
   GeometrySystem,
+  // container,
   IBoxGeometryParams,
   IConfig,
   IConfigService,
   IDENTIFIER,
-  IMeshParams,
-  IRendererConfig,
   IRendererService,
-  IShaderModuleService,
   ISystem,
-  IUniform,
+  KernelBundle,
   MaterialSystem,
-  MeshSystem,
-  PixelPickingPass,
-  SceneGraphSystem,
-  SceneSystem,
   TransformComponent,
 } from '@antv/g-webgpu-core';
-import { WebGLEngine, WebGPUEngine } from '@antv/g-webgpu-engine';
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
-import { Container, ContainerModule } from 'inversify';
+import { Container, ContainerModule, inject, injectable } from 'inversify';
+import { container } from '.';
+import { Camera } from './Camera';
+import { Kernel } from './Kernel';
+import { Renderable } from './Renderable';
+import { Renderer } from './Renderer';
+import { Scene } from './Scene';
 import { createCanvas } from './utils/canvas';
+import { View } from './View';
 
-interface ILifeCycle {
-  init(canvas: HTMLCanvasElement): void;
-  update(): void;
-  destroy(): void;
-}
-
-export class World implements ILifeCycle {
-  private systems: ISystem[];
-
-  private engine: IRendererService;
-  private canvas: HTMLCanvasElement;
-
-  private inited: boolean = false;
-  private destroyed: boolean = false;
-  private onInit: ((engine: IRendererService) => void) | null;
-  private onUpdate: ((engine: IRendererService) => void) | null;
-  private rafHandle: number;
-  private containerModule: ContainerModule;
-  private container: Container;
-  private useRenderBundle: boolean = false;
-  private renderBundleRecorded: boolean = false;
-  private renderBundle: GPURenderBundle;
-
-  constructor(options: Partial<IConfig> = {}) {
-    this.container = new Container();
-    const containerModule = createContainerModule();
-    this.containerModule = containerModule;
-    this.container.load(containerModule);
-
-    // TODO: fallback to WebGL
-    const engineClazz = !navigator.gpu ? WebGLEngine : WebGPUEngine;
-
-    if (!this.container.isBound(IDENTIFIER.RenderEngine)) {
-      this.container
-        .bind<IRendererService>(IDENTIFIER.RenderEngine)
-        // @ts-ignore
-        .to(engineClazz)
-        .inSingletonScope();
-    }
-
-    this.engine = this.container.get<IRendererService>(IDENTIFIER.RenderEngine);
-
-    const configService = this.container.get<IConfigService>(
-      IDENTIFIER.ConfigService,
-    );
-    configService.set(options);
-
-    this.systems = this.container.getAll<ISystem>(IDENTIFIER.Systems);
-
-    this.canvas = options.canvas || createCanvas();
-    this.init(this.canvas, options.engineOptions);
-    if (options.onInit) {
-      this.onInit = options.onInit;
-    }
-    if (options.onUpdate) {
-      this.onUpdate = options.onUpdate;
-    }
-    this.useRenderBundle = !!options.useRenderBundle;
+@injectable()
+export class World {
+  public static create(config: Partial<IConfig> = {}) {
+    const world = container.get(World);
+    world.setConfig(config);
+    return world;
   }
 
-  public getCamera(entity: Entity) {
-    const manager = this.container.get<ComponentManager<CameraComponent>>(
-      IDENTIFIER.CameraComponentManager,
-    );
-    return manager.getComponentByEntity(entity);
+  @inject(IDENTIFIER.ConfigService)
+  private readonly configService: IConfigService;
+
+  public async getEngine() {
+    const engine = container.get<IRendererService>(IDENTIFIER.RenderEngine);
+    const { canvas, engineOptions } = this.configService.get();
+    await engine.init({
+      canvas: canvas || createCanvas(),
+      swapChainFormat: WebGPUConstants.TextureFormat.BGRA8Unorm,
+      antialiasing: false,
+      ...engineOptions,
+    });
+    return engine;
   }
 
-  public getTransform(entity: Entity) {
-    const manager = this.container.get<ComponentManager<TransformComponent>>(
+  /**
+   * get transform component
+   * @param entity
+   */
+  public getTransformComponent(entity: Entity) {
+    const manager = container.get<ComponentManager<TransformComponent>>(
       IDENTIFIER.TransformComponentManager,
     );
     return manager.getComponentByEntity(entity);
   }
 
-  public createScene(sceneParams: { camera: Entity }) {
-    const sceneSystem = this.container.getNamed<SceneSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.SceneSystem,
-    );
-    return sceneSystem.createScene(sceneParams);
+  public setConfig(config: Partial<IConfig>) {
+    this.configService.set(config);
   }
 
-  public createCamera(cameraParams: {
-    near: number;
-    far: number;
-    angle: number;
-    aspect: number;
-  }) {
-    const cameraSystem = this.container.getNamed<CameraSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.CameraSystem,
-    );
-    return cameraSystem.createCamera(cameraParams);
+  public createEntity() {
+    return createEntity();
   }
 
-  public createMesh(params: IMeshParams) {
-    const meshSystem = this.container.getNamed<MeshSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.MeshSystem,
-    );
-    return meshSystem.createMesh(params);
+  public createScene() {
+    return container.get(Scene);
+  }
+
+  public createCamera() {
+    return new Camera();
+  }
+
+  public createView() {
+    return container.get(View);
+  }
+
+  public createRenderable(entity: Entity) {
+    const renderable = container.get(Renderable);
+    renderable.setEntity(entity);
+    return renderable;
   }
 
   public createBoxGeometry(params: IBoxGeometryParams) {
-    const geometrySystem = this.container.getNamed<GeometrySystem>(
+    const geometrySystem = container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -146,7 +97,7 @@ export class World implements ILifeCycle {
   }
 
   public createBufferGeometry(params?: { vertexCount: number }) {
-    const geometrySystem = this.container.getNamed<GeometrySystem>(
+    const geometrySystem = container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -157,7 +108,7 @@ export class World implements ILifeCycle {
     maxInstancedCount: number;
     vertexCount: number;
   }) {
-    const geometrySystem = this.container.getNamed<GeometrySystem>(
+    const geometrySystem = container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -165,7 +116,7 @@ export class World implements ILifeCycle {
   }
 
   public createBasicMaterial() {
-    const materialSystem = this.container.getNamed<MaterialSystem>(
+    const materialSystem = container.getNamed<MaterialSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.MaterialSystem,
     );
@@ -176,284 +127,49 @@ export class World implements ILifeCycle {
     vertexShader: string;
     fragmentShader: string;
   }) {
-    const materialSystem = this.container.getNamed<MaterialSystem>(
+    const materialSystem = container.getNamed<MaterialSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.MaterialSystem,
     );
     return materialSystem.createShaderMaterial(params);
   }
 
-  public setAttribute(
-    entity: Entity,
-    name: string,
-    data: BufferData,
-    descriptor: GPUVertexBufferLayoutDescriptor,
-    bufferGetter?: () => GPUBuffer,
-  ) {
-    const geometrySystem = this.container.getNamed<GeometrySystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.GeometrySystem,
-    );
-    return geometrySystem.setAttribute(
-      entity,
-      name,
-      data,
-      descriptor,
-      // @ts-ignore
-      bufferGetter,
-    );
-  }
-
-  public createComputePipeline(params: {
-    type?: ComputeType;
-    precompiled?: boolean;
-    shader: string;
-    dispatch: [number, number, number];
-    maxIteration?: number;
-    onCompleted?:
-      | ((
-          particleData:
-            | Float32Array
-            | Float64Array
-            | Int8Array
-            | Uint8Array
-            | Uint8ClampedArray
-            | Int16Array
-            | Uint16Array
-            | Int32Array
-            | Uint32Array,
-        ) => void)
-      | null;
-    onIterationCompleted?: ((iteration: number) => Promise<void>) | null;
-  }) {
-    const computeSystem = this.container.getNamed<ComputeSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.ComputeSystem,
-    );
-    return computeSystem.createComputePipeline({
-      ...params,
-      type: params.type || 'layout',
-    });
-  }
-
-  public getPrecompiledBundle(entity: Entity): string {
-    const computeSystem = this.container.getNamed<ComputeSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.ComputeSystem,
-    );
-    return computeSystem.getPrecompiledBundle(entity);
-  }
-
-  // public addUniform(entity: Entity, uniform: IUniform) {
-  //   const materialSystem = container.getNamed<MaterialSystem>(
-  //     IDENTIFIER.Systems,
-  //     IDENTIFIER.MaterialSystem,
-  //   );
-  //   materialSystem.addUniform(entity, uniform);
-  // }
-
-  public setUniform(
-    materialEntity: Entity,
-    uniformName: string,
-    data: BufferData,
-  ) {
-    const materialSystem = this.container.getNamed<MaterialSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.MaterialSystem,
-    );
-    return materialSystem.setUniform(materialEntity, uniformName, data);
-  }
-
-  public setIndex(
-    entity: Entity,
-    data: number[] | Uint8Array | Uint16Array | Uint32Array,
-  ) {
-    const geometrySystem = this.container.getNamed<GeometrySystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.GeometrySystem,
-    );
-    geometrySystem.setIndex(entity, data);
-  }
-
-  public setBinding(
-    entity: Entity,
-    name: string,
-    data:
-      | number
-      | number[]
-      | Float32Array
-      | Uint8Array
-      | Uint16Array
-      | Uint32Array
-      | Int8Array
-      | Int16Array
-      | Int32Array
-      | {
-          entity: Entity;
-        },
-  ) {
-    const computeSystem = this.container.getNamed<ComputeSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.ComputeSystem,
-    );
-
-    return computeSystem.setBinding(entity, name, data);
-  }
-
-  public async readOutputData(entity: Entity) {
-    const computeSystem = this.container.getNamed<ComputeSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.ComputeSystem,
-    );
-
-    return computeSystem.readOutputData(entity);
-  }
-
-  public add(sceneEntity: Entity, meshEntity: Entity) {
-    const sceneSystem = this.container.getNamed<SceneSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.SceneSystem,
-    );
-
-    sceneSystem.addMesh(sceneEntity, meshEntity);
-  }
-
-  public attach(
-    entity: Entity,
-    parent: Entity,
-    isChildAlreadyInLocalSpace?: boolean,
-  ) {
-    const sceneGraphSystem = this.container.getNamed<SceneGraphSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.SceneGraphSystem,
-    );
-
-    sceneGraphSystem.attach(entity, parent, isChildAlreadyInLocalSpace);
-  }
-
-  public async init(
-    canvas: HTMLCanvasElement,
-    engineOptions?: IRendererConfig,
-  ) {
-    // TODO: 目前仅针对 WebGL 进行模块化处理
-    if (!this.engine.supportWebGPU) {
-      // 初始化 shader module
-      const shaderModule = this.container.get<IShaderModuleService>(
-        IDENTIFIER.ShaderModuleService,
-      );
-      shaderModule.registerBuiltinModules();
+  public createKernel(precompiledBundle: KernelBundle | string) {
+    const kernel = container.get(Kernel);
+    if (typeof precompiledBundle === 'string') {
+      kernel.setBundle(JSON.parse(precompiledBundle));
+    } else {
+      kernel.setBundle(precompiledBundle);
     }
-
-    await this.engine.init({
-      canvas,
-      swapChainFormat: WebGPUConstants.TextureFormat.BGRA8Unorm,
-      antialiasing: false,
-      ...engineOptions,
-    });
-
-    await this.update();
+    kernel.init();
+    return kernel;
   }
 
-  public update = async () => {
-    if (this.destroyed) {
-      return;
-    }
-
-    await this.render();
-
-    this.systems.forEach((system) => {
-      if (system.cleanup) {
-        system.cleanup();
-      }
-    });
-
-    // 考虑运行在 Worker 中，不能使用 window.requestAnimationFrame
-    this.rafHandle = requestAnimationFrame(this.update);
-  };
+  public createRenderer() {
+    const renderer = container.get(Renderer);
+    renderer.init();
+    return renderer;
+  }
 
   public destroy() {
-    this.destroyed = true;
-    if (this.engine) {
-      this.engine.destroy();
-    }
-    this.systems.forEach((system) => {
+    const systems = container.getAll<ISystem>(IDENTIFIER.Systems);
+    systems.forEach((system) => {
       if (system.tearDown) {
         system.tearDown();
       }
     });
-
-    cancelAnimationFrame(this.rafHandle);
-    this.container.unload(this.containerModule);
+    const engine = container.get<IRendererService>(IDENTIFIER.RenderEngine);
+    engine.destroy();
+    // container.unload(containerModule);
   }
 
-  public setSize(width: number, height: number) {
-    const canvas = this.engine.getCanvas();
-    const pixelRatio = window.devicePixelRatio;
-    canvas.width = Math.floor(width * pixelRatio);
-    canvas.height = Math.floor(height * pixelRatio);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+  // public pick(position: { x: number; y: number }): number | undefined {
+  //   const pickingPass = this.container.getNamed(
+  //     IDENTIFIER.RenderPass,
+  //     PixelPickingPass.IDENTIFIER,
+  //   );
 
-    this.engine.viewport({
-      x: 0,
-      y: 0,
-      width: canvas.width,
-      height: canvas.height,
-    });
-  }
-
-  public pick(position: { x: number; y: number }): number | undefined {
-    const pickingPass = this.container.getNamed(
-      IDENTIFIER.RenderPass,
-      PixelPickingPass.IDENTIFIER,
-    );
-
-    // @ts-ignore
-    return pickingPass.pick(position);
-  }
-
-  private async render() {
-    this.engine.beginFrame();
-
-    if (!this.inited) {
-      this.systems.forEach((system) => {
-        if (system.initialize) {
-          system.initialize(this.canvas);
-        }
-      });
-      if (this.onInit) {
-        await this.onInit(this.engine);
-      }
-      this.inited = true;
-    }
-
-    for (const system of this.systems) {
-      if (system.execute) {
-        await system.execute();
-      }
-    }
-
-    if (this.onUpdate) {
-      await this.onUpdate(this.engine);
-    }
-
-    // 录制一遍绘制命令，后续直接播放
-    // if (this.useRenderBundle) {
-    //   if (!this.renderBundleRecorded) {
-    //     this.engine.startRecordBundle();
-    //     if (this.onUpdate) {
-    //       await this.onUpdate(this.engine);
-    //     }
-    //     this.renderBundle = this.engine.stopRecordBundle();
-    //     this.renderBundleRecorded = true;
-    //   }
-    //   this.engine.executeBundles([this.renderBundle]);
-    // } else {
-    //   if (this.onUpdate) {
-    //     await this.onUpdate(this.engine);
-    //   }
-    // }
-
-    this.engine.endFrame();
-  }
+  //   // @ts-ignore
+  //   return pickingPass.pick(position);
+  // }
 }

@@ -1,12 +1,13 @@
-import { Component, Entity } from '../..';
+import { Component, Entity, MaterialComponent } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
 import { AABB } from '../../shape/AABB';
+import { GeometryComponent } from '../geometry/GeometryComponent';
 import { IModel } from '../renderer/IModel';
 
 export class MeshComponent extends Component<MeshComponent> {
-  public material: Entity;
+  public material: MaterialComponent;
 
-  public geometry: Entity;
+  public geometry: GeometryComponent;
 
   /**
    * aabb 应该存在 Mesh 而非 Geometry 中，原因包括：

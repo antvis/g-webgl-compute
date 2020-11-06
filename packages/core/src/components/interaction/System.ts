@@ -1,9 +1,9 @@
 import Hammer from 'hammerjs';
 import { inject, injectable } from 'inversify';
+import { IConfigService, View } from '../..';
 import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
-import { CameraComponent } from '../camera/CameraComponent';
 import { SceneComponent } from '../scene/SceneComponent';
 
 export interface IMouseData {
@@ -29,24 +29,32 @@ export class InteractionSystem implements ISystem {
 
   private hammertime: HammerManager;
   private canvas: HTMLCanvasElement;
+  private view: View;
 
   @inject(IDENTIFIER.SceneComponentManager)
   private readonly scene: ComponentManager<SceneComponent>;
 
-  @inject(IDENTIFIER.CameraComponentManager)
-  private readonly camera: ComponentManager<CameraComponent>;
+  @inject(IDENTIFIER.ConfigService)
+  private readonly configService: IConfigService;
 
-  public initialize(canvas: HTMLCanvasElement) {
-    const hammertime = new Hammer(canvas);
-    hammertime.get('pan').set({ direction: Hammer.DIRECTION_ALL });
-    hammertime.get('pinch').set({ enable: true });
-    hammertime.on('panstart', this.onPanstart);
-    hammertime.on('panmove', this.onPanmove);
-    hammertime.on('panend', this.onPanend);
-    hammertime.on('pinch', this.onPinch);
-    this.hammertime = hammertime;
-    canvas.addEventListener('wheel', this.onMousewheel);
-    this.canvas = canvas;
+  public async initialize() {
+    const { canvas } = this.configService.get();
+    if (canvas) {
+      const hammertime = new Hammer(canvas);
+      hammertime.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+      hammertime.get('pinch').set({ enable: true });
+      hammertime.on('panstart', this.onPanstart);
+      hammertime.on('panmove', this.onPanmove);
+      hammertime.on('panend', this.onPanend);
+      hammertime.on('pinch', this.onPinch);
+      this.hammertime = hammertime;
+      canvas.addEventListener('wheel', this.onMousewheel);
+      this.canvas = canvas;
+    }
+  }
+
+  public async execute(view: View) {
+    this.view = view;
   }
 
   public tearDown() {
@@ -99,11 +107,8 @@ export class InteractionSystem implements ISystem {
 
   private onChangeCamera = (data: IMouseData) => {
     const { deltaX, deltaY, deltaZ } = data;
-    this.scene.forEach((entity, scene) => {
-      const camera = this.camera.getComponentByEntity(scene.camera)!;
-
-      camera.rotate(deltaX, deltaY, 0);
-      camera.dolly(deltaZ);
-    });
+    const camera = this.view.getCamera();
+    camera.rotate(deltaX, deltaY, 0);
+    camera.dolly(deltaZ);
   };
 }

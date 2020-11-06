@@ -5,14 +5,6 @@ export const IDENTIFIER = {
   NameComponentManager: Symbol('NameComponentManager'),
   SceneGraphSystem: Symbol('SceneGraphSystem'),
 
-  // Scene
-  SceneSystem: Symbol('SceneSystem'),
-  SceneComponentManager: Symbol('SceneComponentManager'),
-
-  // Camera
-  CameraComponentManager: Symbol('CameraComponentManager'),
-  CameraSystem: Symbol('CameraSystem'),
-
   // FrameGraph
   FrameGraphSystem: Symbol('FrameGraphSystem'),
   ResourcePool: Symbol('ResourcePool'),
@@ -23,6 +15,7 @@ export const IDENTIFIER = {
   RendererSystem: Symbol('RendererSystem'),
   RenderPass: Symbol('RenderPass'),
   RenderPassFactory: Symbol('Factory<IRenderPass>'),
+  Renderable: Symbol('Factory<IRenderPass>'),
 
   // Interaction
   // InteractionSystem: Symbol('InteractionSystem'),

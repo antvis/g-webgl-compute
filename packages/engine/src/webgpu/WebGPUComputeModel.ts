@@ -1,11 +1,20 @@
-import { GLSLContext } from '@antv/g-webgpu-compiler';
-import { gl, IComputeModel, isSafari } from '@antv/g-webgpu-core';
+import {
+  AST_TOKEN_TYPES,
+  gl,
+  GLSLContext,
+  IComputeModel,
+  isSafari,
+  STORAGE_CLASS,
+  createEntity,
+} from '@antv/g-webgpu-core';
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
-import concat from 'lodash/concat';
+import { isNumber } from 'lodash';
+import isNil from 'lodash/isNil';
 import { WebGPUEngine } from '.';
 import WebGPUBuffer from './WebGPUBuffer';
 
 export default class WebGPUComputeModel implements IComputeModel {
+  private entity = createEntity();
   /**
    * 用于后续渲染时动态更新
    */
@@ -15,11 +24,10 @@ export default class WebGPUComputeModel implements IComputeModel {
   }> = [];
 
   private uniformBuffer: WebGPUBuffer;
-  private vertexBuffers: WebGPUBuffer[] = [];
-
-  private pipelineLayout: GPUPipelineLayout;
-  private particleBindGroups = new Array(2);
-  private particleBuffers: WebGPUBuffer[] = new Array(2);
+  private vertexBuffers: Record<string, WebGPUBuffer> = {};
+  private outputBuffer: WebGPUBuffer;
+  private bindGroupEntries: GPUBindGroupEntry[];
+  private bindGroup: GPUBindGroup;
 
   private computePipeline: GPUComputePipeline;
 
@@ -31,29 +39,67 @@ export default class WebGPUComputeModel implements IComputeModel {
     );
 
     const buffers = this.context.uniforms.filter(
-      (uniform) => uniform.type === 'sampler2D' || 'image2D',
+      (uniform) => uniform.storageClass === STORAGE_CLASS.StorageBuffer,
     );
     const uniforms = this.context.uniforms.filter(
-      (uniform) => uniform.type !== 'sampler2D' && uniform.type !== 'image2D',
+      (uniform) => uniform.storageClass === STORAGE_CLASS.Uniform,
     );
 
     let bufferBindingIndex = uniforms.length ? 1 : 0;
-    const bindGroupLayoutEntries = [];
-    const bindGroupEntries = [];
+    this.bindGroupEntries = [];
     if (bufferBindingIndex) {
       let offset = 0;
       // FIXME: 所有 uniform 合并成一个 buffer，固定使用 Float32Array 存储，确实会造成一些内存的浪费
-      const mergedUniformData = concat(
-        uniforms.map((uniform) => {
+      // we use std140 layout @see https://www.khronos.org/opengl/wiki/Interface_Block_(GLSL)
+      const mergedUniformData: number[] = [];
+      uniforms.forEach((uniform) => {
+        if (isNumber(uniform.data)) {
           this.uniformGPUBufferLayout.push({
             name: uniform.name,
             offset,
           });
-          // @ts-ignore
-          offset += (uniform.data.length || 1) * 4;
-          return uniform.data;
-        }),
-      );
+          offset += 4;
+          mergedUniformData.push(uniform.data);
+        } else {
+          let originDataLength = uniform.data?.length || 1;
+          if (originDataLength === 3) {
+            // vec3 -> vec4
+            // @see http://ptgmedia.pearsoncmg.com/images/9780321552624/downloads/0321552628_AppL.pdf
+            originDataLength = 4;
+            uniform.data.push(0);
+          }
+          // 4 elements per block/line
+          const padding = (offset / 4) % 4;
+          if (padding > 0) {
+            const space = 4 - padding;
+            if (originDataLength > 1 && originDataLength <= space) {
+              if (originDataLength === 2) {
+                if (space === 3) {
+                  offset += 4;
+                  mergedUniformData.push(0);
+                }
+                mergedUniformData.push(...uniform.data);
+                this.uniformGPUBufferLayout.push({
+                  name: uniform.name,
+                  offset,
+                });
+              }
+            } else {
+              for (let i = 0; i < space; i++) {
+                offset += 4;
+                mergedUniformData.push(0);
+              }
+              mergedUniformData.push(...uniform.data);
+              this.uniformGPUBufferLayout.push({
+                name: uniform.name,
+                offset,
+              });
+            }
+          }
+
+          offset += 4 * originDataLength;
+        }
+      });
 
       this.uniformBuffer = new WebGPUBuffer(this.engine, {
         // TODO: 处理 Struct 和 boolean
@@ -68,26 +114,21 @@ export default class WebGPUComputeModel implements IComputeModel {
           WebGPUConstants.BufferUsage.CopyDst,
       });
 
-      bindGroupLayoutEntries.push({
-        binding: 0,
-        visibility: WebGPUConstants.ShaderStage.Compute,
-        type: 'uniform-buffer',
-      });
-
-      bindGroupEntries.push({
+      this.bindGroupEntries.push({
         binding: 0,
         resource: {
           buffer: this.uniformBuffer.get(),
-          offset: 0,
-          size: mergedUniformData.length * 4, // 默认 Float32Array
         },
       });
     }
 
     // create GPUBuffers for storeage buffers
     buffers.forEach((buffer) => {
-      if (buffer.data) {
-        if (buffer.type === 'sampler2D') {
+      if (!isNil(buffer.data)) {
+        if (
+          buffer.type === AST_TOKEN_TYPES.Vector4FloatArray ||
+          buffer.type === AST_TOKEN_TYPES.FloatArray
+        ) {
           let gpuBuffer;
           if (buffer.name === this.context.output.name) {
             gpuBuffer = new WebGPUBuffer(this.engine, {
@@ -98,6 +139,7 @@ export default class WebGPUComputeModel implements IComputeModel {
                 WebGPUConstants.BufferUsage.CopyDst |
                 WebGPUConstants.BufferUsage.CopySrc,
             });
+            this.outputBuffer = gpuBuffer;
             this.context.output = {
               name: buffer.name,
               // @ts-ignore
@@ -106,37 +148,38 @@ export default class WebGPUComputeModel implements IComputeModel {
               gpuBuffer: gpuBuffer.get(),
             };
           } else {
-            gpuBuffer = new WebGPUBuffer(this.engine, {
+            if (buffer.isReferer) {
               // @ts-ignore
-              data: isFinite(Number(buffer.data)) ? [buffer.data] : buffer.data,
-              usage:
-                WebGPUConstants.BufferUsage.Storage |
-                WebGPUConstants.BufferUsage.CopyDst,
-            });
+              if (buffer.data.model && buffer.data.model.outputBuffer) {
+                // @ts-ignore
+                gpuBuffer = (buffer.data.model as WebGPUComputeModel)
+                  .outputBuffer;
+              } else {
+                // referred kernel haven't been executed
+              }
+            } else {
+              gpuBuffer = new WebGPUBuffer(this.engine, {
+                // @ts-ignore
+                data: isFinite(Number(buffer.data))
+                  ? [buffer.data]
+                  : buffer.data,
+                usage:
+                  WebGPUConstants.BufferUsage.Storage |
+                  WebGPUConstants.BufferUsage.CopyDst |
+                  WebGPUConstants.BufferUsage.CopySrc,
+              });
+            }
           }
-          this.vertexBuffers.push(gpuBuffer);
-          bindGroupEntries.push({
+
+          this.vertexBuffers[buffer.name] = gpuBuffer;
+          this.bindGroupEntries.push({
             binding: bufferBindingIndex,
             resource: {
-              buffer: gpuBuffer.get(),
-              offset: 0,
-              size:
-                // @ts-ignore
-                (isFinite(Number(buffer.data)) ? 1 : buffer.data.length) *
-                (isFinite(Number(buffer.data))
-                  ? 1
-                  : // @ts-ignore
-                    (buffer.data as Float32Array).BYTES_PER_ELEMENT || 4), // 默认 Float32Array
+              name: buffer.name,
+              refer: gpuBuffer ? undefined : buffer.data,
+              buffer: gpuBuffer ? gpuBuffer.get() : undefined,
             },
           });
-          bindGroupLayoutEntries.push({
-            binding: bufferBindingIndex,
-            visibility: WebGPUConstants.ShaderStage.Compute,
-            type: buffer.readonly
-              ? 'readonly-storage-buffer'
-              : 'storage-buffer',
-          });
-
           bufferBindingIndex++;
           // } else if (buffer.type === 'image2D') {
           //   if (!buffer.size) {
@@ -179,45 +222,24 @@ export default class WebGPUComputeModel implements IComputeModel {
     });
 
     // create compute pipeline layout
-    const computeBindGroupLayout = this.engine.device.createBindGroupLayout(
-      isSafari
-        ? // @ts-ignore
-          { bindings: bindGroupLayoutEntries }
-        : { entries: bindGroupLayoutEntries },
-    );
-    this.pipelineLayout = this.engine.device.createPipelineLayout({
-      bindGroupLayouts: [computeBindGroupLayout],
-    });
-
-    this.particleBindGroups[0] = this.engine.device.createBindGroup(
-      isSafari
-        ? {
-            layout: computeBindGroupLayout,
-            // @ts-ignore
-            bindings: bindGroupEntries,
-          }
-        : {
-            layout: computeBindGroupLayout,
-            entries: bindGroupEntries,
-          },
-    );
-
     this.computePipeline = this.engine.device.createComputePipeline({
-      layout: this.pipelineLayout,
       computeStage,
     });
+
+    // this.bindGroup = this.engine.device.createBindGroup({
+    //   layout: this.computePipeline.getBindGroupLayout(0),
+    //   entries: this.bindGroupEntries,
+    // });
   }
 
   public destroy(): void {
-    if (this.particleBuffers[0]) {
-      this.particleBuffers[0].destroy();
-    }
-
     if (this.uniformBuffer) {
       this.uniformBuffer.destroy();
     }
 
-    this.vertexBuffers.forEach((b) => b.destroy());
+    Object.keys(this.vertexBuffers).forEach((bufferName) =>
+      this.vertexBuffers[bufferName].destroy(),
+    );
   }
 
   public async readData() {
@@ -233,18 +255,14 @@ export default class WebGPUComputeModel implements IComputeModel {
         //   arraybuffer = await gpuBuffer.mapReadAsync();
         // } else {
         const byteCount = length! * typedArrayConstructor!.BYTES_PER_ELEMENT;
+
+        // @see https://developers.google.com/web/updates/2019/08/get-started-with-gpu-compute-on-the-web
         const gpuReadBuffer = this.engine.device.createBuffer({
           size: byteCount,
           usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
         const encoder = this.engine.device.createCommandEncoder();
-        this.engine.uploadEncoder.copyBufferToBuffer(
-          gpuBuffer,
-          0,
-          gpuReadBuffer,
-          0,
-          byteCount,
-        );
+        encoder.copyBufferToBuffer(gpuBuffer, 0, gpuReadBuffer, 0, byteCount);
         const queue: GPUQueue = isSafari
           ? // @ts-ignore
             this.engine.device.getQueue()
@@ -265,11 +283,42 @@ export default class WebGPUComputeModel implements IComputeModel {
   public run() {
     if (this.engine.currentComputePass) {
       this.engine.currentComputePass.setPipeline(this.computePipeline);
-      this.engine.currentComputePass.setBindGroup(
-        0,
-        this.particleBindGroups[0],
-      );
+
+      this.bindGroupEntries.forEach((entry) => {
+        if (!entry.resource.buffer) {
+          // get referred kernel's output
+          const gpuBuffer = (entry.resource.refer.model as WebGPUComputeModel)
+            .outputBuffer;
+          this.vertexBuffers[entry.resource.name] = gpuBuffer;
+          entry.resource.buffer = gpuBuffer.get();
+        }
+      });
+
+      const bindGroup = this.engine.device.createBindGroup({
+        layout: this.computePipeline.getBindGroupLayout(0),
+        entries: this.bindGroupEntries,
+      });
+      this.engine.currentComputePass.setBindGroup(0, bindGroup);
       this.engine.currentComputePass.dispatch(...this.context.dispatch);
+    }
+  }
+
+  public updateBuffer(
+    bufferName: string,
+    data:
+      | number[]
+      | Float32Array
+      | Uint8Array
+      | Uint16Array
+      | Uint32Array
+      | Int8Array
+      | Int16Array
+      | Int32Array,
+    offset: number = 0,
+  ) {
+    const buffer = this.vertexBuffers[bufferName];
+    if (buffer) {
+      buffer.subData({ data, offset });
     }
   }
 
@@ -311,7 +360,32 @@ export default class WebGPUComputeModel implements IComputeModel {
   }
 
   public confirmInput(model: IComputeModel, inputName: string): void {
-    // TODO: 拷贝 GPUBuffer
+    // copy output GPUBuffer of kernel
+    const inputBuffer = this.vertexBuffers[inputName];
+    const outputBuffer = (model as WebGPUComputeModel).outputBuffer;
+
+    debugger;
+
+    if (inputBuffer && outputBuffer && inputBuffer !== outputBuffer) {
+      const encoder = this.engine.device.createCommandEncoder();
+      const {
+        length,
+        typedArrayConstructor,
+      } = (model as WebGPUComputeModel).context.output;
+      const byteCount = length! * typedArrayConstructor!.BYTES_PER_ELEMENT;
+      encoder.copyBufferToBuffer(
+        outputBuffer.get(),
+        0,
+        inputBuffer.get(),
+        0,
+        byteCount,
+      );
+      const queue: GPUQueue = isSafari
+        ? // @ts-ignore
+          this.engine.device.getQueue()
+        : this.engine.device.defaultQueue;
+      queue.submit([encoder.finish()]);
+    }
   }
 
   private compileShaderToSpirV(
@@ -332,11 +406,9 @@ export default class WebGPUComputeModel implements IComputeModel {
   private async compileComputePipelineStageDescriptor(
     computeCode: string,
   ): Promise<Pick<GPUComputePipelineDescriptor, 'computeStage'>> {
-    let computeShader;
-    if (isSafari) {
-      computeShader = computeCode;
-    } else {
-      const shaderVersion = '#version 450\n';
+    let computeShader: Uint32Array | string = computeCode;
+    const shaderVersion = '#version 450\n';
+    if (!this.engine.options.useWGSL) {
       computeShader = await this.compileShaderToSpirV(
         computeCode,
         'compute',

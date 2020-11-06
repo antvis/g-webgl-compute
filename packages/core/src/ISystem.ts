@@ -3,18 +3,20 @@
  * @see https://github.com/sschmid/Entitas-CSharp/wiki/Systems
  */
 
+import { View } from '.';
+
 export interface ISystem {
   /**
    * in a similar way to Unity's `Start()`, we can do some initialization works:
    * * create global entities
    * * init event listeners
    */
-  initialize?(canvas: HTMLCanvasElement): void;
+  initialize?(): Promise<void>;
 
   /**
    * in a similar way to Unity's `Update()`, run once per frame
    */
-  execute?(): Promise<void>;
+  execute?(view: View): Promise<void>;
 
   /**
    * run at the end of each frame

@@ -1,6 +1,7 @@
 import { FrameGraphPass } from '../../framegraph/FrameGraphPass';
 import { PassNode } from '../../framegraph/PassNode';
 import { FrameGraphSystem } from '../../framegraph/System';
+import { IView } from '../IRendererService';
 
 export interface IRenderPass<RenderPassData> {
   /**
@@ -18,5 +19,11 @@ export interface IRenderPass<RenderPassData> {
   execute(
     fg: FrameGraphSystem,
     pass: FrameGraphPass<RenderPassData>,
+    view: IView,
   ): Promise<void>;
+
+  /**
+   * 结束后清理
+   */
+  tearDown?(): void;
 }

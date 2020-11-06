@@ -1,4 +1,4 @@
-import { Entity, World } from '@antv/g-webgpu';
+import { World } from '@antv/g-webgpu';
 import * as d3 from 'd3';
 import { Container } from './Container';
 import fragmentShaderGLSL from './shaders/webgl.point.frag.glsl';
@@ -29,8 +29,8 @@ export interface IMarkInitializationOptions {
 export class Mark {
   private colorScale: d3.ScaleOrdinal<string, string>;
   private world: World;
-  private material: Entity;
-  private geometry: Entity;
+  private material: any;
+  private geometry: any;
   private startTime: number;
 
   private activeLayout: string;
@@ -57,9 +57,9 @@ export class Mark {
     } else {
       const elaspedTime = window.performance.now() - this.startTime;
       if (elaspedTime < 600) {
-        this.world.setUniform(this.material, 'u_time', elaspedTime / 600);
+        this.material.setUniform('u_time', elaspedTime / 600);
       } else {
-        this.world.setUniform(this.material, 'u_time', 1);
+        this.material.setUniform('u_time', 1);
       }
     }
   }
@@ -107,10 +107,9 @@ export class Mark {
       });
       this.geometry = geometry;
 
-      world.setIndex(geometry, [0, 2, 1, 0, 3, 2]);
+      geometry.setIndex([0, 2, 1, 0, 3, 2]);
 
-      world.setAttribute(
-        geometry,
+      geometry.setAttribute(
         'position',
         Float32Array.from(attributes.positions),
         {
@@ -126,8 +125,7 @@ export class Mark {
         },
       );
 
-      world.setAttribute(
-        geometry,
+      geometry.setAttribute(
         'startOffset',
         Float32Array.from(attributes.instancedStartOffsets),
         {
@@ -143,8 +141,7 @@ export class Mark {
         },
       );
 
-      world.setAttribute(
-        geometry,
+      geometry.setAttribute(
         'color',
         Float32Array.from(attributes.instancedColors),
         {
@@ -160,8 +157,7 @@ export class Mark {
         },
       );
 
-      world.setAttribute(
-        geometry,
+      geometry.setAttribute(
         'startSize',
         Float32Array.from(attributes.instancedStartSizes),
         {
@@ -177,8 +173,7 @@ export class Mark {
         },
       );
 
-      world.setAttribute(
-        geometry,
+      geometry.setAttribute(
         'endSize',
         Float32Array.from(attributes.instancedEndSizes),
         {
@@ -194,8 +189,7 @@ export class Mark {
         },
       );
 
-      world.setAttribute(
-        geometry,
+      geometry.setAttribute(
         'shape',
         Float32Array.from(attributes.instancedShapes),
         {
@@ -211,8 +205,7 @@ export class Mark {
         },
       );
 
-      world.setAttribute(
-        geometry,
+      geometry.setAttribute(
         'endOffset',
         Float32Array.from(attributes.instancedEndOffsets),
         {
@@ -228,8 +221,7 @@ export class Mark {
         },
       );
 
-      world.setAttribute(
-        geometry,
+      geometry.setAttribute(
         'a_PickingColor',
         Float32Array.from(attributes.instancedPickingColors),
         {
@@ -251,39 +243,36 @@ export class Mark {
       });
       this.material = material;
 
-      world.setUniform(material, 'u_stroke_width', 1);
-      world.setUniform(
-        material,
-        'u_device_pixel_ratio',
-        window.devicePixelRatio,
-      );
-      world.setUniform(material, 'u_stroke_color', [0, 0, 0, 0]);
-      world.setUniform(material, 'u_stroke_opacity', 1);
-      world.setUniform(material, 'u_opacity', 0.35);
-      world.setUniform(material, 'u_blur', 0.2);
-      world.setUniform(material, 'u_time', 0);
-
       const {
         width: rootWidth,
         height: rootHeight,
       } = rootContainer.visualspace;
-      world.setUniform(material, 'u_viewport', [rootWidth, rootHeight]);
 
-      const mesh = world.createMesh({
-        geometry,
-        material,
+      material.setUniform({
+        u_stroke_width: 1,
+        u_device_pixel_ratio: window.devicePixelRatio,
+        u_stroke_color: [0, 0, 0, 0],
+        u_stroke_opacity: 1,
+        u_opacity: 0.35,
+        u_blur: 0.2,
+        u_time: 0,
+        u_viewport: [rootWidth, rootHeight],
       });
 
       // add meshes to current scene
-      world.add(scene, mesh);
+      const entity = world.createEntity();
+      scene.addEntity(entity);
+      world
+        .createRenderable(entity)
+        .setGeometry(geometry)
+        .setMaterial(material);
 
       this.inited = true;
     } else {
       // 布局切换，更新顶点数据
       if (this.activeLayout !== layout) {
         const currentAttributes = this.attributesMap[this.activeLayout];
-        world.setAttribute(
-          this.geometry,
+        this.geometry.setAttribute(
           'startOffset',
           Float32Array.from(currentAttributes.instancedEndOffsets),
           {
@@ -298,8 +287,7 @@ export class Mark {
             ],
           },
         );
-        world.setAttribute(
-          this.geometry,
+        this.geometry.setAttribute(
           'endOffset',
           Float32Array.from(attributes.instancedEndOffsets),
           {
@@ -314,8 +302,7 @@ export class Mark {
             ],
           },
         );
-        world.setAttribute(
-          this.geometry,
+        this.geometry.setAttribute(
           'startSize',
           Float32Array.from(currentAttributes.instancedEndSizes),
           {
@@ -331,8 +318,7 @@ export class Mark {
           },
         );
 
-        world.setAttribute(
-          this.geometry,
+        this.geometry.setAttribute(
           'endSize',
           Float32Array.from(attributes.instancedEndSizes),
           {

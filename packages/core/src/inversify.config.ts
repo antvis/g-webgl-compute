@@ -14,16 +14,7 @@ import {
 import getDecorators from 'inversify-inject-decorators';
 import { ISystem } from '.';
 import { ComponentManager } from './ComponentManager';
-import { CameraComponent } from './components/camera/CameraComponent';
-import { CameraSystem } from './components/camera/System';
-import { ComputeComponent } from './components/compute/ComputeComponent';
-import { IComputeStrategy } from './components/compute/IComputeStrategy';
-// import { LayoutComputeStrategy } from './components/compute/LayoutComputeStrategy';
-// import { ParticleComputeStrategy } from './components/compute/ParticleComputeStrategy';
-import { ComputeSystem } from './components/compute/System';
 import { ResourcePool } from './components/framegraph/ResourcePool';
-// import { PassNodeComponent } from './components/framegraph/PassNodeComponent';
-// import { ResourceHandleComponent } from './components/framegraph/ResourceHandleComponent';
 import { FrameGraphSystem } from './components/framegraph/System';
 import { GeometryComponent } from './components/geometry/GeometryComponent';
 import { GeometrySystem } from './components/geometry/System';
@@ -38,8 +29,6 @@ import { IRenderPass } from './components/renderer/passes/IRenderPass';
 import { PixelPickingPass } from './components/renderer/passes/PixelPickingPass';
 import { RenderPass } from './components/renderer/passes/RenderPass';
 import { RendererSystem } from './components/renderer/System';
-import { SceneComponent } from './components/scene/SceneComponent';
-import { SceneSystem } from './components/scene/System';
 import { HierarchyComponent } from './components/scenegraph/HierarchyComponent';
 import { NameComponent } from './components/scenegraph/NameComponent';
 import { SceneGraphSystem } from './components/scenegraph/System';
@@ -122,19 +111,6 @@ export function createContainerModule() {
       bind<ComponentManager<TransformComponent>>(
         IDENTIFIER.TransformComponentManager,
       ).toConstantValue(new ComponentManager(TransformComponent));
-      bind<ComponentManager<CameraComponent>>(
-        IDENTIFIER.CameraComponentManager,
-      ).toConstantValue(new ComponentManager(CameraComponent));
-      // container
-      //   .bind<ComponentManager<ResourceHandleComponent>>(
-      //     IDENTIFIER.ResourceHandleComponentManager,
-      //   )
-      //   .toConstantValue(new ComponentManager(ResourceHandleComponent));
-      // container
-      //   .bind<ComponentManager<PassNodeComponent>>(
-      //     IDENTIFIER.PassNodeComponentManager,
-      //   )
-      //   .toConstantValue(new ComponentManager(PassNodeComponent));
       bind<ComponentManager<MeshComponent>>(
         IDENTIFIER.MeshComponentManager,
       ).toConstantValue(new ComponentManager(MeshComponent));
@@ -147,12 +123,6 @@ export function createContainerModule() {
       bind<ComponentManager<MaterialComponent>>(
         IDENTIFIER.MaterialComponentManager,
       ).toConstantValue(new ComponentManager(MaterialComponent));
-      bind<ComponentManager<SceneComponent>>(
-        IDENTIFIER.SceneComponentManager,
-      ).toConstantValue(new ComponentManager(SceneComponent));
-      bind<ComponentManager<ComputeComponent>>(
-        IDENTIFIER.ComputeComponentManager,
-      ).toConstantValue(new ComponentManager(ComputeComponent));
 
       /**
        * bind systems
@@ -161,16 +131,6 @@ export function createContainerModule() {
         .to(SceneGraphSystem)
         .inSingletonScope()
         .whenTargetNamed(IDENTIFIER.SceneGraphSystem);
-
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(SceneSystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.SceneSystem);
-
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(CameraSystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.CameraSystem);
 
       bind<ISystem>(IDENTIFIER.Systems)
         .to(FrameGraphSystem)
@@ -201,11 +161,6 @@ export function createContainerModule() {
       //   .bind<ISystem>(IDENTIFIER.Systems)
       //   .to(InteractionSystem)
       //   .whenTargetNamed(IDENTIFIER.InteractionSystem);
-
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(ComputeSystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.ComputeSystem);
 
       /**
        * 全局服务

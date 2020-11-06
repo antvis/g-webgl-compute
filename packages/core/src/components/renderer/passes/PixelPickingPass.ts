@@ -7,12 +7,10 @@ import { FrameGraphPass } from '../../framegraph/FrameGraphPass';
 import { PassNode } from '../../framegraph/PassNode';
 import { ResourcePool } from '../../framegraph/ResourcePool';
 import { FrameGraphSystem } from '../../framegraph/System';
-import { MaterialSystem } from '../../material/System';
+import { MaterialComponent } from '../../material/MaterialComponent';
 import { MeshComponent } from '../../mesh/MeshComponent';
-import { SceneComponent } from '../../scene/SceneComponent';
 import { IFramebuffer } from '../IFramebuffer';
-import { IModel } from '../IModel';
-import { IRendererService } from '../IRendererService';
+import { IRendererService, IView } from '../IRendererService';
 import { IRenderPass } from './IRenderPass';
 import { RenderPass, RenderPassData } from './RenderPass';
 
@@ -39,17 +37,11 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
   @inject(IDENTIFIER.RenderPassFactory)
   private readonly renderPassFactory: <T>(name: string) => IRenderPass<T>;
 
-  @inject(IDENTIFIER.SceneComponentManager)
-  private readonly scene: ComponentManager<SceneComponent>;
-
   @inject(IDENTIFIER.MeshComponentManager)
   private readonly mesh: ComponentManager<MeshComponent>;
 
-  @inject(IDENTIFIER.Systems)
-  @named(IDENTIFIER.MaterialSystem)
-  private readonly materialSystem: MaterialSystem;
-
   private pickingFBO: IFramebuffer;
+  private view: IView;
 
   /**
    * 简单的 throttle，防止连续触发 hover 时导致频繁渲染到 picking framebuffer
@@ -77,11 +69,14 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
   public execute = async (
     fg: FrameGraphSystem,
     pass: FrameGraphPass<PixelPickingPassData>,
+    view: IView,
   ): Promise<void> => {
+    this.view = view;
+
     if (this.alreadyInRendering) {
       return;
     }
-    const { width, height } = this.engine.getViewportSize();
+    const { width, height } = view.getViewport();
     // throttled
     this.alreadyInRendering = true;
 
@@ -107,38 +102,28 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
 
       // 修改所有
       const meshes: MeshComponent[] = [];
-      this.scene.map(async (sceneEntity, scene) => {
-        for (const meshEntity of scene.meshes) {
-          const mesh = this.mesh.getComponentByEntity(meshEntity)!;
-          this.materialSystem.setUniform(
-            mesh.material,
-            'u_PickingStage',
-            PickingStage.ENCODE,
-          );
-          meshes.push(mesh);
-        }
-      });
+      const scene = view.getScene();
+      for (const meshEntity of scene.getEntities()) {
+        const mesh = this.mesh.getComponentByEntity(meshEntity)!;
+        const material = mesh.material;
+        material.setUniform('u_PickingStage', PickingStage.ENCODE);
+        meshes.push(mesh);
+      }
 
       // @ts-ignore
-      renderPass.renderScenes();
-      meshes.forEach((mesh) =>
-        this.materialSystem.setUniform(
-          mesh.material,
-          'u_PickingStage',
-          PickingStage.HIGHLIGHT,
-        ),
-      );
+      renderPass.renderView(view);
+      meshes.forEach((mesh) => {
+        const material = mesh.material;
+        material.setUniform('u_PickingStage', PickingStage.HIGHLIGHT);
+      });
 
       this.alreadyInRendering = false;
     });
   };
 
-  public pick = ({ x, y }: { x: number; y: number }) => {
-    // if (!this.layer.isVisible() || !this.layer.needPick(type)) {
-    //   return;
-    // }
-    const { getViewportSize, readPixels, useFramebuffer } = this.engine;
-    const { width, height } = getViewportSize();
+  public pick = ({ x, y }: { x: number; y: number }, view: IView) => {
+    const { readPixels, useFramebuffer } = this.engine;
+    const { width, height } = view.getViewport();
 
     const xInDevicePixel = x * window.devicePixelRatio;
     const yInDevicePixel = y * window.devicePixelRatio;
@@ -180,28 +165,18 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
 
   private highlightPickedFeature(pickedColors: Uint8Array | undefined) {
     if (pickedColors) {
-      this.scene.map(async (sceneEntity, scene) => {
-        for (const meshEntity of scene.meshes) {
-          const mesh = this.mesh.getComponentByEntity(meshEntity)!;
-          this.materialSystem.setUniform(
-            mesh.material,
-            'u_PickingStage',
-            PickingStage.HIGHLIGHT,
-          );
+      for (const meshEntity of this.view.getScene().getEntities()) {
+        const mesh = this.mesh.getComponentByEntity(meshEntity)!;
+        const material = mesh.material;
+        material.setUniform('u_PickingStage', PickingStage.HIGHLIGHT);
 
-          this.materialSystem.setUniform(mesh.material, 'u_PickingColor', [
-            pickedColors[0],
-            pickedColors[1],
-            pickedColors[2],
-          ]);
-          this.materialSystem.setUniform(mesh.material, 'u_HighlightColor', [
-            255,
-            0,
-            0,
-            255,
-          ]);
-        }
-      });
+        material.setUniform('u_PickingColor', [
+          pickedColors[0],
+          pickedColors[1],
+          pickedColors[2],
+        ]);
+        material.setUniform('u_HighlightColor', [255, 0, 0, 255]);
+      }
     }
   }
 }

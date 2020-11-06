@@ -22,70 +22,96 @@ module.exports = {
           zh: '文档',
           en: 'Document'
         },
-        redirect: 'api/gwebgpu'
+        redirect: 'docs/api/gpgpu/gwebgpu'
       },
       {
         slug: 'docs/tutorial',
         title: {
           zh: '教程',
           en: 'Tutorial'
-        }
+        },
+        redirect: 'docs/tutorial/gpgpu/quickstart'
       },
       {
-        slug: 'examples/tutorial',
+        slug: 'examples',
         title: {
           zh: '示例',
           en: 'Examples'
         },
-        redirect: 'tutorial/add2vectors'
+        redirect: 'examples/gpgpu/basic/add2vectors'
       }
     ],
     docs: [
       {
-        slug: 'api/gwebgpu',
+        slug: 'api/gpgpu',
         title: {
-          zh: 'GWebGPU 简介',
-          en: 'Introduction'
+          zh: 'GPGPU',
+          en: 'GPGPU'
         },
         order: 0
       },
       {
-        slug: 'api/syntax',
+        slug: 'api/rendering',
         title: {
-          zh: '语法介绍',
-          en: 'Shader Syntax'
+          zh: '渲染',
+          en: 'Rendering'
         },
-        order: 1
+        order: 0
       },
       {
-        slug: 'api/compute-pipeline',
+        slug: 'tutorial/gpgpu',
         title: {
-          zh: '计算管线 API',
-          en: 'API of compute pipeline'
+          zh: 'GPGPU',
+          en: 'GPGPU'
         },
-        order: 2
+        order: 0
       },
       {
-        slug: 'api/workgroup',
+        slug: 'tutorial/rendering',
         title: {
-          zh: '线程组',
-          en: 'Workgroup'
+          zh: '渲染',
+          en: 'Rendering'
         },
-        order: 3
+        order: 0
       },
     ],
     examples: [
       {
-        slug: 'tutorial',
-        icon: 'gallery',
+        slug: 'gpgpu',
         title: {
-          zh: '示例',
-          en: 'Examples'
-        }
+          zh: 'GPGPU',
+          en: 'GPGPU'
+        },
+        order: 0
+      },
+      {
+        slug: 'gpgpu/basic',
+        title: {
+          zh: '基础算法',
+          en: 'Basic Algorithms'
+        },
+        order: 0
+      },
+      {
+        slug: 'gpgpu/graph',
+        title: {
+          zh: '图算法',
+          en: 'Graph'
+        },
+        order: 0
+      },
+      {
+        slug: 'rendering',
+        title: {
+          zh: '渲染',
+          en: 'Rendering'
+        },
+        order: 1
       },
     ],
     playground: {
       container: '<div style="min-height: 500px; justify-content: center;position: relative" id="wrapper"/>',
+      playgroundWillUnmount: 'window.gwebgpuClean && window.gwebgpuClean();',
       dependencies: {
         '@antv/g-webgpu': 'latest'
       }

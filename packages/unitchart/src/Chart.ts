@@ -35,7 +35,7 @@ export class Chart {
 
   constructor(private options: IChartInitializationOptions) {}
 
-  public async init() {
+  public init() {
     const rawData = [...this.options.data];
     rawData.forEach((d, i) => {
       d.$unitChartId = `${i}`;
@@ -63,32 +63,8 @@ export class Chart {
       });
 
       rootContainer.applyLayout(layouts[0]);
-
-      // const layoutList = {
-      //   head: layouts[0],
-      // };
-
-      // const container = {
-      //   rootContainer,
-      //   layoutList,
-      //   childContainers: [rootContainer],
-      //   currentLayout: layoutList.head,
-      // };
-
-      // while (!container.currentLayout.isEndOf()) {
-      //   container.childContainers = this.applyLayout(
-      //     container.childContainers,
-      //     container.currentLayout,
-      //   );
-      //   container.currentLayout = container.currentLayout.getChild();
-      // }
-
       this.containerMap[name] = rootContainer;
-
-      
     });
-
-    console.log(this.containerMap);
 
     this.renderer = new Renderer({
       canvas: this.options.canvas,
@@ -102,12 +78,12 @@ export class Chart {
       },
     });
 
-    await this.renderer.init();
+    // this.renderer.init();
   }
 
   public render(renderOptions: { layout: string }) {
     this.renderAxis(renderOptions);
-    this.renderer.render(renderOptions);
+    // this.renderer.render(renderOptions);
   }
 
   public destroy() {

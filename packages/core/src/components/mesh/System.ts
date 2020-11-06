@@ -1,6 +1,5 @@
 import { mat3, mat4, vec3 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { createEntity } from '../..';
 import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
@@ -8,12 +7,10 @@ import { AABB } from '../../shape/AABB';
 import { Mask } from '../../shape/Frustum';
 import { Plane } from '../../shape/Plane';
 import { getRotationScale } from '../../utils/math';
-import { CameraComponent } from '../camera/CameraComponent';
 import { GeometryComponent } from '../geometry/GeometryComponent';
 import { MaterialComponent } from '../material/MaterialComponent';
-import { SceneComponent } from '../scene/SceneComponent';
+import { IView } from '../renderer/IRendererService';
 import { HierarchyComponent } from '../scenegraph/HierarchyComponent';
-import { NameComponent } from '../scenegraph/NameComponent';
 import { TransformComponent } from '../scenegraph/TransformComponent';
 import { CullableComponent } from './CullableComponent';
 import { IMeshParams } from './interface';
@@ -21,12 +18,6 @@ import { MeshComponent } from './MeshComponent';
 
 @injectable()
 export class MeshSystem implements ISystem {
-  @inject(IDENTIFIER.SceneComponentManager)
-  private readonly scene: ComponentManager<SceneComponent>;
-
-  @inject(IDENTIFIER.CameraComponentManager)
-  private readonly camera: ComponentManager<CameraComponent>;
-
   @inject(IDENTIFIER.MeshComponentManager)
   private readonly mesh: ComponentManager<MeshComponent>;
 
@@ -36,14 +27,8 @@ export class MeshSystem implements ISystem {
   @inject(IDENTIFIER.GeometryComponentManager)
   private readonly geometry: ComponentManager<GeometryComponent>;
 
-  @inject(IDENTIFIER.MaterialComponentManager)
-  private readonly material: ComponentManager<MaterialComponent>;
-
   @inject(IDENTIFIER.HierarchyComponentManager)
   private readonly hierarchy: ComponentManager<HierarchyComponent>;
-
-  @inject(IDENTIFIER.NameComponentManager)
-  private readonly nameManager: ComponentManager<NameComponent>;
 
   @inject(IDENTIFIER.TransformComponentManager)
   private readonly transform: ComponentManager<TransformComponent>;
@@ -54,74 +39,63 @@ export class MeshSystem implements ISystem {
     this.planes = planes;
   }
 
-  public async execute() {
-    this.scene.forEach((sceneEntity, scene) => {
-      // get VP matrix from camera
-      const camera = this.camera.getComponentByEntity(scene.camera)!;
-      this.mesh.forEach((entity, component) => {
-        const hierarchyComponent = this.hierarchy.getComponentByEntity(entity);
-        const cullableComponent = this.cullable.getComponentByEntity(entity);
-        const geometryComponent = this.geometry.getComponentByEntity(
-          component.geometry,
+  public async execute(view: IView) {
+    const scene = view.getScene();
+    const camera = view.getCamera();
+    // get VP matrix from camera
+    this.mesh.forEach((entity, component) => {
+      const hierarchyComponent = this.hierarchy.getComponentByEntity(entity);
+      const cullableComponent = this.cullable.getComponentByEntity(entity);
+      const geometryComponent = component.geometry;
+      const meshTransform = this.transform.getComponentByEntity(entity);
+
+      // update mesh.aabb
+      if (
+        geometryComponent &&
+        geometryComponent.aabb &&
+        meshTransform &&
+        component.aabbDirty
+      ) {
+        const { worldTransform } = meshTransform;
+
+        // apply transform to geometry.aabb
+        const { center, halfExtents } = geometryComponent.aabb;
+        const transformedCenter = vec3.transformMat4(
+          vec3.create(),
+          center,
+          worldTransform,
         );
-        const meshTransform = this.transform.getComponentByEntity(entity);
 
-        // update mesh.aabb
-        if (
-          geometryComponent &&
-          geometryComponent.aabb &&
-          meshTransform &&
-          component.aabbDirty
-        ) {
-          const { worldTransform } = meshTransform;
+        const rotationScale = getRotationScale(worldTransform, mat3.create());
+        const transformedHalfExtents = vec3.transformMat3(
+          vec3.create(),
+          halfExtents,
+          rotationScale,
+        );
 
-          // apply transform to geometry.aabb
-          const { center, halfExtents } = geometryComponent.aabb;
-          const transformedCenter = vec3.transformMat4(
-            vec3.create(),
-            center,
-            worldTransform,
-          );
+        component.aabb.update(transformedCenter, transformedHalfExtents);
+        component.aabbDirty = false;
+      }
 
-          const rotationScale = getRotationScale(worldTransform, mat3.create());
-          const transformedHalfExtents = vec3.transformMat3(
-            vec3.create(),
-            halfExtents,
-            rotationScale,
-          );
-
-          component.aabb.update(transformedCenter, transformedHalfExtents);
-          component.aabbDirty = false;
-        }
-
-        // culling
-        if (cullableComponent && geometryComponent) {
-          const parentCullableComponent = this.cullable.getComponentByEntity(
-            hierarchyComponent?.parentID || -1,
-          );
-          cullableComponent.visibilityPlaneMask = this.computeVisibilityWithPlaneMask(
-            component.aabb,
-            parentCullableComponent?.visibilityPlaneMask || Mask.INDETERMINATE,
-            this.planes || camera.getFrustum().planes,
-          );
-          cullableComponent.visible =
-            cullableComponent.visibilityPlaneMask !== Mask.OUTSIDE;
-        }
-      });
+      // culling
+      if (cullableComponent && geometryComponent) {
+        const parentCullableComponent = this.cullable.getComponentByEntity(
+          hierarchyComponent?.parentID || -1,
+        );
+        cullableComponent.visibilityPlaneMask = this.computeVisibilityWithPlaneMask(
+          component.aabb,
+          parentCullableComponent?.visibilityPlaneMask || Mask.INDETERMINATE,
+          this.planes || camera.getFrustum().planes,
+        );
+        cullableComponent.visible =
+          cullableComponent.visibilityPlaneMask !== Mask.OUTSIDE;
+      }
     });
   }
 
   public tearDown() {
     this.cullable.clear();
     this.mesh.clear();
-  }
-
-  public createMesh(params: IMeshParams) {
-    const entity = createEntity();
-    this.mesh.create(entity, params);
-    this.transform.create(entity);
-    this.cullable.create(entity);
-    return entity;
   }
 
   /**

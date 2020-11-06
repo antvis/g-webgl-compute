@@ -1,3 +1,4 @@
+// import glslangInit from '@webgpu/glslang/dist/web-devel/glslang.onefile';
 // @ts-nocheck
 /* tslint:disable */
 
@@ -13,5 +14,6 @@ export default async function() {
     'https://cdn.jsdelivr.net/npm/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js'
   );
   glslang = await glslangModule.default();
+  // glslang = await glslangInit();
   return glslang;
 }

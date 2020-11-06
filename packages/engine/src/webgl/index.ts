@@ -2,8 +2,8 @@
  * render w/ regl
  * @see https://github.com/regl-project/regl/blob/gh-pages/API.md
  */
-import { GLSLContext } from '@antv/g-webgpu-compiler';
 import {
+  GLSLContext,
   IAttribute,
   IAttributeInitializationOptions,
   IBuffer,
@@ -38,10 +38,15 @@ import ReglTexture2D from './ReglTexture2D';
 @injectable()
 export class WebGLEngine implements IRendererService {
   public supportWebGPU = false;
+  public useWGSL = false;
   private $canvas: HTMLCanvasElement;
   private gl: regl.Regl;
+  private inited: boolean;
 
   public async init(cfg: IRendererConfig): Promise<void> {
+    if (this.inited) {
+      return;
+    }
     this.$canvas = cfg.canvas;
     // tslint:disable-next-line:typedef
     this.gl = await new Promise((resolve, reject) => {
@@ -72,10 +77,12 @@ export class WebGLEngine implements IRendererService {
           if (err || !r) {
             reject(err);
           }
+          // @ts-ignore
           resolve(r);
         },
       });
     });
+    this.inited = true;
   }
 
   public isFloatSupported() {
@@ -83,10 +90,6 @@ export class WebGLEngine implements IRendererService {
     // @ts-ignore
     return this.gl.limits.readFloat;
   }
-
-  // public createComputeModel = () => {
-
-  // };
 
   public createModel = async (
     options: IModelInitializationOptions,
@@ -175,17 +178,6 @@ export class WebGLEngine implements IRendererService {
     return this.gl.read(readPixelsOptions);
   };
 
-  public getViewportSize = () => {
-    return {
-      width: this.gl._gl.drawingBufferWidth,
-      height: this.gl._gl.drawingBufferHeight,
-    };
-  };
-
-  // public getContainer = () => {
-  //   return this.$container;
-  // };
-
   public getCanvas = () => {
     return this.$canvas;
   };
@@ -198,6 +190,7 @@ export class WebGLEngine implements IRendererService {
     if (this.gl) {
       // @see https://github.com/regl-project/regl/blob/gh-pages/API.md#clean-up
       this.gl.destroy();
+      this.inited = false;
     }
   };
 

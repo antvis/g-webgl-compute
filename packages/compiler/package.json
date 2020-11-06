@@ -1,6 +1,6 @@
 {
   "name": "@antv/g-webgpu-compiler",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "",
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -23,6 +23,7 @@
   "author": "xiaoiver",
   "license": "ISC",
   "dependencies": {
+    "@antv/g-webgpu-core": "^0.5.0",
     "lodash": "^4.17.15"
   },
   "devDependencies": {

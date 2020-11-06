@@ -12,12 +12,12 @@ const IndexPage = () => {
   const bannerButtons = [
     {
       text: t('示例'),
-      link: `/${i18n.language}/examples/tutorial`,
+      link: `/${i18n.language}/examples/gpgpu/tutorial`,
       type: 'primary',
     },
     {
       text: t('开始使用'),
-      link: `/${i18n.language}/docs/api/gwebgpu`,
+      link: `/${i18n.language}/docs/api/gpgpu/gwebgpu`,
     },
   ];
 

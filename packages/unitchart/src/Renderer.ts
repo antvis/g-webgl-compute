@@ -15,33 +15,25 @@ export interface IRendererOptions {
 
 export class Renderer {
   private world: World;
+  private frameId: number;
 
   constructor(private options: IRendererOptions) {}
 
   public onHover = ({ x, y }: MouseEvent) => {
-    const { top, left } = this.options.canvas.getBoundingClientRect();
-    x -= left;
-    y -= top;
-    const featureId = this.world.pick({ x, y });
-    this.options.onPick({
-      x,
-      y,
-      featureId,
-    });
+    // const { top, left } = this.options.canvas.getBoundingClientRect();
+    // x -= left;
+    // y -= top;
+    // const featureId = this.world.pick({ x, y });
+    // this.options.onPick({
+    //   x,
+    //   y,
+    //   featureId,
+    // });
   };
 
-  public async init() {
-    await new Promise((resolve) => {
-      this.world = new World({
-        canvas: this.options.canvas,
-        onInit: () => {
-          this.world.setSize(600, 600);
-          resolve();
-        },
-        onUpdate: () => {
-          this.options.mark.update();
-        },
-      });
+  public init() {
+    this.world = World.create({
+      canvas: this.options.canvas,
     });
 
     this.options.canvas.addEventListener('mousemove', this.onHover);
@@ -52,28 +44,42 @@ export class Renderer {
   }
 
   public render({ layout }: { layout: string }) {
-    const targetContainer = this.options.containerMap[layout];
-    const {
-      width: rootWidth,
-      height: rootHeight,
-    } = targetContainer.visualspace;
+    // const targetContainer = this.options.containerMap[layout];
+    // const {
+    //   width: rootWidth,
+    //   height: rootHeight,
+    // } = targetContainer.visualspace;
 
-    // create a camera
-    const camera = this.world.createCamera({
-      aspect: Math.abs(rootWidth / rootHeight),
-      angle: 50,
-      far: 10,
-      near: 1,
-    });
-    this.world.getCamera(camera)!.setPosition(0, 0, 2.5);
+    // const renderer = this.world.createRenderer();
+    // const scene = this.world.createScene();
+    // const camera = this.world
+    //   .createCamera()
+    //   .setPosition(0, 0, 2.5)
+    //   .setPerspective(1, 10, 50, Math.abs(rootWidth / rootHeight));
 
-    // create a scene
-    const scene = this.world.createScene({ camera });
+    // const view = this.world
+    //   .createView()
+    //   .setCamera(camera)
+    //   .setScene(scene)
+    //   .setViewport({
+    //     x: 0,
+    //     y: 0,
+    //     width: this.options.canvas.width,
+    //     height: this.options.canvas.height,
+    //   });
 
-    this.options.mark.render(this.world, scene, targetContainer, layout);
+    // // this.options.mark.render(this.world, scene, targetContainer, layout);
+    // const render = () => {
+    //   this.options.mark.update();
+    //   renderer.render(view);
+    //   // this.frameId = window.requestAnimationFrame(render);
+    // };
+
+    // render();
   }
 
   public destroy() {
+    window.cancelAnimationFrame(this.frameId);
     this.world.destroy();
   }
 }

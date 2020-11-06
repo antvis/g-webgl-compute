@@ -32,7 +32,8 @@ module.exports = {
   notifyMode: 'always',
   roots: [ '<rootDir>packages' ],
   // testMatch: [ '**/__tests__/*.spec.+(ts|tsx|js)', '**/*.test.+(ts|tsx|js)', '**/__tests__/*/*.spec.+(ts|tsx|js)' ],
-  testMatch: [ '**/unitchart/src/__tests__/*.spec.+(ts|tsx|js)' ],
+  // testMatch: [ '**/unitchart/src/__tests__/*.spec.+(ts|tsx|js)' ],
+  testMatch: [ '**/__tests__/transform.spec.+(ts|tsx|js)', '**/__tests__/code-generator-glsl100.spec.+(ts|tsx|js)', '**/__tests__/code-generator-glsl450.spec.+(ts|tsx|js)', '**/__tests__/code-generator-wgsl.spec.+(ts|tsx|js)' ],
   transform: {
     // '^.+\\.(ts|tsx)$': 'ts-jest',
     // @see https://github.com/kulshekhar/ts-jest/issues/1130

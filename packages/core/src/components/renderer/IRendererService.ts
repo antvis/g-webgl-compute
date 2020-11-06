@@ -1,4 +1,5 @@
-import { GLSLContext } from '@antv/g-webgpu-compiler';
+import { mat4 } from 'gl-matrix';
+import { Entity, Frustum, GLSLContext } from '../..';
 import { IAttribute, IAttributeInitializationOptions } from './IAttribute';
 import { IBuffer, IBufferInitializationOptions } from './IBuffer';
 import { IComputeModel } from './IComputeModel';
@@ -11,8 +12,41 @@ import { IModel, IModelInitializationOptions } from './IModel';
 import { IPass } from './IMultiPassRenderer';
 import { ITexture2D, ITexture2DInitializationOptions } from './ITexture2D';
 
+export interface ICamera {
+  getFrustum(): Frustum;
+  getViewTransform(): mat4;
+  getPerspective(): mat4;
+}
+
+export interface IScene {
+  getEntities(): Entity[];
+  addEntity(entity: Entity): IScene;
+}
+
+export interface IViewport {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface IView {
+  getCamera(): ICamera;
+  getScene(): IScene;
+  getViewport(): IViewport;
+  setCamera(camera: ICamera): IView;
+  setScene(scene: IScene): IView;
+  setViewport(viewport: IViewport): IView;
+}
+
 export interface IRendererConfig {
   canvas: HTMLCanvasElement;
+
+  /**
+   * Whether to use WGSL instead of GLSL 450
+   */
+  useWGSL?: boolean;
+
   /**
    * 是否开启 multi pass
    */
@@ -81,6 +115,7 @@ export type BufferData =
 
 export interface IRendererService {
   supportWebGPU: boolean;
+  useWGSL: boolean;
   init(cfg: IRendererConfig): Promise<void>;
   clear(options: IClearOptions): void;
   createModel(options: IModelInitializationOptions): Promise<IModel>;
@@ -93,8 +128,6 @@ export interface IRendererService {
     framebuffer: IFramebuffer | null,
     drawCommands: () => void,
   ): void;
-  getViewportSize(): { width: number; height: number };
-  // getContainer(): HTMLElement | null;
   getCanvas(): HTMLCanvasElement;
   getGLContext(): WebGLRenderingContext;
   viewport(size: { x: number; y: number; width: number; height: number }): void;

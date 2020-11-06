@@ -10,6 +10,7 @@ module.exports = api => {
   if (isSite) {
     return {
       presets: [
+        '@babel/env',
         'babel-preset-gatsby'
       ],
       plugins: [
@@ -116,7 +117,6 @@ module.exports = api => {
       // isCDNBundle ? 'inline-webgl-constants' : {},
     ],
     ignore: [
-      // /node_modules\/(?![kdbush|supercluster|async])/,
       'node_modules',
       ...!isTest ? [
         '**/*.test.tsx',

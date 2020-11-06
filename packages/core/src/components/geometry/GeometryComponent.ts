@@ -34,4 +34,39 @@ export class GeometryComponent extends Component<GeometryComponent> {
 
     Object.assign(this, data);
   }
+
+  /**
+   * @see https://threejs.org/docs/#api/en/core/BufferAttribute
+   */
+  public setAttribute(
+    name: string,
+    data: BufferData,
+    descriptor: GPUVertexBufferLayoutDescriptor,
+    bufferGetter?: () => IBuffer,
+  ) {
+    const existed = this.attributes.find((a) => a.name === name);
+    if (!existed) {
+      this.attributes.push({
+        dirty: true,
+        name,
+        data,
+        ...descriptor,
+        bufferGetter,
+      });
+    } else {
+      existed.data = data;
+      existed.dirty = true;
+    }
+    this.dirty = true;
+    return this;
+  }
+
+  public setIndex(data: number[] | Uint8Array | Uint16Array | Uint32Array) {
+    this.indices = new Uint32Array(
+      // @ts-ignore
+      data.buffer ? data.buffer : (data as number[]),
+    );
+    this.dirty = true;
+    return this;
+  }
 }

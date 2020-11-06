@@ -7,7 +7,9 @@ import {
   IUniform,
 } from '@antv/g-webgpu-core';
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
+import isNil from 'lodash/isNil';
 import { WebGPUEngine } from '.';
+import { extractUniforms } from '../utils/uniform';
 import {
   getColorStateDescriptors,
   getCullMode,
@@ -17,6 +19,8 @@ import {
 import WebGPUAttribute from './WebGPUAttribute';
 import WebGPUBuffer from './WebGPUBuffer';
 import WebGPUElements from './WebGPUElements';
+import WebGPUFramebuffer from './WebGPUFramebuffer';
+import WebGPUTexture2D from './WebGPUTexture2D';
 
 // @ts-ignore
 function concatenate(resultConstructor, ...arrays) {
@@ -38,6 +42,11 @@ export default class WebGPUModel implements IModel {
   private renderPipeline: GPURenderPipeline;
   private uniformsBindGroupLayout: GPUBindGroupLayout;
   private uniformBindGroup: GPUBindGroup;
+  private uniformBuffer: WebGPUBuffer;
+
+  private uniforms: {
+    [key: string]: IUniform;
+  } = {};
 
   /**
    * 用于后续渲染时动态更新
@@ -100,8 +109,6 @@ export default class WebGPUModel implements IModel {
     // TODO: instanced array
 
     const vertexState = {
-      // TODO: non-indexed
-      indexFormat: WebGPUConstants.IndexFormat.Uint32,
       vertexBuffers: Object.keys(attributes).map((attributeName, i) => {
         const attribute = attributes[attributeName] as WebGPUAttribute;
         const { arrayStride, stepMode, attributes: ats } = attribute.get();
@@ -114,7 +121,7 @@ export default class WebGPUModel implements IModel {
       }),
     };
 
-    const d = {
+    const descriptor = {
       sampleCount: this.engine.mainPassSampleCount,
       primitiveTopology: primitiveMap[primitive || gl.TRIANGLES],
       rasterizationState: {
@@ -137,18 +144,85 @@ export default class WebGPUModel implements IModel {
     };
 
     // create pipeline
-    this.renderPipeline = this.engine.device.createRenderPipeline(d);
+    this.renderPipeline = this.engine.device.createRenderPipeline(descriptor);
   }
 
   public addUniforms(uniforms: { [key: string]: IUniform }): void {
-    throw new Error('Method not implemented.');
+    this.uniforms = {
+      ...this.uniforms,
+      ...extractUniforms(uniforms),
+    };
   }
 
   public draw(options: IModelDrawOptions): void {
-    const renderPass =
-      this.engine.bundleEncoder || this.engine.currentRenderPass!;
+    const renderPass = this.engine.getCurrentRenderPass();
+
+    const uniforms: {
+      [key: string]: IUniform;
+    } = {
+      ...this.uniforms,
+      ...extractUniforms(options.uniforms || {}),
+    };
+
+    const bindGroupBindings: GPUBindGroupEntry[] = [];
 
     // TODO: uniform 发生修改
+    Object.keys(uniforms).forEach((uniformName: string) => {
+      const type = typeof uniforms[uniformName];
+      if (
+        type === 'boolean' ||
+        type === 'number' ||
+        Array.isArray(uniforms[uniformName]) ||
+        // @ts-ignore
+        uniforms[uniformName].BYTES_PER_ELEMENT
+      ) {
+        const offset = this.uniformGPUBufferLayout.find(
+          ({ name }) => name === uniformName,
+        )?.offset;
+        if (!isNil(offset)) {
+          this.uniformBuffer.subData({
+            data: uniforms[uniformName],
+            offset,
+          });
+        }
+      } else {
+        let offset = this.uniformGPUBufferLayout.find(
+          ({ name }) => name === uniformName,
+        )?.offset;
+        if (!isNil(offset)) {
+          const textureOrFramebuffer = (uniforms[uniformName] as
+            | WebGPUTexture2D
+            | WebGPUFramebuffer).get();
+          const { texture, sampler } =
+            textureOrFramebuffer.color || textureOrFramebuffer;
+          if (sampler) {
+            bindGroupBindings.push({
+              binding: offset,
+              resource: sampler,
+            });
+            offset++;
+          }
+          bindGroupBindings.push({
+            binding: offset,
+            resource: texture.createView(),
+          });
+        }
+      }
+    });
+
+    if (this.uniformBuffer) {
+      bindGroupBindings[0] = {
+        binding: 0,
+        resource: {
+          buffer: this.uniformBuffer.get(), // 返回 GPUBuffer 原生对象
+        },
+      };
+    }
+
+    this.uniformBindGroup = this.engine.device.createBindGroup({
+      layout: this.uniformsBindGroupLayout,
+      entries: bindGroupBindings,
+    });
 
     if (this.renderPipeline) {
       renderPass.setPipeline(this.renderPipeline);
@@ -157,7 +231,11 @@ export default class WebGPUModel implements IModel {
     renderPass.setBindGroup(0, this.uniformBindGroup);
 
     if (this.indexBuffer) {
-      renderPass.setIndexBuffer(this.indexBuffer.get(), 0);
+      renderPass.setIndexBuffer(
+        this.indexBuffer.get(),
+        WebGPUConstants.IndexFormat.Uint32,
+        0,
+      );
     }
 
     Object.keys(this.attributeCache).forEach((attributeName: string, i) => {
@@ -199,16 +277,21 @@ export default class WebGPUModel implements IModel {
     Pick<GPURenderPipelineDescriptor, 'vertexStage' | 'fragmentStage'>
   > {
     const shaderVersion = '#version 450\n';
-    const vertexShader = await this.compileShaderToSpirV(
-      vertexCode,
-      'vertex',
-      shaderVersion,
-    );
-    const fragmentShader = await this.compileShaderToSpirV(
-      fragmentCode,
-      'fragment',
-      shaderVersion,
-    );
+
+    let vertexShader: Uint32Array | string = vertexCode;
+    let fragmentShader: Uint32Array | string = fragmentCode;
+    if (!this.engine.options.useWGSL) {
+      vertexShader = await this.compileShaderToSpirV(
+        vertexCode,
+        'vertex',
+        shaderVersion,
+      );
+      fragmentShader = await this.compileShaderToSpirV(
+        fragmentCode,
+        'fragment',
+        shaderVersion,
+      );
+    }
 
     return this.createPipelineStageDescriptor(vertexShader, fragmentShader);
   }
@@ -229,8 +312,8 @@ export default class WebGPUModel implements IModel {
   }
 
   private createPipelineStageDescriptor(
-    vertexShader: Uint32Array,
-    fragmentShader: Uint32Array,
+    vertexShader: Uint32Array | string,
+    fragmentShader: Uint32Array | string,
   ): Pick<GPURenderPipelineDescriptor, 'vertexStage' | 'fragmentStage'> {
     return {
       vertexStage: {
@@ -271,25 +354,59 @@ export default class WebGPUModel implements IModel {
     const mergedUniformData = concatenate(
       Float32Array,
       ...Object.keys(uniforms).map((uniformName) => {
-        this.uniformGPUBufferLayout.push({
-          name: uniformName,
-          offset,
-        });
-        // @ts-ignore
-        offset += (uniforms[uniformName].length || 1) * 4;
-        return uniforms[uniformName];
+        if (uniforms[uniformName]) {
+          this.uniformGPUBufferLayout.push({
+            name: uniformName,
+            offset,
+          });
+          // @ts-ignore
+          offset += (uniforms[uniformName].length || 1) * 4;
+          return uniforms[uniformName];
+        } else {
+          // texture & framebuffer
+          return [];
+        }
       }),
     );
 
-    // TODO: 所有 uniform 绑定到 slot 0，通过解析 Shader 代码判定可见性
-    const entries: GPUBindGroupLayoutEntry[] = [
-      {
+    const entries: GPUBindGroupLayoutEntry[] = [];
+    let hasUniform = false;
+    if (mergedUniformData.length) {
+      hasUniform = true;
+      // TODO: 所有 uniform 绑定到 slot 0，通过解析 Shader 代码判定可见性
+      entries.push({
         // TODO: 暂时都绑定到 slot 0
         binding: 0,
-        visibility: 1 | 2, // TODO: 暂时 VS 和 FS 都可见
-        type: 'uniform-buffer',
-      },
-    ];
+        visibility:
+          WebGPUConstants.ShaderStage.Fragment |
+          WebGPUConstants.ShaderStage.Vertex, // TODO: 暂时 VS 和 FS 都可见
+        type: WebGPUConstants.BindingType.UniformBuffer,
+      });
+    }
+
+    // 声明 texture & sampler
+    Object.keys(uniforms)
+      .filter((uniformName) => uniforms[uniformName] === null)
+      .forEach((uniformName, i) => {
+        this.uniformGPUBufferLayout.push({
+          name: uniformName,
+          offset: i * 2 + (hasUniform ? 1 : 0),
+        });
+        entries.push(
+          {
+            // Sampler
+            binding: i * 2 + (hasUniform ? 1 : 0),
+            visibility: WebGPUConstants.ShaderStage.Fragment,
+            type: WebGPUConstants.BindingType.Sampler,
+          },
+          {
+            // Texture view
+            binding: i * 2 + (hasUniform ? 1 : 0) + 1,
+            visibility: WebGPUConstants.ShaderStage.Fragment,
+            type: WebGPUConstants.BindingType.SampledTexture,
+          },
+        );
+      });
 
     this.uniformsBindGroupLayout = this.engine.device.createBindGroupLayout({
       // 最新 API 0.0.22 版本使用 entries。Chrome Canary 84.0.4110.0 已实现。
@@ -302,31 +419,19 @@ export default class WebGPUModel implements IModel {
       bindGroupLayouts: [this.uniformsBindGroupLayout],
     });
 
-    const uniformBuffer = new WebGPUBuffer(this.engine, {
-      // TODO: 处理 Struct 和 boolean
-      // @ts-ignore
-      data:
-        mergedUniformData instanceof Array
-          ? // @ts-ignore
-            new Float32Array(mergedUniformData)
-          : mergedUniformData,
-      usage:
-        WebGPUConstants.BufferUsage.Uniform |
-        WebGPUConstants.BufferUsage.CopyDst,
-    });
-
-    const bindGroupBindings = [
-      {
-        binding: 0,
-        resource: {
-          buffer: uniformBuffer.get(), // 返回 GPUBuffer 原生对象
-        },
-      },
-    ];
-
-    this.uniformBindGroup = this.engine.device.createBindGroup({
-      layout: this.uniformsBindGroupLayout,
-      entries: bindGroupBindings,
-    });
+    if (hasUniform) {
+      this.uniformBuffer = new WebGPUBuffer(this.engine, {
+        // TODO: 处理 Struct 和 boolean
+        // @ts-ignore
+        data:
+          mergedUniformData instanceof Array
+            ? // @ts-ignore
+              new Float32Array(mergedUniformData)
+            : mergedUniformData,
+        usage:
+          WebGPUConstants.BufferUsage.Uniform |
+          WebGPUConstants.BufferUsage.CopyDst,
+      });
+    }
   }
 }

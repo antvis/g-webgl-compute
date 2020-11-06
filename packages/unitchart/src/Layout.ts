@@ -221,8 +221,6 @@ export class Layout {
       'size',
     );
 
-    debugger;
-
     containers.forEach((container) => {
       newSizeSharingAncestor = this.getSharingAncestorContainer(
         container,

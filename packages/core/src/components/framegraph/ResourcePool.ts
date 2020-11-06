@@ -19,17 +19,22 @@ export class ResourcePool {
    */
   public getOrCreateResource(resource: ResourceEntry): IFramebuffer {
     if (!this.resourcePool[resource.name]) {
-      const { width, height } = resource.descriptor;
+      const { width, height, usage } = resource.descriptor;
       this.resourcePool[resource.name] = this.engine.createFramebuffer({
         color: this.engine.createTexture2D({
           width,
           height,
           wrapS: gl.CLAMP_TO_EDGE,
           wrapT: gl.CLAMP_TO_EDGE,
+          usage,
         }),
       });
     }
 
     return this.resourcePool[resource.name];
+  }
+
+  public clean() {
+    this.resourcePool = {};
   }
 }

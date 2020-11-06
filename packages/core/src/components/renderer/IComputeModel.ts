@@ -38,6 +38,20 @@ export interface IComputeModel {
       | Int32Array,
   ): void;
 
+  updateBuffer(
+    bufferName: string,
+    data:
+      | number[]
+      | Float32Array
+      | Uint8Array
+      | Uint16Array
+      | Uint32Array
+      | Int8Array
+      | Int16Array
+      | Int32Array,
+    offset?: number,
+  ): void;
+
   /**
    * 以另一个计算模型结果作为输入
    */

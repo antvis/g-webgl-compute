@@ -51,22 +51,14 @@ export class MaterialSystem implements ISystem {
    */
   public createBasicMaterial() {
     const entity = createEntity();
-    this.material.create(entity, {
+    return this.material.create(entity, {
       vertexShaderGLSL: this.engine.supportWebGPU
         ? webgpuVertexShaderGLSL
         : webglVertexShaderGLSL,
       fragmentShaderGLSL: this.engine.supportWebGPU
         ? webgpuFragmentShaderGLSL
-        : `#ifdef GL_FRAGMENT_PRECISION_HIGH
-  precision highp float;
-#else
-  precision mediump float;
-#endif
-${webglFragmentShaderGLSL}`,
+        : webglFragmentShaderGLSL,
     });
-
-    // this.addBuiltinUniforms(entity);
-    return entity;
   }
 
   /**
@@ -103,85 +95,12 @@ ${webglFragmentShaderGLSL}`,
       }
     }
 
-    this.material.create(entity, {
+    return this.material.create(entity, {
       vertexShaderGLSL,
       fragmentShaderGLSL,
       ...params,
       uniforms,
     });
-
-    // this.addBuiltinUniforms(entity);
-    return entity;
-  }
-
-  // public addUniform(entity: Entity, uniform: IUniform) {
-  //   const component = this.material.getComponentByEntity(entity)!;
-  //   const { uniforms, length } = component.uniforms[uniform.binding] || {};
-  //   if (!uniforms) {
-  //     component.uniforms[uniform.binding] = {
-  //       uniforms: [],
-  //       length: 0,
-  //     };
-  //   }
-
-  //   const uniformLength = getLengthFromFormat(uniform.format);
-  //   component.uniforms[uniform.binding].uniforms.push({
-  //     binding: uniform.binding,
-  //     name: uniform.name,
-  //     format: uniform.format,
-  //     offset: length || 0,
-  //     length: uniformLength,
-  //     data: uniform.data,
-  //     dirty: uniform.dirty,
-  //   });
-
-  //   // BytesPerElement = 4
-  //   component.uniforms[uniform.binding].length += uniformLength * 4;
-  // }
-
-  public setUniform(
-    entity: Entity,
-    name: string,
-    data: BufferData,
-    force: boolean = false,
-  ) {
-    const component = this.material.getComponentByEntity(entity)!;
-
-    const existedUniform = component.uniforms.find((u) => u.name === name);
-    if (!existedUniform) {
-      component.uniforms.push({
-        name,
-        dirty: true,
-        data,
-      });
-    } else {
-      existedUniform.dirty = true;
-      existedUniform.data = data;
-    }
-
-    component.dirty = true;
-
-    // for (const binding of component.uniforms) {
-    //   // const targetUniform = binding.uniforms.find((u) => u.name === name);
-    //   if (binding.name === name) {
-    //     if (!force) {
-    //       // 暂时标记，实际数据更新在 frame 中完成
-    //       binding.dirty = true;
-    //       binding.data = data;
-    //       component.dirty = true;
-    //       // } else if (binding.buffer && data) {
-    //       //   targetUniform.data = data;
-    //       //   this.engine.setSubData(
-    //       //     binding.buffer,
-    //       //     targetUniform.offset || 0,
-    //       //     data,
-    //       //     name,
-    //       //   );
-    //       //   targetUniform.dirty = false;
-    //     }
-    //     return;
-    //   }
-    // }
   }
 
   /**

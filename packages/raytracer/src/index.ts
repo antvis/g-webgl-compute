@@ -1,4 +1,5 @@
-import { CameraComponent, isSafari } from '@antv/g-webgpu-core';
+import { isSafari } from '@antv/g-webgpu-core';
+import { Camera } from '@antv/g-webgpu';
 import { WebGPUEngine } from '@antv/g-webgpu-engine';
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
 import { mat4, vec3 } from 'gl-matrix';
@@ -9,11 +10,6 @@ import blitFragCode from './shaders/blit.frag.glsl';
 import blitVertCode from './shaders/blit.vert.glsl';
 // import rayComputeCode from './shaders/raycasting.comp.glsl';
 import rayComputeCode from './shaders/whitted.comp.glsl';
-
-console.log(
-  rayComputeCode,
-  'ssssssssssssssssssssssssssssssssssssssssssssssssssssssss',
-);
 
 export class RayTracer {
   private engine: WebGPUEngine;
@@ -29,7 +25,7 @@ export class RayTracer {
   private verticesBuffer: Float32Array;
   private meshesBuffer: Float32Array;
   private trianglesBuffer: Int32Array;
-  private camera: CameraComponent;
+  private camera: Camera;
   private sampleCount = 0;
   private randomSeed = 0;
   private interactionSystem: InteractionSystem;
@@ -125,7 +121,7 @@ export class RayTracer {
   }
 
   private createCamera() {
-    this.camera = new CameraComponent({});
+    this.camera = new Camera();
     this.camera.position = vec3.fromValues(-2.75, 2.75, 8.35);
     this.camera.setFocalPoint(vec3.fromValues(-2.75, 2.75, 0));
     this.camera.setPerspective(0.1, 100, 40, 1);

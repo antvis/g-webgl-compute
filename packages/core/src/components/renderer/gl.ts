@@ -3,6 +3,8 @@
  * @see http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.14
  * 使用 babel 插件对常量进行内联，以减少最终打包产物大小
  * @see https://github.com/uber/deck.gl/blob/7.1-release/dev-docs/roadmaps/dist-size-roadmap.md#inline-gl-constants
+ * 为了支持 WebGPU，新增 TextureUsage
+ * @see https://gpuweb.github.io/gpuweb/#gputextureusage
  */
 export enum gl {
   /* ClearBufferMask */
@@ -423,4 +425,11 @@ export enum gl {
   CONTEXT_LOST_WEBGL = 0x9242,
   UNPACK_COLORSPACE_CONVERSION_WEBGL = 0x9243,
   BROWSER_DEFAULT_WEBGL = 0x9244,
+
+  // GPUFlagsConstant @see https://gpuweb.github.io/gpuweb/#gputextureusage
+  COPY_SRC = 0x01,
+  COPY_DST = 0x02,
+  SAMPLED = 0x04,
+  STORAGE = 0x08,
+  RENDER_ATTACHMENT = 0x10,
 }

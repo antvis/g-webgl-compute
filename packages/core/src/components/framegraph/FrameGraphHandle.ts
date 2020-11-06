@@ -6,4 +6,5 @@ export class FrameGraphHandle {
 export interface TextureDescriptor {
   width: number;
   height: number;
+  usage?: number;
 }

@@ -81,61 +81,15 @@ export class GeometrySystem implements ISystem {
   }
 
   /**
-   * @see https://threejs.org/docs/#api/en/core/BufferAttribute
-   */
-  public setAttribute(
-    entity: Entity,
-    name: string,
-    data: BufferData,
-    descriptor: GPUVertexBufferLayoutDescriptor,
-    bufferGetter?: () => IBuffer,
-  ) {
-    const geometry = this.geometry.getComponentByEntity(entity);
-
-    if (geometry) {
-      const existed = geometry.attributes.find((a) => a.name === name);
-      if (!existed) {
-        geometry.attributes.push({
-          dirty: true,
-          name,
-          data,
-          ...descriptor,
-          bufferGetter,
-        });
-      } else {
-        existed.data = data;
-        existed.dirty = true;
-      }
-      geometry.dirty = true;
-    }
-  }
-
-  public setIndex(
-    entity: Entity,
-    data: number[] | Uint8Array | Uint16Array | Uint32Array,
-  ) {
-    const geometry = this.geometry.getComponentByEntity(entity);
-
-    if (geometry) {
-      geometry.indices = new Uint32Array(
-        // @ts-ignore
-        data.buffer ? data.buffer : (data as number[]),
-      );
-      geometry.dirty = true;
-    }
-  }
-
-  /**
    * @see https://threejs.org/docs/#api/en/core/BufferGeometry
    */
   public createBufferGeometry(
     { vertexCount }: { vertexCount: number } = { vertexCount: 3 },
   ) {
     const entity = createEntity();
-    this.geometry.create(entity, {
+    return this.geometry.create(entity, {
       vertexCount,
     });
-    return entity;
   }
 
   /**
@@ -149,11 +103,10 @@ export class GeometrySystem implements ISystem {
     vertexCount: number;
   }) {
     const entity = createEntity();
-    this.geometry.create(entity, {
+    return this.geometry.create(entity, {
       maxInstancedCount,
       vertexCount,
     });
-    return entity;
   }
 
   /**
@@ -289,7 +242,7 @@ export class GeometrySystem implements ISystem {
     const aabb = generateAABBFromVertices(positions);
 
     const entity = createEntity();
-    this.geometry.create(entity, {
+    return this.geometry.create(entity, {
       indices: Uint32Array.from(indices),
       aabb,
       attributes: [
@@ -339,6 +292,5 @@ export class GeometrySystem implements ISystem {
     });
 
     // TODO: barycentric & tangent
-    return entity;
   }
 }

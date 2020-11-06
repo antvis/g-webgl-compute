@@ -1,6 +1,4 @@
-import { Parser } from '..';
-import { AST_NODE_TYPES } from '../ast-node-types';
-import { parse } from '../g';
+import { AST_NODE_TYPES } from '../ast/ts-ast-node-types';
 import {
   ExportDefaultDeclaration,
   FunctionDeclaration,
@@ -9,10 +7,12 @@ import {
   ImportNamespaceSpecifier,
   ImportSpecifier,
   VariableDeclaration,
-} from '../ts-estree';
+} from '../ast/ts-estree';
+import { Compiler } from '../Compiler';
+import { parse } from '../pegjs/g';
 
-describe('Parser', () => {
-  const parser = new Parser();
+describe('TS Parser', () => {
+  const parser = new Compiler();
 
   test('should generate empty AST for invalid code.', () => {
     expect(() => {

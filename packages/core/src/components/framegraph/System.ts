@@ -1,4 +1,5 @@
 import { inject, injectable } from 'inversify';
+import { IView } from '../..';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
 import { IRendererService } from '../renderer/IRendererService';
@@ -24,14 +25,19 @@ export class FrameGraphSystem implements ISystem {
   @inject(IDENTIFIER.RenderEngine)
   private readonly engine: IRendererService;
 
-  public async execute() {
+  public async execute(view: IView) {
     // this.engine.beginFrame();
     this.compile();
-    await this.executePassNodes();
+    await this.executePassNodes(view);
     // this.engine.endFrame();
   }
 
   public tearDown() {
+    this.frameGraphPasses.forEach((pass) => {
+      if (pass.tearDown) {
+        pass.tearDown();
+      }
+    });
     this.reset();
   }
 
@@ -45,10 +51,15 @@ export class FrameGraphSystem implements ISystem {
     execute: (
       fg: FrameGraphSystem,
       pass: FrameGraphPass<PassData>,
+      view: IView,
     ) => Promise<void>,
+    tearDown?: () => void,
   ) {
     const frameGraphPass = new FrameGraphPass<PassData>();
     frameGraphPass.execute = execute;
+    if (tearDown) {
+      frameGraphPass.tearDown = tearDown;
+    }
     frameGraphPass.name = name;
 
     const passNode = new PassNode();
@@ -134,7 +145,7 @@ export class FrameGraphSystem implements ISystem {
     }
   }
 
-  public async executePassNodes() {
+  public async executePassNodes(view: IView) {
     for (const [index, node] of this.passNodes.entries()) {
       if (node.refCount) {
         for (const resource of node.devirtualize) {
@@ -148,6 +159,7 @@ export class FrameGraphSystem implements ISystem {
         await this.frameGraphPasses[index].execute(
           this,
           this.frameGraphPasses[index],
+          view,
         );
 
         for (const resource of node.devirtualize) {

@@ -3,7 +3,7 @@ var path = require('path');
 var pegjs = require('pegjs');
 var tspegjs = require('ts-pegjs');
 
-fs.readFile(path.join(__dirname, '../src/g.pegjs'), (err, data) => {
+fs.readFile(path.join(__dirname, '../src/pegjs/g.pegjs'), (err, data) => {
   if (err) throw err;
 
   // https://pegjs.org/documentation#using-the-parser
@@ -17,5 +17,5 @@ fs.readFile(path.join(__dirname, '../src/g.pegjs'), (err, data) => {
     }
   });
 
-  fs.writeFileSync(path.join(__dirname, '../src/g.ts'), parser);
+  fs.writeFileSync(path.join(__dirname, '../src/pegjs/g.ts'), parser);
 });
