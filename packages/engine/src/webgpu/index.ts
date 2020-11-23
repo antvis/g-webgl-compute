@@ -291,7 +291,7 @@ export class WebGPUEngine implements IRendererService {
       this.mainTexture.destroy();
     }
     if (this.depthTexture) {
-      // this.depthTexture.destroy();
+      this.depthTexture.destroy();
     }
     this.tempBuffers.forEach((buffer) => buffer.destroy());
     this.tempBuffers = [];
@@ -461,8 +461,6 @@ export class WebGPUEngine implements IRendererService {
   }
 
   private startMainRenderPass() {
-    this.renderEncoder.pushDebugGroup('start main rendering');
-
     if (this.currentRenderPass && !this.currentRenderTarget) {
       this.endMainRenderPass();
     }
@@ -498,7 +496,6 @@ export class WebGPUEngine implements IRendererService {
     clearDepth: boolean,
     clearStencil: boolean = false,
   ) {
-    this.renderTargetEncoder.pushDebugGroup('start render target rendering');
     const gpuTexture = renderTarget.get().color?.texture;
     let colorTextureView: GPUTextureView;
     if (gpuTexture) {
@@ -556,8 +553,6 @@ export class WebGPUEngine implements IRendererService {
       this.resetCachedViewport();
       this.currentRenderPass = null;
       this.mainRenderPass = null;
-
-      this.renderEncoder.popDebugGroup();
     }
   }
 
@@ -571,7 +566,6 @@ export class WebGPUEngine implements IRendererService {
   private endRenderTargetRenderPass() {
     if (this.currentRenderPass) {
       this.currentRenderPass.endPass();
-      this.renderTargetEncoder.popDebugGroup();
       this.resetCachedViewport();
     }
   }

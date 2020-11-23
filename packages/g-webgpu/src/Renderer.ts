@@ -1,4 +1,5 @@
 import {
+  IClearOptions,
   IConfigService,
   IDENTIFIER,
   IRendererService,
@@ -8,8 +9,7 @@ import {
 } from '@antv/g-webgpu-core';
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
-import { inject, injectable } from 'inversify';
-import { container } from '.';
+import { Container, inject, injectable, multiInject } from 'inversify';
 
 @injectable()
 export class Renderer {
@@ -22,16 +22,27 @@ export class Renderer {
   @inject(IDENTIFIER.ConfigService)
   private readonly configService: IConfigService;
 
+  // @multiInject(IDENTIFIER.Systems)
+  // private readonly systems: ISystem[];
+
   private inited: boolean = false;
 
   private rendering: boolean = false;
+
+  private pendings: Array<() => void> = [];
+
+  private views: IView[] = [];
+  private size: { width: number; height: number };
+
+  public container: Container;
 
   public async init() {
     // 模块化处理
     this.shaderModule.registerBuiltinModules();
 
+    const systems = this.container.getAll<ISystem>(IDENTIFIER.Systems);
+
     const config = this.configService.get();
-    const systems = container.getAll<ISystem>(IDENTIFIER.Systems);
 
     if (config.canvas) {
       await this.engine.init({
@@ -50,18 +61,24 @@ export class Renderer {
     }
   }
 
-  public async render(view: IView) {
+  public async render(...views: IView[]) {
     if (!this.inited || this.rendering) {
       return;
+    }
+
+    if (this.pendings.length) {
+      this.pendings.forEach((pending) => {
+        pending();
+      });
     }
 
     this.rendering = true;
     this.engine.beginFrame();
 
-    const systems = container.getAll<ISystem>(IDENTIFIER.Systems);
+    const systems = this.container.getAll<ISystem>(IDENTIFIER.Systems);
     for (const system of systems) {
       if (system.execute) {
-        await system.execute(view);
+        await system.execute(views);
       }
     }
 
@@ -84,5 +101,44 @@ export class Renderer {
 
     this.engine.endFrame();
     this.rendering = false;
+  }
+
+  public clear(options: IClearOptions) {
+    if (this.inited) {
+      this.engine.clear(options);
+    } else {
+      this.pendings.unshift(() => {
+        this.engine.clear(options);
+        this.pendings.shift();
+      });
+    }
+    return this;
+  }
+
+  // public setScissor(
+  //   scissor: Partial<{
+  //     enable: boolean;
+  //     box: {
+  //       x: number;
+  //       y: number;
+  //       width: number;
+  //       height: number;
+  //     };
+  //   }>,
+  // ) {
+  //   this.engine.setScissor(scissor);
+  //   return this;
+  // }
+
+  public setSize({ width, height }: { width: number; height: number }) {
+    const canvas = this.engine.getCanvas();
+    this.size = { width, height };
+    canvas.width = width;
+    canvas.height = height;
+    return this;
+  }
+
+  public getSize() {
+    return this.size;
   }
 }

@@ -72,8 +72,9 @@ const App = React.memo(function Fruchterman() {
       // draw with G
       renderCircles(finalParticleData, numParticles);
 
-      // 计算完成后销毁相关 GPU 资源
-      world.destroy();
+      window.gwebgpuClean = () => {
+        world.destroy();
+      };
     })();
   }, []);
 

@@ -46,6 +46,8 @@ export default class ReglModel implements IModel {
       stencil,
       cull,
       instances,
+      scissor,
+      viewport,
     } = options;
     const reglUniforms: { [key: string]: IUniform } = {};
     if (uniforms) {
@@ -85,6 +87,14 @@ ${fs}`,
 
     if (elements) {
       drawParams.elements = (elements as ReglElements).get();
+    }
+
+    if (scissor) {
+      drawParams.scissor = scissor;
+    }
+
+    if (viewport) {
+      drawParams.viewport = viewport;
     }
 
     this.initDepthDrawParams({ depth }, drawParams);

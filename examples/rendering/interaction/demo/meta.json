@@ -1,0 +1,34 @@
+{
+  "title": {
+    "zh": "交互",
+    "en": "Interaction"
+  },
+  "demos": [
+    {
+      "filename": "responsive.tsx",
+      "title": "Use a responsive viewport",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*ByguS56BAO0AAAAAAAAAAAAAARQnAQ"
+    },
+    {
+      "filename": "multi-view.tsx",
+      "title": "Multi views(Recommended)",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*ytT4SoKan_0AAAAAAAAAAAAAARQnAQ"
+    },
+    {
+      "filename": "ray-picker.tsx",
+      "title": "RayPicker",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    },
+    {
+      "filename": "pixel-picker.tsx",
+      "title": "PixelPicker",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    },
+    {
+      "filename": "multi-canvas.tsx",
+      "hidden": true,
+      "title": "Multi canvas contexts(Not recommended)",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    }
+  ]
+}

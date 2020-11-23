@@ -39,58 +39,60 @@ export class MeshSystem implements ISystem {
     this.planes = planes;
   }
 
-  public async execute(view: IView) {
-    const scene = view.getScene();
-    const camera = view.getCamera();
-    // get VP matrix from camera
-    this.mesh.forEach((entity, component) => {
-      const hierarchyComponent = this.hierarchy.getComponentByEntity(entity);
-      const cullableComponent = this.cullable.getComponentByEntity(entity);
-      const geometryComponent = component.geometry;
-      const meshTransform = this.transform.getComponentByEntity(entity);
+  public async execute(views: IView[]) {
+    for (const view of views) {
+      const scene = view.getScene();
+      const camera = view.getCamera();
+      // get VP matrix from camera
+      this.mesh.forEach((entity, component) => {
+        const hierarchyComponent = this.hierarchy.getComponentByEntity(entity);
+        const cullableComponent = this.cullable.getComponentByEntity(entity);
+        const geometryComponent = component.geometry;
+        const meshTransform = this.transform.getComponentByEntity(entity);
 
-      // update mesh.aabb
-      if (
-        geometryComponent &&
-        geometryComponent.aabb &&
-        meshTransform &&
-        component.aabbDirty
-      ) {
-        const { worldTransform } = meshTransform;
+        // update mesh.aabb
+        if (
+          geometryComponent &&
+          geometryComponent.aabb &&
+          meshTransform &&
+          component.aabbDirty
+        ) {
+          const { worldTransform } = meshTransform;
 
-        // apply transform to geometry.aabb
-        const { center, halfExtents } = geometryComponent.aabb;
-        const transformedCenter = vec3.transformMat4(
-          vec3.create(),
-          center,
-          worldTransform,
-        );
+          // apply transform to geometry.aabb
+          const { center, halfExtents } = geometryComponent.aabb;
+          const transformedCenter = vec3.transformMat4(
+            vec3.create(),
+            center,
+            worldTransform,
+          );
 
-        const rotationScale = getRotationScale(worldTransform, mat3.create());
-        const transformedHalfExtents = vec3.transformMat3(
-          vec3.create(),
-          halfExtents,
-          rotationScale,
-        );
+          const rotationScale = getRotationScale(worldTransform, mat3.create());
+          const transformedHalfExtents = vec3.transformMat3(
+            vec3.create(),
+            halfExtents,
+            rotationScale,
+          );
 
-        component.aabb.update(transformedCenter, transformedHalfExtents);
-        component.aabbDirty = false;
-      }
+          component.aabb.update(transformedCenter, transformedHalfExtents);
+          component.aabbDirty = false;
+        }
 
-      // culling
-      if (cullableComponent && geometryComponent) {
-        const parentCullableComponent = this.cullable.getComponentByEntity(
-          hierarchyComponent?.parentID || -1,
-        );
-        cullableComponent.visibilityPlaneMask = this.computeVisibilityWithPlaneMask(
-          component.aabb,
-          parentCullableComponent?.visibilityPlaneMask || Mask.INDETERMINATE,
-          this.planes || camera.getFrustum().planes,
-        );
-        cullableComponent.visible =
-          cullableComponent.visibilityPlaneMask !== Mask.OUTSIDE;
-      }
-    });
+        // culling
+        if (cullableComponent && geometryComponent) {
+          const parentCullableComponent = this.cullable.getComponentByEntity(
+            hierarchyComponent?.parentID || -1,
+          );
+          cullableComponent.visibilityPlaneMask = this.computeVisibilityWithPlaneMask(
+            component.aabb,
+            parentCullableComponent?.visibilityPlaneMask || Mask.INDETERMINATE,
+            this.planes || camera.getFrustum().planes,
+          );
+          cullableComponent.visible =
+            cullableComponent.visibilityPlaneMask !== Mask.OUTSIDE;
+        }
+      });
+    }
   }
 
   public tearDown() {

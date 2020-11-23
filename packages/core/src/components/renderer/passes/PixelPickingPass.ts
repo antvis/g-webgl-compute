@@ -24,6 +24,10 @@ const PickingStage = {
   HIGHLIGHT: 2.0,
 };
 
+/**
+ * color-based picking
+ * @see https://threejsfundamentals.org/threejs/lessons/threejs-picking.html
+ */
 @injectable()
 export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
   public static IDENTIFIER = 'PixelPicking Pass';
@@ -41,12 +45,22 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
   private readonly mesh: ComponentManager<MeshComponent>;
 
   private pickingFBO: IFramebuffer;
-  private view: IView;
+  private views: IView[];
+  private highlightEnabled = true;
+  private highlightColor = [255, 0, 0, 255];
 
   /**
    * 简单的 throttle，防止连续触发 hover 时导致频繁渲染到 picking framebuffer
    */
   private alreadyInRendering: boolean = false;
+
+  public enableHighlight(enabled: boolean) {
+    this.highlightEnabled = enabled;
+  }
+
+  public setHighlightColor(color: number[]) {
+    this.highlightColor = color;
+  }
 
   public setup = (
     fg: FrameGraphSystem,
@@ -69,64 +83,69 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
   public execute = async (
     fg: FrameGraphSystem,
     pass: FrameGraphPass<PixelPickingPassData>,
-    view: IView,
+    views: IView[],
   ): Promise<void> => {
-    this.view = view;
+    this.views = views;
 
     if (this.alreadyInRendering) {
       return;
     }
-    const { width, height } = view.getViewport();
-    // throttled
-    this.alreadyInRendering = true;
 
-    // 实例化资源
-    const resourceNode = fg.getResourceNode(pass.data.output);
-    this.pickingFBO = this.resourcePool.getOrCreateResource(
-      resourceNode.resource,
-    );
+    for (const view of views) {
+      const { width, height } = view.getViewport();
+      // throttled
+      this.alreadyInRendering = true;
 
-    this.pickingFBO.resize({ width, height });
-    this.engine.useFramebuffer(this.pickingFBO, () => {
-      this.engine.clear({
-        framebuffer: this.pickingFBO,
-        color: [0, 0, 0, 0],
-        stencil: 0,
-        depth: 1,
-      });
-
-      // 渲染
-      const renderPass = this.renderPassFactory<RenderPassData>(
-        RenderPass.IDENTIFIER,
+      // 实例化资源
+      const resourceNode = fg.getResourceNode(pass.data.output);
+      this.pickingFBO = this.resourcePool.getOrCreateResource(
+        resourceNode.resource,
       );
 
-      // 修改所有
-      const meshes: MeshComponent[] = [];
-      const scene = view.getScene();
-      for (const meshEntity of scene.getEntities()) {
-        const mesh = this.mesh.getComponentByEntity(meshEntity)!;
-        const material = mesh.material;
-        material.setUniform('u_PickingStage', PickingStage.ENCODE);
-        meshes.push(mesh);
-      }
+      // TODO: only draw 1x1 quad, with offset camera
+      this.pickingFBO.resize({ width, height });
+      this.engine.useFramebuffer(this.pickingFBO, () => {
+        this.engine.clear({
+          framebuffer: this.pickingFBO,
+          color: [0, 0, 0, 0],
+          stencil: 0,
+          depth: 1,
+        });
 
-      // @ts-ignore
-      renderPass.renderView(view);
-      meshes.forEach((mesh) => {
-        const material = mesh.material;
-        material.setUniform('u_PickingStage', PickingStage.HIGHLIGHT);
+        // 渲染
+        const renderPass = this.renderPassFactory<RenderPassData>(
+          RenderPass.IDENTIFIER,
+        );
+
+        // 修改所有
+        const meshes: MeshComponent[] = [];
+        const scene = view.getScene();
+        for (const meshEntity of scene.getEntities()) {
+          const mesh = this.mesh.getComponentByEntity(meshEntity)!;
+          const material = mesh.material;
+          material.setUniform('u_PickingStage', PickingStage.ENCODE);
+          meshes.push(mesh);
+        }
+
+        // @ts-ignore
+        renderPass.renderView(view);
+        meshes.forEach((mesh) => {
+          const material = mesh.material;
+          material.setUniform('u_PickingStage', PickingStage.HIGHLIGHT);
+        });
+
+        this.alreadyInRendering = false;
       });
-
-      this.alreadyInRendering = false;
-    });
+    }
   };
 
   public pick = ({ x, y }: { x: number; y: number }, view: IView) => {
     const { readPixels, useFramebuffer } = this.engine;
     const { width, height } = view.getViewport();
-
     const xInDevicePixel = x * window.devicePixelRatio;
     const yInDevicePixel = y * window.devicePixelRatio;
+    // const xInDevicePixel = x;
+    // const yInDevicePixel = y;
     if (
       xInDevicePixel > width ||
       xInDevicePixel < 0 ||
@@ -135,6 +154,7 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
     ) {
       return;
     }
+
     let pickedColors: Uint8Array | undefined;
     let pickedFeatureIdx: number | undefined;
     useFramebuffer(this.pickingFBO, () => {
@@ -143,6 +163,7 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
         x: Math.round(xInDevicePixel),
         // 视口坐标系原点在左上，而 WebGL 在左下，需要翻转 Y 轴
         y: Math.round(height - (y + 1) * window.devicePixelRatio),
+        // y: Math.round(height - (y + 1)),
         width: 1,
         height: 1,
         data: new Uint8Array(1 * 1 * 4),
@@ -156,16 +177,27 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
       ) {
         pickedFeatureIdx = decodePickingColor(pickedColors);
 
-        // 高亮
-        this.highlightPickedFeature(pickedColors);
+        if (this.highlightEnabled) {
+          // 高亮
+          this.highlightPickedFeature(pickedColors, view);
+        }
       }
     });
     return pickedFeatureIdx;
   };
 
-  private highlightPickedFeature(pickedColors: Uint8Array | undefined) {
+  /**
+   * highlight 如果直接修改选中 feature 的 buffer，存在两个问题：
+   * 1. 鼠标移走时无法恢复
+   * 2. 无法实现高亮颜色与原始原色的 alpha 混合
+   * 因此高亮还是放在 shader 中做比较好
+   */
+  private highlightPickedFeature(
+    pickedColors: Uint8Array | undefined,
+    view: IView,
+  ) {
     if (pickedColors) {
-      for (const meshEntity of this.view.getScene().getEntities()) {
+      for (const meshEntity of view.getScene().getEntities()) {
         const mesh = this.mesh.getComponentByEntity(meshEntity)!;
         const material = mesh.material;
         material.setUniform('u_PickingStage', PickingStage.HIGHLIGHT);
@@ -175,7 +207,7 @@ export class PixelPickingPass implements IRenderPass<PixelPickingPassData> {
           pickedColors[1],
           pickedColors[2],
         ]);
-        material.setUniform('u_HighlightColor', [255, 0, 0, 255]);
+        material.setUniform('u_HighlightColor', this.highlightColor);
       }
     }
   }

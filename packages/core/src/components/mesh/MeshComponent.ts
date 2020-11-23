@@ -26,6 +26,8 @@ export class MeshComponent extends Component<MeshComponent> {
    */
   public model: IModel | undefined;
 
+  public visible = true;
+
   constructor(data: Partial<NonFunctionProperties<MeshComponent>>) {
     super(data);
 

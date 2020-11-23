@@ -181,42 +181,6 @@ export default class WebGPUComputeModel implements IComputeModel {
             },
           });
           bufferBindingIndex++;
-          // } else if (buffer.type === 'image2D') {
-          //   if (!buffer.size) {
-          //     throw new Error(`The size of ${buffer.name} must be declared.`);
-          //   }
-          //   const gpuBuffer = this.engine.createTexture(
-          //     buffer.size,
-          //     // @ts-ignore
-          //     buffer.data,
-          //     4, // sampled-texture
-          //   );
-          //   const sampler = this.engine.createSampler({
-          //     magFilter: 'linear',
-          //     minFilter: 'linear',
-          //   });
-
-          //   bindGroupEntries.push({
-          //     binding: bufferBindingIndex,
-          //     resource: gpuBuffer.createView(),
-          //   });
-          //   bindGroupEntries.push({
-          //     binding: bufferBindingIndex + 1,
-          //     resource: sampler,
-          //   });
-
-          //   bindGroupLayoutEntries.push({
-          //     binding: bufferBindingIndex,
-          //     visibility: 4,
-          //     type: 'sampled-texture',
-          //   });
-          //   bindGroupLayoutEntries.push({
-          //     binding: bufferBindingIndex + 1,
-          //     visibility: 4,
-          //     type: 'sampler',
-          //   });
-
-          //   bufferBindingIndex += 2;
         }
       }
     });
@@ -226,10 +190,12 @@ export default class WebGPUComputeModel implements IComputeModel {
       computeStage,
     });
 
-    // this.bindGroup = this.engine.device.createBindGroup({
-    //   layout: this.computePipeline.getBindGroupLayout(0),
-    //   entries: this.bindGroupEntries,
-    // });
+    console.log(this.bindGroupEntries);
+
+    this.bindGroup = this.engine.device.createBindGroup({
+      layout: this.computePipeline.getBindGroupLayout(0),
+      entries: this.bindGroupEntries,
+    });
   }
 
   public destroy(): void {
@@ -284,21 +250,21 @@ export default class WebGPUComputeModel implements IComputeModel {
     if (this.engine.currentComputePass) {
       this.engine.currentComputePass.setPipeline(this.computePipeline);
 
-      this.bindGroupEntries.forEach((entry) => {
-        if (!entry.resource.buffer) {
-          // get referred kernel's output
-          const gpuBuffer = (entry.resource.refer.model as WebGPUComputeModel)
-            .outputBuffer;
-          this.vertexBuffers[entry.resource.name] = gpuBuffer;
-          entry.resource.buffer = gpuBuffer.get();
-        }
-      });
+      // this.bindGroupEntries.forEach((entry) => {
+      //   if (!entry.resource.buffer) {
+      //     // get referred kernel's output
+      //     const gpuBuffer = (entry.resource.refer.model as WebGPUComputeModel)
+      //       .outputBuffer;
+      //     this.vertexBuffers[entry.resource.name] = gpuBuffer;
+      //     entry.resource.buffer = gpuBuffer.get();
+      //   }
+      // });
 
-      const bindGroup = this.engine.device.createBindGroup({
-        layout: this.computePipeline.getBindGroupLayout(0),
-        entries: this.bindGroupEntries,
-      });
-      this.engine.currentComputePass.setBindGroup(0, bindGroup);
+      // const bindGroup = this.engine.device.createBindGroup({
+      //   layout: this.computePipeline.getBindGroupLayout(0),
+      //   entries: this.bindGroupEntries,
+      // });
+      this.engine.currentComputePass.setBindGroup(0, this.bindGroup);
       this.engine.currentComputePass.dispatch(...this.context.dispatch);
     }
   }
@@ -363,8 +329,6 @@ export default class WebGPUComputeModel implements IComputeModel {
     // copy output GPUBuffer of kernel
     const inputBuffer = this.vertexBuffers[inputName];
     const outputBuffer = (model as WebGPUComputeModel).outputBuffer;
-
-    debugger;
 
     if (inputBuffer && outputBuffer && inputBuffer !== outputBuffer) {
       const encoder = this.engine.device.createCommandEncoder();

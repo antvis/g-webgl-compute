@@ -17,9 +17,6 @@ export const IDENTIFIER = {
   RenderPassFactory: Symbol('Factory<IRenderPass>'),
   Renderable: Symbol('Factory<IRenderPass>'),
 
-  // Interaction
-  // InteractionSystem: Symbol('InteractionSystem'),
-
   // Mesh
   MeshSystem: Symbol('MeshSystem'),
   MeshComponentManager: Symbol('MeshComponentManager'),
@@ -52,4 +49,6 @@ export const IDENTIFIER = {
   // Shader Module
   ShaderModuleService: Symbol('ShaderModuleService'),
   ConfigService: Symbol('ConfigService'),
+  InteractorService: Symbol('InteractorService'),
+  IEventEmitter: Symbol('IEventEmitter'),
 };

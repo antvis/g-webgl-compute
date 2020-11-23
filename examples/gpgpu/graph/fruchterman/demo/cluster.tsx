@@ -708,14 +708,14 @@ const App = React.memo(function Fruchterman() {
 
       for (let i = 0; i < MAX_ITERATION; i++) {
         await kernel.execute();
-        // kernel2.setBinding({
-        //   u_Data: kernel,
-        // });
-        // await kernel2.execute();
-        // kernel.setBinding({
-        //   u_MaxDisplace: maxDisplace *= 0.99,
-        //   u_ClusterCenters: kernel2,
-        // });
+        kernel2.setBinding({
+          u_Data: kernel,
+        });
+        await kernel2.execute();
+        kernel.setBinding({
+          u_MaxDisplace: maxDisplace *= 0.99,
+          u_ClusterCenters: kernel2,
+        });
       }
 
       const finalParticleData = await kernel.getOutput();
@@ -724,8 +724,9 @@ const App = React.memo(function Fruchterman() {
       // draw with G
       renderCircles(finalParticleData, numParticles);
 
-      // 计算完成后销毁相关 GPU 资源
-      world.destroy();
+      window.gwebgpuClean = () => {
+        world.destroy();
+      };
     })();
   }, []);
 

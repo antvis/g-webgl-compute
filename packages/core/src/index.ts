@@ -4,7 +4,6 @@ import { FrameGraphSystem } from './components/framegraph/System';
 import { GeometryComponent } from './components/geometry/GeometryComponent';
 import { IBoxGeometryParams } from './components/geometry/interface';
 import { GeometrySystem } from './components/geometry/System';
-// import { InteractionSystem } from './components/interaction/System';
 import { IUniformBinding } from './components/material/interface';
 import { MaterialComponent } from './components/material/MaterialComponent';
 import { MaterialSystem } from './components/material/System';
@@ -12,6 +11,8 @@ import { CullableComponent } from './components/mesh/CullableComponent';
 import { IMeshParams } from './components/mesh/interface';
 import { MeshComponent } from './components/mesh/MeshComponent';
 import { MeshSystem } from './components/mesh/System';
+import { RendererSystem } from './components/renderer/System';
+import { HierarchyComponent } from './components/scenegraph/HierarchyComponent';
 import { SceneGraphSystem } from './components/scenegraph/System';
 import { TransformComponent } from './components/scenegraph/TransformComponent';
 
@@ -44,14 +45,14 @@ import {
 } from './components/renderer/IRenderbuffer';
 import {
   BufferData,
+  ICamera,
   IClearOptions,
   IReadPixelsOptions,
   IRendererConfig,
   IRendererService,
-  IView,
   IScene,
+  IView,
   IViewport,
-  ICamera,
 } from './components/renderer/IRendererService';
 import {
   ITexture2D,
@@ -64,15 +65,19 @@ import { createEntity } from './Entity';
 import { IDENTIFIER } from './identifier';
 import {
   container,
-  createContainerModule,
+  createWorldContainer,
   lazyInject,
   lazyMultiInject,
 } from './inversify.config';
 import { ISystem } from './ISystem';
 import { IConfig, IConfigService } from './services/config/IConfigService';
+import {
+  IInteractorEvent,
+  IInteractorService,
+} from './services/interactor/IIteractorService';
 import { IShaderModuleService } from './services/shader-module/IShaderModuleService';
-import { isSafari } from './utils/isSafari';
 import { Frustum } from './shape/Frustum';
+import { isSafari } from './utils/isSafari';
 
 type Entity = number;
 
@@ -282,7 +287,7 @@ interface KernelBundle {
 
 export {
   container,
-  createContainerModule,
+  createWorldContainer,
   lazyInject,
   lazyMultiInject,
   createEntity,
@@ -297,6 +302,7 @@ export {
   IDENTIFIER,
   FrameGraphSystem,
   GeometrySystem,
+  RendererSystem,
   // InteractionSystem,
   MaterialSystem,
   MeshSystem,
@@ -306,6 +312,7 @@ export {
   TransformComponent,
   MaterialComponent,
   GeometryComponent,
+  HierarchyComponent,
   isSafari,
   // renderer service
   gl,
@@ -332,6 +339,8 @@ export {
   BufferData,
   IShaderModuleService,
   IConfigService,
+  IInteractorService,
+  IInteractorEvent,
   IConfig,
   PixelPickingPass,
   AST_TOKEN_TYPES,

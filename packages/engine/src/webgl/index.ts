@@ -3,6 +3,7 @@
  * @see https://github.com/regl-project/regl/blob/gh-pages/API.md
  */
 import {
+  gl,
   GLSLContext,
   IAttribute,
   IAttributeInitializationOptions,
@@ -58,8 +59,9 @@ export class WebGLEngine implements IRendererService {
           // @see https://www.khronos.org/registry/webgl/specs/1.0/#5.2.1
           antialias: cfg.antialias,
           premultipliedAlpha: true,
-          preserveDrawingBuffer: true,
+          // preserveDrawingBuffer: false,
         },
+        pixelRatio: 1,
         // TODO: use extensions
         extensions: [
           'OES_element_index_uint',
@@ -143,6 +145,30 @@ export class WebGLEngine implements IRendererService {
         : (framebuffer as ReglFramebuffer).get();
 
     this.gl.clear(reglClearOptions);
+  };
+
+  public setScissor = (
+    scissor: Partial<{
+      enable: boolean;
+      box: { x: number; y: number; width: number; height: number };
+    }>,
+  ) => {
+    if (this.gl && this.gl._gl) {
+      // https://developer.mozilla.org/zh-CN/docs/Web/API/WebGLRenderingContext/scissor
+      if (scissor.enable && scissor.box) {
+        // console.log(scissor.box);
+        this.gl._gl.enable(gl.SCISSOR_TEST);
+        this.gl._gl.scissor(
+          scissor.box.x,
+          scissor.box.y,
+          scissor.box.width,
+          scissor.box.height,
+        );
+      } else {
+        this.gl._gl.disable(gl.SCISSOR_TEST);
+      }
+      this.gl._refresh();
+    }
   };
 
   public viewport = ({

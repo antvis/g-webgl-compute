@@ -1,5 +1,6 @@
-import { Component } from '../..';
+import { Component, gl } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
+import { IModelInitializationOptions } from '../renderer/IModel';
 import { BufferData } from '../renderer/IRendererService';
 import { IUniformBinding } from './interface';
 
@@ -12,10 +13,36 @@ export class MaterialComponent extends Component<MaterialComponent> {
 
   public uniforms: IUniformBinding[] = [];
 
+  public cull: IModelInitializationOptions['cull'] = {
+    enable: true,
+    face: gl.BACK,
+  };
+
+  public depth: IModelInitializationOptions['depth'] = {
+    enable: true,
+  };
+
+  public blend: IModelInitializationOptions['blend'];
+
   constructor(data: Partial<NonFunctionProperties<MaterialComponent>>) {
     super(data);
 
     Object.assign(this, data);
+  }
+
+  public setCull(cull: IModelInitializationOptions['cull']) {
+    this.cull = cull;
+    return this;
+  }
+
+  public setDepth(depth: IModelInitializationOptions['depth']) {
+    this.depth = depth;
+    return this;
+  }
+
+  public setBlend(blend: IModelInitializationOptions['blend']) {
+    this.blend = blend;
+    return this;
   }
 
   public setUniform(

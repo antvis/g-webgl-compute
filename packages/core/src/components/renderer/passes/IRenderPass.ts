@@ -19,7 +19,7 @@ export interface IRenderPass<RenderPassData> {
   execute(
     fg: FrameGraphSystem,
     pass: FrameGraphPass<RenderPassData>,
-    view: IView,
+    views: IView[],
   ): Promise<void>;
 
   /**

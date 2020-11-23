@@ -187,6 +187,16 @@ export class ComponentManager<P> {
     }
   }
 
+  public async forEachAsync(
+    callback: (entity: Entity, component: Component<P> & P) => Promise<void>,
+  ) {
+    for (const entity of Object.keys(this.lookup)) {
+      const entityInNum = Number(entity);
+      const componentIndex = this.lookup[entityInNum];
+      await callback(entityInNum, this.getComponent(componentIndex));
+    }
+  }
+
   public map(callback: (entity: Entity, component: Component<P> & P) => void) {
     const result = [];
     for (const entity of Object.keys(this.lookup)) {

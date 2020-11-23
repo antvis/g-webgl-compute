@@ -28,17 +28,16 @@ export class RendererSystem implements ISystem {
   @inject(IDENTIFIER.ResourcePool)
   private readonly resourcePool: ResourcePool;
 
-  public async execute(view: IView) {
+  public async execute(views: IView[]) {
+    // const pixelPickingPass = this.renderPassFactory<PixelPickingPassData>(
+    //   PixelPickingPass.IDENTIFIER,
+    // );
     // const {
     //   setup: setupPixelPickingPass,
     //   execute: executePixelPickingPass,
     //   tearDown: tearDownPickingPass,
-    // } = this.renderPassFactory<PixelPickingPassData>(
-    //   PixelPickingPass.IDENTIFIER,
-    // );
-    // const pixelPickingPass = this.frameGraphSystem.addPass<
-    //   PixelPickingPassData
-    // >(
+    // } = pixelPickingPass;
+    // this.frameGraphSystem.addPass<PixelPickingPassData>(
     //   PixelPickingPass.IDENTIFIER,
     //   setupPixelPickingPass,
     //   executePixelPickingPass,
@@ -73,5 +72,13 @@ export class RendererSystem implements ISystem {
 
   public tearDown() {
     this.resourcePool.clean();
+  }
+
+  public pick(position: { x: number; y: number }, view: IView) {
+    const pickingPass = this.renderPassFactory<PixelPickingPassData>(
+      PixelPickingPass.IDENTIFIER,
+    ) as PixelPickingPass;
+
+    return pickingPass.pick(position, view);
   }
 }

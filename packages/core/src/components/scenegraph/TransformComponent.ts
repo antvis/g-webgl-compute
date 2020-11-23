@@ -222,16 +222,19 @@ export class TransformComponent extends Component<TransformComponent> {
   public translate(translation: vec3) {
     this.setDirty();
     vec3.add(this.localTranslation, this.localTranslation, translation);
+    return this;
   }
 
   public scale(scaling: vec3) {
     this.setDirty();
     vec3.multiply(this.localScale, this.localScale, scaling);
+    return this;
   }
 
   public rotate(quaternion: quat) {
     this.setDirty();
     quat.multiply(this.localRotation, this.localRotation, quaternion);
     quat.normalize(this.localRotation, this.localRotation);
+    return this;
   }
 }

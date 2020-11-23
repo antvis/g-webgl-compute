@@ -23,6 +23,10 @@ const App = React.memo(function Add2Vectors() {
       setResult(await kernel.getOutput());
     };
     executeKernel();
+
+    window.gwebgpuClean = () => {
+      world.destroy();
+    };
   }, []);
 
   return (

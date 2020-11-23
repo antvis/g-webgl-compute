@@ -1,0 +1,28 @@
+{
+  "title": {
+    "zh": "相机",
+    "en": "Camera"
+  },
+  "demos": [
+    {
+      "filename": "landmark.tsx",
+      "title": "Switch to landmarks of a camera",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    },
+    {
+      "filename": "ortho.tsx",
+      "title": "Camera with orthographic projection",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    },
+    {
+      "filename": "perspective.tsx",
+      "title": "Camera with perspective projection",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    },
+    {
+      "filename": "tracking.tsx",
+      "title": "Tracking",
+      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    }
+  ]
+}

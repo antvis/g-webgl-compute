@@ -25,10 +25,10 @@ export class FrameGraphSystem implements ISystem {
   @inject(IDENTIFIER.RenderEngine)
   private readonly engine: IRendererService;
 
-  public async execute(view: IView) {
+  public async execute(views: IView[]) {
     // this.engine.beginFrame();
     this.compile();
-    await this.executePassNodes(view);
+    await this.executePassNodes(views);
     // this.engine.endFrame();
   }
 
@@ -51,7 +51,7 @@ export class FrameGraphSystem implements ISystem {
     execute: (
       fg: FrameGraphSystem,
       pass: FrameGraphPass<PassData>,
-      view: IView,
+      views: IView[],
     ) => Promise<void>,
     tearDown?: () => void,
   ) {
@@ -145,7 +145,7 @@ export class FrameGraphSystem implements ISystem {
     }
   }
 
-  public async executePassNodes(view: IView) {
+  public async executePassNodes(views: IView[]) {
     for (const [index, node] of this.passNodes.entries()) {
       if (node.refCount) {
         for (const resource of node.devirtualize) {
@@ -159,7 +159,7 @@ export class FrameGraphSystem implements ISystem {
         await this.frameGraphPasses[index].execute(
           this,
           this.frameGraphPasses[index],
-          view,
+          views,
         );
 
         for (const resource of node.devirtualize) {

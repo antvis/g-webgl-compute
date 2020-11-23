@@ -75,6 +75,10 @@ const App = React.memo(function Add2Vectors() {
       await kernel2.execute();
       await kernel3.execute();
       setResult(await kernel3.getOutput());
+
+      window.gwebgpuClean = () => {
+        world.destroy();
+      };
     };
     executeKernel();
   }, []);

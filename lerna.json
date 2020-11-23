@@ -4,6 +4,7 @@
     "packages/core",
     "packages/engine",
     "packages/g-webgpu",
+    "packages/interactor",
     "packages/unitchart"
   ],
   "command": {
@@ -18,7 +19,7 @@
       "message": "chore: publish"
     }
   },
-  "version": "0.5.0",
+  "version": "0.6.0",
   "npmClient": "yarn",
   "useWorkspaces": true,
   "publishConfig": {

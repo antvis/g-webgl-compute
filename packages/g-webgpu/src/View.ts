@@ -1,8 +1,19 @@
-import { ICamera, IScene, IView, IViewport } from '@antv/g-webgpu-core';
-import { injectable } from 'inversify';
+import {
+  ICamera,
+  IDENTIFIER,
+  IScene,
+  IView,
+  IViewport,
+  RendererSystem,
+} from '@antv/g-webgpu-core';
+import { inject, injectable, named } from 'inversify';
 
 @injectable()
 export class View implements IView {
+  @inject(IDENTIFIER.Systems)
+  @named(IDENTIFIER.RendererSystem)
+  private readonly rendererSystem: RendererSystem;
+
   private camera: ICamera;
   private scene: IScene;
   private viewport: IViewport = {
@@ -11,6 +22,7 @@ export class View implements IView {
     width: 0,
     height: 0,
   };
+  private clearColor: [number, number, number, number] = [1, 1, 1, 1];
 
   public getCamera() {
     return this.camera;
@@ -22,6 +34,10 @@ export class View implements IView {
 
   public getViewport() {
     return this.viewport;
+  }
+
+  public getClearColor() {
+    return this.clearColor;
   }
 
   public setCamera(camera: ICamera) {
@@ -37,5 +53,14 @@ export class View implements IView {
   public setViewport(viewport: IViewport) {
     this.viewport = viewport;
     return this;
+  }
+
+  public setClearColor(clearColor: [number, number, number, number]) {
+    this.clearColor = clearColor;
+    return this;
+  }
+
+  public pick(position: { x: number; y: number }) {
+    return this.rendererSystem.pick(position, this);
   }
 }

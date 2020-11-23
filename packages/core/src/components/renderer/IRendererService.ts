@@ -1,4 +1,4 @@
-import { mat4 } from 'gl-matrix';
+import { mat4, vec3 } from 'gl-matrix';
 import { Entity, Frustum, GLSLContext } from '../..';
 import { IAttribute, IAttributeInitializationOptions } from './IAttribute';
 import { IBuffer, IBufferInitializationOptions } from './IBuffer';
@@ -16,6 +16,12 @@ export interface ICamera {
   getFrustum(): Frustum;
   getViewTransform(): mat4;
   getPerspective(): mat4;
+  getPosition(): vec3;
+  rotate(azimuth: number, elevation: number, roll: number): void;
+  pan(tx: number, ty: number): void;
+  dolly(value: number): void;
+  changeAzimuth(az: number): void;
+  changeElevation(el: number): void;
 }
 
 export interface IScene {
@@ -34,9 +40,12 @@ export interface IView {
   getCamera(): ICamera;
   getScene(): IScene;
   getViewport(): IViewport;
+  getClearColor(): [number, number, number, number];
   setCamera(camera: ICamera): IView;
   setScene(scene: IScene): IView;
   setViewport(viewport: IViewport): IView;
+  setClearColor(clearColor: [number, number, number, number]): IView;
+  pick(position: { x: number; y: number }, view: IView): number | undefined;
 }
 
 export interface IRendererConfig {
@@ -132,6 +141,17 @@ export interface IRendererService {
   getGLContext(): WebGLRenderingContext;
   viewport(size: { x: number; y: number; width: number; height: number }): void;
   readPixels(options: IReadPixelsOptions): Uint8Array;
+  setScissor(
+    scissor: Partial<{
+      enable: boolean;
+      box: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
+    }>,
+  ): void;
   destroy(): void;
   beginFrame(): void;
   endFrame(): void;

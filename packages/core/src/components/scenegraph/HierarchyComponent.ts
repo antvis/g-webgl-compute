@@ -6,6 +6,6 @@ export class HierarchyComponent extends Component<HierarchyComponent> {
 
   constructor(data: Partial<NonFunctionProperties<HierarchyComponent>>) {
     super(data);
-    this.parentID = data.parentID || -1;
+    Object.assign(this, data);
   }
 }

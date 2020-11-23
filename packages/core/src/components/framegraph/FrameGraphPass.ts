@@ -9,7 +9,7 @@ export class FrameGraphPass<PassData> {
   public execute: (
     fg: FrameGraphSystem,
     pass: FrameGraphPass<PassData>,
-    view: IView,
+    views: IView[],
   ) => Promise<void>;
 
   public tearDown: () => void;

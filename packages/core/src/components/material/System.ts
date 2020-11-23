@@ -6,6 +6,7 @@ import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
 import { IShaderModuleService } from '../../services/shader-module/IShaderModuleService';
 import { getLengthFromFormat } from '../../utils/shader';
+import { IModelInitializationOptions } from '../renderer/IModel';
 import { BufferData, IRendererService } from '../renderer/IRendererService';
 import { MaterialComponent } from './MaterialComponent';
 import webglFragmentShaderGLSL from './shaders/webgl.basic.frag.glsl';
@@ -67,6 +68,9 @@ export class MaterialSystem implements ISystem {
   public createShaderMaterial(params: {
     vertexShader: string;
     fragmentShader: string;
+    cull?: IModelInitializationOptions['cull'];
+    depth?: IModelInitializationOptions['depth'];
+    blend?: IModelInitializationOptions['blend'];
   }) {
     const entity = createEntity();
 
@@ -102,34 +106,4 @@ export class MaterialSystem implements ISystem {
       uniforms,
     });
   }
-
-  /**
-   * 添加内置 uniform，例如 mvp 矩阵
-   *
-   * 在 Shader 中可以通过 Uniform 访问：
-   * @example
-   *
-   * layout(set = 0, binding = 0) uniform Builtin {
-   *   mat4 projectionMatrix;
-   *   mat4 modelViewMatrix;
-   * } builtin;
-   *
-   * 后续可以改成自动添加到用户自定义 Shader 的头部，类似 Three.js chunk
-   */
-  // private addBuiltinUniforms(entity: Entity) {
-  //   this.addUniform(entity, {
-  //     binding: 0,
-  //     name: 'projectionMatrix',
-  //     format: 'mat4',
-  //     data: null,
-  //     dirty: true,
-  //   });
-  //   this.addUniform(entity, {
-  //     binding: 0,
-  //     name: 'modelViewMatrix',
-  //     format: 'mat4',
-  //     data: null,
-  //     dirty: true,
-  //   });
-  // }
 }

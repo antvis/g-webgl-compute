@@ -3,6 +3,7 @@
 import {
   ComponentManager,
   createEntity,
+  createWorldContainer,
   Entity,
   GeometrySystem,
   // container,
@@ -10,19 +11,23 @@ import {
   IConfig,
   IConfigService,
   IDENTIFIER,
+  IInteractorService,
   IRendererService,
   ISystem,
   KernelBundle,
   MaterialSystem,
+  MeshComponent,
   TransformComponent,
 } from '@antv/g-webgpu-core';
+import { WebGLEngine, WebGPUEngine } from '@antv/g-webgpu-engine';
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
-import { Container, ContainerModule, inject, injectable } from 'inversify';
-import { container } from '.';
-import { Camera } from './Camera';
+import { Container, inject, injectable } from 'inversify';
+import { Camera } from './camera/Camera';
 import { Kernel } from './Kernel';
-import { Renderable } from './Renderable';
+import { Line } from './renderable/line/Line';
+import { Point } from './renderable/point/Point';
+import { IRenderable, Renderable } from './renderable/Renderable';
 import { Renderer } from './Renderer';
 import { Scene } from './Scene';
 import { createCanvas } from './utils/canvas';
@@ -31,7 +36,37 @@ import { View } from './View';
 @injectable()
 export class World {
   public static create(config: Partial<IConfig> = {}) {
-    const world = container.get(World);
+    const worldContainer = createWorldContainer();
+
+    // bind render engine, fallback to WebGL
+    const engineClazz = !navigator.gpu ? WebGLEngine : WebGPUEngine;
+    if (!worldContainer.isBound(IDENTIFIER.RenderEngine)) {
+      worldContainer
+        .bind<IRendererService>(IDENTIFIER.RenderEngine)
+        // @ts-ignore
+        .to(engineClazz)
+        .inSingletonScope();
+    }
+
+    worldContainer.bind(Renderer).toSelf();
+    worldContainer.bind(Kernel).toSelf();
+    worldContainer.bind(Renderable).toSelf();
+    worldContainer.bind(View).toSelf();
+    worldContainer.bind(Camera).toSelf();
+    worldContainer.bind(Scene).toSelf();
+    worldContainer.bind(World).toSelf();
+
+    worldContainer
+      .bind<IRenderable<unknown>>(IDENTIFIER.Renderable)
+      .to(Point)
+      .whenTargetNamed(Renderable.POINT);
+    worldContainer
+      .bind<IRenderable<unknown>>(IDENTIFIER.Renderable)
+      .to(Line)
+      .whenTargetNamed(Renderable.LINE);
+
+    const world = worldContainer.get(World);
+    world.setContainer(worldContainer);
     world.setConfig(config);
     return world;
   }
@@ -39,8 +74,12 @@ export class World {
   @inject(IDENTIFIER.ConfigService)
   private readonly configService: IConfigService;
 
+  private container: Container;
+
   public async getEngine() {
-    const engine = container.get<IRendererService>(IDENTIFIER.RenderEngine);
+    const engine = this.container.get<IRendererService>(
+      IDENTIFIER.RenderEngine,
+    );
     const { canvas, engineOptions } = this.configService.get();
     await engine.init({
       canvas: canvas || createCanvas(),
@@ -56,8 +95,15 @@ export class World {
    * @param entity
    */
   public getTransformComponent(entity: Entity) {
-    const manager = container.get<ComponentManager<TransformComponent>>(
+    const manager = this.container.get<ComponentManager<TransformComponent>>(
       IDENTIFIER.TransformComponentManager,
+    );
+    return manager.getComponentByEntity(entity);
+  }
+
+  public getMeshComponent(entity: Entity) {
+    const manager = this.container.get<ComponentManager<MeshComponent>>(
+      IDENTIFIER.MeshComponentManager,
     );
     return manager.getComponentByEntity(entity);
   }
@@ -66,30 +112,41 @@ export class World {
     this.configService.set(config);
   }
 
+  public setContainer(container: Container) {
+    this.container = container;
+  }
+
+  public getContainer() {
+    return this.container;
+  }
+
   public createEntity() {
     return createEntity();
   }
 
   public createScene() {
-    return container.get(Scene);
+    return this.container.get(Scene);
   }
 
   public createCamera() {
-    return new Camera();
+    return this.container.get(Camera);
   }
 
   public createView() {
-    return container.get(View);
+    return this.container.get(View);
   }
 
-  public createRenderable(entity: Entity) {
-    const renderable = container.get(Renderable);
+  public createRenderable(entity: Entity, type?: string, config?: unknown) {
+    const renderable: Renderable = type
+      ? this.container.getNamed(IDENTIFIER.Renderable, type)
+      : this.container.get(Renderable);
+    renderable.setConfig(config);
     renderable.setEntity(entity);
     return renderable;
   }
 
   public createBoxGeometry(params: IBoxGeometryParams) {
-    const geometrySystem = container.getNamed<GeometrySystem>(
+    const geometrySystem = this.container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -97,7 +154,7 @@ export class World {
   }
 
   public createBufferGeometry(params?: { vertexCount: number }) {
-    const geometrySystem = container.getNamed<GeometrySystem>(
+    const geometrySystem = this.container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -108,7 +165,7 @@ export class World {
     maxInstancedCount: number;
     vertexCount: number;
   }) {
-    const geometrySystem = container.getNamed<GeometrySystem>(
+    const geometrySystem = this.container.getNamed<GeometrySystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.GeometrySystem,
     );
@@ -116,7 +173,7 @@ export class World {
   }
 
   public createBasicMaterial() {
-    const materialSystem = container.getNamed<MaterialSystem>(
+    const materialSystem = this.container.getNamed<MaterialSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.MaterialSystem,
     );
@@ -127,7 +184,7 @@ export class World {
     vertexShader: string;
     fragmentShader: string;
   }) {
-    const materialSystem = container.getNamed<MaterialSystem>(
+    const materialSystem = this.container.getNamed<MaterialSystem>(
       IDENTIFIER.Systems,
       IDENTIFIER.MaterialSystem,
     );
@@ -135,7 +192,7 @@ export class World {
   }
 
   public createKernel(precompiledBundle: KernelBundle | string) {
-    const kernel = container.get(Kernel);
+    const kernel = this.container.get(Kernel);
     if (typeof precompiledBundle === 'string') {
       kernel.setBundle(JSON.parse(precompiledBundle));
     } else {
@@ -146,30 +203,26 @@ export class World {
   }
 
   public createRenderer() {
-    const renderer = container.get(Renderer);
+    const renderer = this.container.get(Renderer);
+    renderer.container = this.container;
     renderer.init();
     return renderer;
   }
 
   public destroy() {
-    const systems = container.getAll<ISystem>(IDENTIFIER.Systems);
+    const systems = this.container.getAll<ISystem>(IDENTIFIER.Systems);
     systems.forEach((system) => {
       if (system.tearDown) {
         system.tearDown();
       }
     });
-    const engine = container.get<IRendererService>(IDENTIFIER.RenderEngine);
+    const engine = this.container.get<IRendererService>(
+      IDENTIFIER.RenderEngine,
+    );
     engine.destroy();
-    // container.unload(containerModule);
+    const interactor = this.container.get<IInteractorService>(
+      IDENTIFIER.InteractorService,
+    );
+    interactor.destroy();
   }
-
-  // public pick(position: { x: number; y: number }): number | undefined {
-  //   const pickingPass = this.container.getNamed(
-  //     IDENTIFIER.RenderPass,
-  //     PixelPickingPass.IDENTIFIER,
-  //   );
-
-  //   // @ts-ignore
-  //   return pickingPass.pick(position);
-  // }
 }

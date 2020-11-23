@@ -3,7 +3,7 @@
  * @see https://github.com/sschmid/Entitas-CSharp/wiki/Systems
  */
 
-import { View } from '.';
+import { IView } from '.';
 
 export interface ISystem {
   /**
@@ -16,7 +16,7 @@ export interface ISystem {
   /**
    * in a similar way to Unity's `Update()`, run once per frame
    */
-  execute?(view: View): Promise<void>;
+  execute?(views: IView[]): Promise<void>;
 
   /**
    * run at the end of each frame

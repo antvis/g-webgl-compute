@@ -214,12 +214,22 @@ export interface IModelInitializationOptions {
   /**
    * cull
    */
-  cull?: {
+  cull?: Partial<{
     // gl.enable(gl.CULL_FACE)
     enable: boolean;
     // gl.cullFace
     face: gl.FRONT | gl.BACK;
-  };
+  }>;
+
+  scissor?: Partial<{
+    enable: boolean;
+    box: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+  }>;
 }
 
 export interface IModelDrawOptions {

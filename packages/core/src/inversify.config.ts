@@ -4,6 +4,7 @@
  */
 import 'reflect-metadata';
 
+import { EventEmitter } from 'eventemitter3';
 import {
   Container,
   ContainerModule,
@@ -35,11 +36,15 @@ import { SceneGraphSystem } from './components/scenegraph/System';
 import { TransformComponent } from './components/scenegraph/TransformComponent';
 import { IDENTIFIER } from './identifier';
 import { ConfigService } from './services/config/ConfigService';
+import { InteractorService } from './services/interactor/IteractorService';
 import ShaderModuleService from './services/shader-module/ShaderModuleService';
 
 // @see https://github.com/inversify/InversifyJS/blob/master/wiki/container_api.md#defaultscope
 export const container = new Container();
 
+// @see https://github.com/inversify/InversifyJS/blob/master/wiki/inheritance.md#what-can-i-do-when-my-base-class-is-provided-by-a-third-party-module
+decorate(injectable(), EventEmitter);
+container.bind(IDENTIFIER.IEventEmitter).to(EventEmitter);
 // 支持使用 new 而非容器实例化的场景，同时禁止 lazyInject cache
 // @see https://github.com/inversify/inversify-inject-decorators#caching-vs-non-caching-behaviour
 const DECORATORS = getDecorators(container, false);
@@ -96,110 +101,131 @@ export const lazyMultiInject = (
   };
 };
 
-export function createContainerModule() {
-  return new ContainerModule(
-    (bind: interfaces.Bind, unbind: interfaces.Unbind) => {
-      /**
-       * bind global component managers in root container
-       */
-      bind<ComponentManager<NameComponent>>(
-        IDENTIFIER.NameComponentManager,
-      ).toConstantValue(new ComponentManager(NameComponent));
-      bind<ComponentManager<HierarchyComponent>>(
-        IDENTIFIER.HierarchyComponentManager,
-      ).toConstantValue(new ComponentManager(HierarchyComponent));
-      bind<ComponentManager<TransformComponent>>(
-        IDENTIFIER.TransformComponentManager,
-      ).toConstantValue(new ComponentManager(TransformComponent));
-      bind<ComponentManager<MeshComponent>>(
-        IDENTIFIER.MeshComponentManager,
-      ).toConstantValue(new ComponentManager(MeshComponent));
-      bind<ComponentManager<CullableComponent>>(
-        IDENTIFIER.CullableComponentManager,
-      ).toConstantValue(new ComponentManager(CullableComponent));
-      bind<ComponentManager<GeometryComponent>>(
-        IDENTIFIER.GeometryComponentManager,
-      ).toConstantValue(new ComponentManager(GeometryComponent));
-      bind<ComponentManager<MaterialComponent>>(
-        IDENTIFIER.MaterialComponentManager,
-      ).toConstantValue(new ComponentManager(MaterialComponent));
+/** global services */
+container
+  .bind(IDENTIFIER.ShaderModuleService)
+  .to(ShaderModuleService)
+  .inSingletonScope();
 
-      /**
-       * bind systems
-       */
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(SceneGraphSystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.SceneGraphSystem);
+/**
+ * bind global component managers in root container
+ */
+container
+  .bind<ComponentManager<NameComponent>>(IDENTIFIER.NameComponentManager)
+  .toConstantValue(new ComponentManager(NameComponent));
+container
+  .bind<ComponentManager<HierarchyComponent>>(
+    IDENTIFIER.HierarchyComponentManager,
+  )
+  .toConstantValue(new ComponentManager(HierarchyComponent));
+container
+  .bind<ComponentManager<TransformComponent>>(
+    IDENTIFIER.TransformComponentManager,
+  )
+  .toConstantValue(new ComponentManager(TransformComponent));
+container
+  .bind<ComponentManager<MeshComponent>>(IDENTIFIER.MeshComponentManager)
+  .toConstantValue(new ComponentManager(MeshComponent));
+container
+  .bind<ComponentManager<CullableComponent>>(
+    IDENTIFIER.CullableComponentManager,
+  )
+  .toConstantValue(new ComponentManager(CullableComponent));
+container
+  .bind<ComponentManager<GeometryComponent>>(
+    IDENTIFIER.GeometryComponentManager,
+  )
+  .toConstantValue(new ComponentManager(GeometryComponent));
+container
+  .bind<ComponentManager<MaterialComponent>>(
+    IDENTIFIER.MaterialComponentManager,
+  )
+  .toConstantValue(new ComponentManager(MaterialComponent));
 
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(FrameGraphSystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.FrameGraphSystem);
+// https://github.com/inversify/InversifyJS/blob/master/wiki/hierarchical_di.md#support-for-hierarchical-di-systems
+export function createWorldContainer() {
+  const worldContainer = new Container();
+  worldContainer.parent = container;
 
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(MeshSystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.MeshSystem);
+  /**
+   * bind systems
+   */
+  worldContainer
+    .bind<ISystem>(IDENTIFIER.Systems)
+    .to(SceneGraphSystem)
+    .inSingletonScope()
+    .whenTargetNamed(IDENTIFIER.SceneGraphSystem);
 
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(GeometrySystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.GeometrySystem);
+  worldContainer
+    .bind<ISystem>(IDENTIFIER.Systems)
+    .to(FrameGraphSystem)
+    .inSingletonScope()
+    .whenTargetNamed(IDENTIFIER.FrameGraphSystem);
 
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(MaterialSystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.MaterialSystem);
+  worldContainer
+    .bind<ISystem>(IDENTIFIER.Systems)
+    .to(MeshSystem)
+    .inSingletonScope()
+    .whenTargetNamed(IDENTIFIER.MeshSystem);
 
-      bind<ISystem>(IDENTIFIER.Systems)
-        .to(RendererSystem)
-        .inSingletonScope()
-        .whenTargetNamed(IDENTIFIER.RendererSystem);
+  worldContainer
+    .bind<ISystem>(IDENTIFIER.Systems)
+    .to(GeometrySystem)
+    .inSingletonScope()
+    .whenTargetNamed(IDENTIFIER.GeometrySystem);
 
-      // container
-      //   .bind<ISystem>(IDENTIFIER.Systems)
-      //   .to(InteractionSystem)
-      //   .whenTargetNamed(IDENTIFIER.InteractionSystem);
+  worldContainer
+    .bind<ISystem>(IDENTIFIER.Systems)
+    .to(MaterialSystem)
+    .inSingletonScope()
+    .whenTargetNamed(IDENTIFIER.MaterialSystem);
 
-      /**
-       * 全局服务
-       */
-      // 资源池
-      bind(IDENTIFIER.ResourcePool)
-        .to(ResourcePool)
-        .inSingletonScope();
-      // Shader 模块化
-      bind(IDENTIFIER.ShaderModuleService)
-        .to(ShaderModuleService)
-        .inSingletonScope();
-      bind(IDENTIFIER.ConfigService)
-        .to(ConfigService)
-        .inSingletonScope();
+  worldContainer
+    .bind<ISystem>(IDENTIFIER.Systems)
+    .to(RendererSystem)
+    .inSingletonScope()
+    .whenTargetNamed(IDENTIFIER.RendererSystem);
 
-      /**
-       * bind render passes
-       */
-      bind<IRenderPass<any>>(IDENTIFIER.RenderPass)
-        .to(RenderPass)
-        .inSingletonScope()
-        .whenTargetNamed(RenderPass.IDENTIFIER);
-      bind<IRenderPass<any>>(IDENTIFIER.RenderPass)
-        .to(CopyPass)
-        .inSingletonScope()
-        .whenTargetNamed(CopyPass.IDENTIFIER);
-      bind<IRenderPass<any>>(IDENTIFIER.RenderPass)
-        .to(PixelPickingPass)
-        .inSingletonScope()
-        .whenTargetNamed(PixelPickingPass.IDENTIFIER);
+  // 资源池
+  worldContainer
+    .bind(IDENTIFIER.ResourcePool)
+    .to(ResourcePool)
+    .inSingletonScope();
+  worldContainer
+    .bind(IDENTIFIER.ConfigService)
+    .to(ConfigService)
+    .inSingletonScope();
+  worldContainer
+    .bind(IDENTIFIER.InteractorService)
+    .to(InteractorService)
+    .inSingletonScope();
 
-      bind<interfaces.Factory<IRenderPass<any>>>(
-        IDENTIFIER.RenderPassFactory,
-      ).toFactory<IRenderPass<any>>((context: interfaces.Context) => {
-        return (name: string) => {
-          return context.container.getNamed(IDENTIFIER.RenderPass, name);
-        };
-      });
-    },
-  );
+  /**
+   * bind render passes
+   */
+  worldContainer
+    .bind<IRenderPass<any>>(IDENTIFIER.RenderPass)
+    .to(RenderPass)
+    .inSingletonScope()
+    .whenTargetNamed(RenderPass.IDENTIFIER);
+  worldContainer
+    .bind<IRenderPass<any>>(IDENTIFIER.RenderPass)
+    .to(CopyPass)
+    .inSingletonScope()
+    .whenTargetNamed(CopyPass.IDENTIFIER);
+  worldContainer
+    .bind<IRenderPass<any>>(IDENTIFIER.RenderPass)
+    .to(PixelPickingPass)
+    .inSingletonScope()
+    .whenTargetNamed(PixelPickingPass.IDENTIFIER);
+
+  worldContainer
+    .bind<interfaces.Factory<IRenderPass<any>>>(IDENTIFIER.RenderPassFactory)
+    .toFactory<IRenderPass<any>>((context: interfaces.Context) => {
+      return (name: string) => {
+        return context.container.getNamed(IDENTIFIER.RenderPass, name);
+      };
+    });
+
+  return worldContainer;
 }

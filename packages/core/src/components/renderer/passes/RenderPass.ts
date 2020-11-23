@@ -1,5 +1,6 @@
 import { mat4 } from 'gl-matrix';
 import { inject, injectable, named } from 'inversify';
+import { Entity } from '../../..';
 import { ComponentManager } from '../../../ComponentManager';
 import { IDENTIFIER } from '../../../identifier';
 import { FrameGraphHandle } from '../../framegraph/FrameGraphHandle';
@@ -11,11 +12,12 @@ import { GeometryComponent } from '../../geometry/GeometryComponent';
 import { MaterialComponent } from '../../material/MaterialComponent';
 import { CullableComponent } from '../../mesh/CullableComponent';
 import { MeshComponent } from '../../mesh/MeshComponent';
+import { HierarchyComponent } from '../../scenegraph/HierarchyComponent';
 import { TransformComponent } from '../../scenegraph/TransformComponent';
 import { gl } from '../gl';
 import { IAttribute } from '../IAttribute';
 import { IModelInitializationOptions } from '../IModel';
-import { IRendererService, IView } from '../IRendererService';
+import { ICamera, IRendererService, IView } from '../IRendererService';
 import { IUniform } from '../IUniform';
 import { IRenderPass } from './IRenderPass';
 
@@ -41,6 +43,9 @@ export class RenderPass implements IRenderPass<RenderPassData> {
 
   @inject(IDENTIFIER.TransformComponentManager)
   private readonly transform: ComponentManager<TransformComponent>;
+
+  @inject(IDENTIFIER.HierarchyComponentManager)
+  private readonly hierarchy: ComponentManager<HierarchyComponent>;
 
   @inject(IDENTIFIER.Systems)
   @named(IDENTIFIER.FrameGraphSystem)
@@ -71,44 +76,42 @@ export class RenderPass implements IRenderPass<RenderPassData> {
   public execute = async (
     fg: FrameGraphSystem,
     pass: FrameGraphPass<RenderPassData>,
-    view: IView,
+    views: IView[],
   ): Promise<void> => {
-    const { x, y, width, height } = view.getViewport();
-
-    // 实例化资源
     const resourceNode = fg.getResourceNode(pass.data.output);
     const framebuffer = this.resourcePool.getOrCreateResource(
       resourceNode.resource,
     );
 
+    // initialize model of each mesh
+    for (const view of views) {
+      await this.initView(view);
+    }
+
+    const canvas = this.engine.getCanvas();
     framebuffer.resize({
-      width,
-      height,
+      width: canvas.width,
+      height: canvas.height,
     });
 
-    await new Promise((resolve) => {
-      // this.engine.viewport({
-      //   x,
-      //   y,
-      //   width,
-      //   height,
-      // });
+    this.engine.setScissor({
+      enable: false,
+    });
+    this.engine.clear({
+      framebuffer,
+      color: views[0].getClearColor(), // TODO: use clearColor defined in view
+      depth: 1,
+    });
 
-      this.engine.useFramebuffer(framebuffer, async () => {
-        this.engine.clear({
-          framebuffer,
-          color: [1, 1, 1, 1],
-          depth: 1,
-        });
-        await this.renderView(view);
-        // @ts-ignore
-        resolve();
-      });
+    this.engine.useFramebuffer(framebuffer, () => {
+      for (const view of views) {
+        // must do rendering in a sync way
+        this.renderView(view);
+      }
     });
   };
 
-  public async renderView(view: IView) {
-    const { createModel, createAttribute } = this.engine;
+  public renderView(view: IView) {
     const scene = view.getScene();
     const camera = view.getCamera();
 
@@ -122,104 +125,90 @@ export class RenderPass implements IRenderPass<RenderPassData> {
     // TODO: use cached planes if camera was not changed
     camera.getFrustum().extractFromVPMatrix(viewProjectionMatrix);
 
+    const { x, y, width, height } = view.getViewport();
+    this.engine.viewport({
+      x,
+      y,
+      width,
+      height,
+    });
+    // this.engine.setScissor({
+    //   enable: true,
+    //   box: { x, y, width, height },
+    // });
+    // this.engine.clear({
+    //   // framebuffer,
+    //   color: [1, 1, 1, 1], // TODO: use clearColor defined in view
+    //   depth: 1,
+    // });
+
     for (const meshEntity of scene.getEntities()) {
-      // filter meshes with frustum culling
-      if (!this.cullable.getComponentByEntity(meshEntity)?.visible) {
-        return;
-      }
-
-      const mesh = this.mesh.getComponentByEntity(meshEntity)!;
-      const material = mesh.material;
-      const geometry = mesh.geometry;
-
-      // geometry 在自己的 System 中完成脏检查后的更新
-      if (geometry.dirty) {
-        return;
-      }
-
-      // get model matrix from mesh
-      const transform = this.transform.getComponentByEntity(meshEntity)!;
-
-      const modelViewMatrix = mat4.multiply(
-        mat4.create(),
+      this.renderMesh(meshEntity, {
+        camera,
+        view,
         viewMatrix,
-        transform.worldTransform,
-      );
-      // const modelViewProjectionMatrix = mat4.multiply(
-      //   mat4.create(),
-      //   viewProjectionMatrix,
-      //   transform.worldTransform,
-      // );
+      });
+    }
+  }
 
-      // set MVP matrix
-      material.setUniform('projectionMatrix', camera.getPerspective());
-      material.setUniform('modelViewMatrix', modelViewMatrix);
+  private renderMesh(
+    meshEntity: Entity,
+    {
+      camera,
+      view,
+      viewMatrix,
+    }: {
+      camera: ICamera;
+      view: IView;
+      viewMatrix: mat4;
+    },
+  ) {
+    const mesh = this.mesh.getComponentByEntity(meshEntity)!;
 
-      // 还不存在渲染对象，需要先创建
-      if (!mesh.model) {
-        const modelInitializationOptions: IModelInitializationOptions = {
-          vs: material.vertexShaderGLSL,
-          fs: material.fragmentShaderGLSL,
-          attributes: geometry.attributes.reduce(
-            (cur: { [key: string]: IAttribute }, prev) => {
-              if (prev.data && prev.buffer) {
-                cur[prev.name] = createAttribute({
-                  buffer: prev.buffer,
-                  attributes: prev.attributes,
-                  arrayStride: prev.arrayStride,
-                  stepMode: prev.stepMode,
-                  divisor: prev.stepMode === 'vertex' ? 0 : 1,
-                });
-              }
-              return cur;
-            },
-            {},
-          ),
-          uniforms: material.uniforms.reduce(
-            (cur: { [key: string]: IUniform }, prev) => {
-              cur[prev.name] = prev.data;
-              return cur;
-            },
-            {},
-          ),
-          cull: {
-            enable: true,
-            face: gl.BACK,
-          },
-          depth: {
-            // TODO: material 可指定
-            enable: false,
-            func: gl.LESS,
-          },
-          blend: {
-            enable: true,
-            func: {
-              srcRGB: gl.SRC_ALPHA,
-              dstRGB: gl.ONE_MINUS_SRC_ALPHA,
-              srcAlpha: 1,
-              dstAlpha: 1,
-            },
-            // func: {
-            //   srcRGB: gl.ONE,
-            //   dstRGB: gl.ONE,
-            //   srcAlpha: 1,
-            //   dstAlpha: 1,
-            // },
-          },
-        };
+    if (!mesh.visible) {
+      return;
+    }
 
-        if (geometry.indicesBuffer) {
-          modelInitializationOptions.elements = geometry.indicesBuffer;
-        }
-
-        if (geometry.maxInstancedCount) {
-          modelInitializationOptions.instances = geometry.maxInstancedCount;
-          modelInitializationOptions.count = geometry.vertexCount || 3;
-        }
-
-        mesh.model = await createModel(modelInitializationOptions);
+    // render mesh's children recursively
+    this.hierarchy.forEach((entity, { parentID }) => {
+      if (parentID === meshEntity) {
+        this.renderMesh(entity, { camera, view, viewMatrix });
       }
+    });
 
+    // filter meshes with frustum culling
+    // if (!this.cullable.getComponentByEntity(meshEntity)?.visible) {
+    //   return;
+    // }
+    const material = mesh.material;
+    const geometry = mesh.geometry;
+
+    // geometry 在自己的 System 中完成脏检查后的更新
+    if (!geometry || geometry.dirty || !material) {
+      return;
+    }
+
+    // get model matrix from mesh
+    const transform = this.transform.getComponentByEntity(meshEntity)!;
+
+    const modelViewMatrix = mat4.multiply(
+      mat4.create(),
+      viewMatrix,
+      transform.worldTransform,
+    );
+    const { width, height } = view.getViewport();
+
+    // set MVP matrix, other builtin uniforms @see https://threejs.org/docs/#api/en/renderers/webgl/WebGLProgram
+    material.setUniform({
+      projectionMatrix: camera.getPerspective(),
+      modelViewMatrix,
+      modelMatrix: transform.worldTransform,
+      viewMatrix,
+      cameraPosition: camera.getPosition(),
+      u_viewport: [width, height],
+    });
+
+    if (mesh.model) {
       mesh.model.draw({
         uniforms: material.uniforms.reduce(
           (cur: { [key: string]: IUniform }, prev) => {
@@ -234,95 +223,96 @@ export class RenderPass implements IRenderPass<RenderPassData> {
         u.dirty = false;
       });
       material.dirty = false;
+    }
+  }
 
-      // this.engine.setRenderBindGroups([material.uniformBindGroup]);
+  private async initMesh(meshEntity: Entity, view: IView) {
+    const mesh = this.mesh.getComponentByEntity(meshEntity)!;
+    const material = mesh.material;
+    const geometry = mesh.geometry;
 
-      // // some custom shader doesn't need vertex, like our triangle MSAA example.
-      // if (geometry.attributes.length) {
-      //   const vertexBuffers = geometry.attributes
-      //     .map((attribute) => {
-      //       if (attribute.buffer) {
-      //         return attribute.buffer;
-      //       } else if (attribute.bufferGetter) {
-      //         return attribute.bufferGetter();
-      //       }
-      //       return null;
-      //     })
-      //     .filter((v) => v) as GPUBuffer[];
+    // render mesh's children recursively
+    await this.hierarchy.forEachAsync(async (entity, { parentID }) => {
+      if (parentID === meshEntity) {
+        await this.initMesh(entity, view);
+      }
+    });
 
-      //   // TODO: use some semantic like POSITION, NORMAL, COLOR etc.
-      //   this.engine.bindVertexInputs({
-      //     indexBuffer: geometry.indicesBuffer,
-      //     indexOffset: 0,
-      //     vertexStartSlot: 0,
-      //     vertexBuffers,
-      //     vertexOffsets: new Array(vertexBuffers.length).fill(0),
-      //     pipelineName,
-      //   });
-      // }
+    if (!geometry || geometry.dirty || !material) {
+      return;
+    }
 
-      // if (geometry.indices && geometry.indices.length) {
-      //   this.engine.drawElementsType(
-      //     pipelineName,
-      //     {
-      //       layout: material.pipelineLayout,
-      //       ...material.stageDescriptor,
-      //       primitiveTopology: material.primitiveTopology || 'triangle-list',
-      //       vertexState: {
-      //         indexFormat: 'uint32',
-      //         vertexBuffers: geometry.attributes.map((attribute) => ({
-      //           arrayStride: attribute.arrayStride,
-      //           stepMode: attribute.stepMode,
-      //           attributes: attribute.attributes,
-      //           label: attribute.name,
-      //         })),
-      //       },
-      //       rasterizationState: material.rasterizationState || {
-      //         cullMode: 'back',
-      //       },
-      //       depthStencilState: material.depthStencilState || {
-      //         depthWriteEnabled: true,
-      //         depthCompare: 'less',
-      //         format: 'depth24plus-stencil8',
-      //       },
-      //       // @ts-ignore
-      //       colorStates: material.colorStates,
-      //     },
-      //     0,
-      //     geometry.indices.length,
-      //     geometry.maxInstancedCount || 1,
-      //     material.uniforms,
-      //   );
-      // } else {
-      //   this.engine.drawArraysType(
-      //     pipelineName,
-      //     {
-      //       layout: material.pipelineLayout,
-      //       ...material.stageDescriptor,
-      //       primitiveTopology: material.primitiveTopology || 'triangle-list',
-      //       vertexState: {
-      //         vertexBuffers: geometry.attributes.map((attribute) => ({
-      //           arrayStride: attribute.arrayStride,
-      //           stepMode: attribute.stepMode,
-      //           attributes: attribute.attributes,
-      //         })),
-      //       },
-      //       rasterizationState: material.rasterizationState || {
-      //         cullMode: 'back',
-      //       },
-      //       depthStencilState: material.depthStencilState || {
-      //         depthWriteEnabled: true,
-      //         depthCompare: 'less',
-      //         format: 'depth24plus-stencil8',
-      //       },
-      //       // @ts-ignore
-      //       colorStates: material.colorStates,
-      //     },
-      //     0,
-      //     geometry.vertexCount || 3,
-      //     geometry.maxInstancedCount || 1,
-      //   );
-      // }
+    if (!mesh.model) {
+      material.setUniform({
+        projectionMatrix: 1,
+        modelViewMatrix: 1,
+        modelMatrix: 1,
+        viewMatrix: 1,
+        cameraPosition: 1,
+        u_viewport: 1,
+      });
+
+      const { createModel, createAttribute } = this.engine;
+      const modelInitializationOptions: IModelInitializationOptions = {
+        vs: material.vertexShaderGLSL,
+        fs: material.fragmentShaderGLSL,
+        attributes: geometry.attributes.reduce(
+          (cur: { [key: string]: IAttribute }, prev) => {
+            if (prev.data && prev.buffer) {
+              cur[prev.name] = createAttribute({
+                buffer: prev.buffer,
+                attributes: prev.attributes,
+                arrayStride: prev.arrayStride,
+                stepMode: prev.stepMode,
+                divisor: prev.stepMode === 'vertex' ? 0 : 1,
+              });
+            }
+            return cur;
+          },
+          {},
+        ),
+        uniforms: material.uniforms.reduce(
+          (cur: { [key: string]: IUniform }, prev) => {
+            cur[prev.name] = prev.data;
+            return cur;
+          },
+          {},
+        ),
+        // viewport: () => view.getViewport(),
+        scissor: {
+          enable: true,
+          // @ts-ignore
+          box: () => view.getViewport(),
+        },
+      };
+
+      if (material.cull) {
+        modelInitializationOptions.cull = material.cull;
+      }
+      if (material.depth) {
+        modelInitializationOptions.depth = material.depth;
+      }
+      if (material.blend) {
+        modelInitializationOptions.blend = material.blend;
+      }
+
+      if (geometry.indicesBuffer) {
+        modelInitializationOptions.elements = geometry.indicesBuffer;
+      }
+
+      if (geometry.maxInstancedCount) {
+        modelInitializationOptions.instances = geometry.maxInstancedCount;
+        modelInitializationOptions.count = geometry.vertexCount || 3;
+      }
+
+      mesh.model = await createModel(modelInitializationOptions);
+    }
+  }
+
+  private async initView(view: IView) {
+    const scene = view.getScene();
+    for (const meshEntity of scene.getEntities()) {
+      await this.initMesh(meshEntity, view);
     }
   }
 }
