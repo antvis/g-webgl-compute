@@ -41,11 +41,7 @@ export class SceneGraphSystem implements ISystem {
     // 原版基于 JobSystem 实现
     this.transform.forEach((entity, transform) => {
       if (transform.isDirty()) {
-        // 需要通知 mesh（如果有）更新 aabb
-        const mesh = this.mesh.getComponentByEntity(entity);
-        if (mesh) {
-          mesh.aabbDirty = true;
-        }
+        this.setMeshAABBDirty(entity);
         transform.updateTransform();
       }
     });
@@ -75,6 +71,9 @@ export class SceneGraphSystem implements ISystem {
     this.hierarchy.create(entity, {
       parentID: parent,
     });
+
+    // inform parent mesh to update its aabb
+    this.setMeshAABBDirty(parent);
 
     if (this.hierarchy.getCount() > 1) {
       for (let i = this.hierarchy.getCount() - 1; i > 0; --i) {
@@ -126,6 +125,9 @@ export class SceneGraphSystem implements ISystem {
       }
 
       this.hierarchy.removeKeepSorted(entity);
+
+      // inform parent mesh to update its aabb
+      this.setMeshAABBDirty(entity);
     }
   }
 
@@ -137,6 +139,13 @@ export class SceneGraphSystem implements ISystem {
       } else {
         ++i;
       }
+    }
+  }
+
+  private setMeshAABBDirty(entity: Entity) {
+    const mesh = this.mesh.getComponentByEntity(entity);
+    if (mesh) {
+      mesh.aabbDirty = true;
     }
   }
 }

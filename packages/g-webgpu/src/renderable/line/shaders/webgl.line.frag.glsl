@@ -1,7 +1,7 @@
-uniform float u_dash_array;
-uniform float u_dash_offset;
-uniform float u_dash_ratio;
-uniform float u_thickness;
+uniform float u_dash_array : 0.02;
+uniform float u_dash_offset : 0;
+uniform float u_dash_ratio : 0;
+uniform float u_thickness : 0.02;
 
 varying vec4 v_color;
 varying vec2 v_normal;

@@ -1,7 +1,9 @@
 import {
+  BufferData,
   GeometrySystem,
   gl,
   IDENTIFIER,
+  IShaderModuleService,
   MaterialSystem,
 } from '@antv/g-webgpu-core';
 import { inject, injectable, named } from 'inversify';
@@ -52,6 +54,8 @@ interface IInstanceAttributes {
   instancedPickingColors: number[];
 }
 
+console.log();
+
 /**
  * Use SDF to draw 2D point with stroke.
  */
@@ -67,10 +71,46 @@ export class Point extends Renderable<
   @named(IDENTIFIER.GeometrySystem)
   private readonly geometrySystem: GeometrySystem;
 
-  protected afterEntityCreated() {
+  @inject(IDENTIFIER.ShaderModuleService)
+  private readonly shaderModuleService: IShaderModuleService;
+
+  protected onAttributeChanged({
+    name,
+    data,
+  }: {
+    name: string;
+    data: BufferData;
+  }) {
+    const mesh = this.getMeshComponent();
+    if (mesh && mesh.material) {
+      if (name === 'strokeWidth') {
+        mesh.material.setUniform('u_stroke_width', data);
+      } else if (name === 'strokeColor') {
+        mesh.material.setUniform('u_stroke_color', data);
+      } else if (name === 'strokeOpacity') {
+        mesh.material.setUniform('u_stroke_opacity', data);
+      } else if (name === 'opacity') {
+        mesh.material.setUniform('u_opacity', data);
+      } else if (name === 'blur') {
+        mesh.material.setUniform('u_blur', data);
+      }
+    }
+  }
+
+  protected onEntityCreated() {
+    this.shaderModuleService.registerModule('grid', {
+      vs: pointVert,
+      fs: pointFrag,
+    });
+    const {
+      vs,
+      fs,
+      uniforms: extractedUniforms,
+    } = this.shaderModuleService.getModule('grid');
+
     const material = this.materialSystem.createShaderMaterial({
-      vertexShader: pointVert,
-      fragmentShader: pointFrag,
+      vertexShader: vs,
+      fragmentShader: fs,
       cull: {
         enable: false,
       },
@@ -90,12 +130,8 @@ export class Point extends Renderable<
 
     // TODO: support define stroke-relative props per point
     material.setUniform({
-      u_stroke_width: 0.01,
       u_device_pixel_ratio: window.devicePixelRatio,
-      u_stroke_color: [0, 0, 0, 0],
-      u_stroke_opacity: 1,
-      u_opacity: 0.35,
-      u_blur: 0,
+      ...extractedUniforms,
     });
 
     const attributes = this.buildAttributes();

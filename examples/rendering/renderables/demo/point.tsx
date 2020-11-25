@@ -54,7 +54,7 @@ const App = function Point() {
     const tracker = Tracker.create(world);
     tracker.attachControl(view);
 
-    world.createRenderable(
+    const points = world.createRenderable(
       pointsEntity,
       Renderable.POINT,
       new Array(100).fill(undefined).map((_, i) => ({
@@ -117,26 +117,33 @@ const App = function Point() {
       transformComponent.scale(vec3.fromValues(size, size, size));
     });
     pointFolder.add(pointConfig, 'opacity', 0, 1, 0.1).onChange((opacity) => {
-      meshComponent.material.setUniform('u_opacity', opacity);
+      points.setAttributes({
+        opacity,
+      });
     });
     pointFolder
       .add(pointConfig, 'strokeWidth', 0, 0.1, 0.01)
       .onChange((strokeWidth) => {
-        meshComponent.material.setUniform('u_stroke_width', strokeWidth);
+        points.setAttributes({
+          strokeWidth,
+        });
       });
     pointFolder.addColor(pointConfig, 'strokeColor').onChange((color) => {
-      meshComponent.material.setUniform(
-        'u_stroke_color',
-        vec4.fromValues(color[0] / 255, color[1] / 255, color[2] / 255, 1),
-      );
+      points.setAttributes({
+        strokeColor: [color[0] / 255, color[1] / 255, color[2] / 255, 1],
+      });
     });
     pointFolder
       .add(pointConfig, 'strokeOpacity', 0, 1)
       .onChange((strokeOpacity) => {
-        meshComponent.material.setUniform('u_stroke_opacity', strokeOpacity);
+        points.setAttributes({
+          strokeOpacity,
+        });
       });
     pointFolder.add(pointConfig, 'blur', 0, 1).onChange((blur) => {
-      meshComponent.material.setUniform('u_blur', blur);
+      points.setAttributes({
+        blur,
+      });
     });
     pointFolder.open();
 

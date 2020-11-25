@@ -1,4 +1,4 @@
-import { World } from '@antv/g-webgpu';
+import { Renderable, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import { Button } from 'antd';
 import { vec3, vec4 } from 'gl-matrix';
@@ -29,6 +29,8 @@ const App = function Landmark() {
     const scene = world.createScene();
     const boxEntity = world.createEntity();
     scene.addEntity(boxEntity);
+    const gridEntity = world.createEntity();
+    scene.addEntity(gridEntity);
 
     camera = world
       .createCamera()
@@ -67,6 +69,7 @@ const App = function Landmark() {
       .createRenderable(boxEntity)
       .setGeometry(boxGeometry)
       .setMaterial(material);
+    world.createRenderable(gridEntity, Renderable.GRID);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;

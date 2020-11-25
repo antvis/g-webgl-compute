@@ -1,4 +1,4 @@
-import { inject, injectable } from 'inversify';
+import { injectable } from 'inversify';
 import { uniq } from 'lodash';
 import { extractUniforms } from '../../utils/shader-module';
 import { IModuleParams, IShaderModuleService } from './IShaderModuleService';

@@ -1,4 +1,5 @@
 import {
+  BufferData,
   ComponentManager,
   CullableComponent,
   Entity,
@@ -10,21 +11,23 @@ import {
   SceneGraphSystem,
   TransformComponent,
 } from '@antv/g-webgpu-core';
-import { mat4 } from 'gl-matrix';
 import { inject, injectable, named } from 'inversify';
 
 export interface IRenderable<T> {
   setConfig(config: T): void;
+  setAttributes(attributes: Record<string, BufferData | undefined>): void;
   setEntity(entity: Entity): void;
   setMaterial(material: MaterialComponent): void;
   setGeometry(geometry: GeometryComponent): void;
 }
 
 @injectable()
-export class Renderable<T = unknown> implements IRenderable<T> {
+export class Renderable<T = {}> implements IRenderable<T> {
   public static POINT = 'point';
   public static LINE = 'line';
+  public static GRID = 'grid';
 
+  protected attributes: Record<string, BufferData> = {};
   protected config: T;
 
   @inject(IDENTIFIER.MeshComponentManager)
@@ -66,7 +69,7 @@ export class Renderable<T = unknown> implements IRenderable<T> {
     this.cullable.create(entity);
     this.meshComponent = this.mesh.create(entity);
     this.transformComponent = this.transform.create(entity);
-    this.afterEntityCreated();
+    this.onEntityCreated();
   }
 
   public setMaterial(material: MaterialComponent) {
@@ -77,6 +80,21 @@ export class Renderable<T = unknown> implements IRenderable<T> {
   public setGeometry(geometry: GeometryComponent) {
     this.meshComponent.geometry = geometry;
     return this;
+  }
+
+  public setAttributes(attributes: Record<string, BufferData | undefined>) {
+    Object.keys(attributes).forEach((name) => {
+      if (
+        attributes[name] !== undefined &&
+        attributes[name] !== this.attributes[name]
+      ) {
+        this.onAttributeChanged({
+          name,
+          data: attributes[name]!,
+        });
+        this.attributes[name] = attributes[name]!;
+      }
+    });
   }
 
   public setVisible(visible: boolean) {
@@ -103,10 +121,26 @@ export class Renderable<T = unknown> implements IRenderable<T> {
     return this;
   }
 
-  /**
-   * @override
-   */
-  protected afterEntityCreated() {
+  protected onEntityCreated() {
     //
+  }
+
+  protected onAttributeChanged({
+    name,
+    data,
+  }: {
+    name: string;
+    data: BufferData;
+  }) {
+    if (this.meshComponent && this.meshComponent.material) {
+      this.meshComponent.material.setUniform(
+        this.convertAttributeName2UniformName(name),
+        data,
+      );
+    }
+  }
+
+  protected convertAttributeName2UniformName(attributeName: string) {
+    return attributeName;
   }
 }

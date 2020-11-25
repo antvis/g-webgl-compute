@@ -101,13 +101,14 @@ const App = function Responsive() {
 
     render();
 
-    window.gwebgpuClean = () => {
+    history.onpushstate = () => {
       window.cancelAnimationFrame(frameId);
       world.destroy();
     };
 
     return () => {
-      window.gwebgpuClean();
+      window.cancelAnimationFrame(frameId);
+      world.destroy();
     };
   });
 

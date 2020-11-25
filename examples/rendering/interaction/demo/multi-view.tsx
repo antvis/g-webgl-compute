@@ -5,7 +5,9 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import Stats from 'stats.js';
 
-const App = function MultiView() {
+const $wrapper = document.getElementById('wrapper');
+
+function MultiView() {
   let frameId: number;
   let camera1;
   let camera2;
@@ -16,7 +18,6 @@ const App = function MultiView() {
     $stats.style.position = 'absolute';
     $stats.style.left = '0px';
     $stats.style.top = '0px';
-    const $wrapper = document.getElementById('wrapper');
     $wrapper.appendChild($stats);
 
     const canvas = document.getElementById('application') as HTMLCanvasElement;
@@ -99,6 +100,7 @@ const App = function MultiView() {
     };
 
     const render = async () => {
+      console.log('render...');
       if (stats) {
         stats.update();
       }
@@ -117,13 +119,14 @@ const App = function MultiView() {
 
     render();
 
-    window.gwebgpuClean = () => {
+    history.onpushstate = () => {
       window.cancelAnimationFrame(frameId);
       world.destroy();
     };
 
     return () => {
-      window.gwebgpuClean();
+      window.cancelAnimationFrame(frameId);
+      world.destroy();
     };
   });
 
@@ -156,6 +159,6 @@ const App = function MultiView() {
       </div>
     </>
   );
-};
+}
 
-ReactDOM.render(<App />, document.getElementById('wrapper'));
+ReactDOM.render(<MultiView />, $wrapper);

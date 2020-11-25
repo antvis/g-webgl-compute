@@ -1,14 +1,14 @@
 import { Renderable, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import * as dat from 'dat.gui';
-import { vec3, vec4 } from 'gl-matrix';
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import Stats from 'stats.js';
 
-const App = function Perspective() {
-  let frameId: number;
-  let camera;
+const $wrapper = document.getElementById('wrapper');
+
+function Grid() {
+  let frameId;
   useEffect(() => {
     const stats = new Stats();
     stats.showPanel(0);
@@ -16,7 +16,6 @@ const App = function Perspective() {
     $stats.style.position = 'absolute';
     $stats.style.left = '0px';
     $stats.style.top = '0px';
-    const $wrapper = document.getElementById('wrapper');
     $wrapper.appendChild($stats);
 
     const canvas = document.getElementById('application') as HTMLCanvasElement;
@@ -27,35 +26,26 @@ const App = function Perspective() {
 
     const renderer = world.createRenderer();
     const scene = world.createScene();
-    const boxEntity = world.createEntity();
-    scene.addEntity(boxEntity);
     const gridEntity = world.createEntity();
     scene.addEntity(gridEntity);
 
-    camera = world
+    const camera = world
       .createCamera()
-      .setPosition(0, 0, 5)
-      .setPerspective(0.1, 1000, 72, canvas.width / canvas.height);
+      .setPosition(0, 5, 5)
+      .setPerspective(0.1, 1000, 75, canvas.width / canvas.height);
 
     const view = world
       .createView()
       .setCamera(camera)
       .setScene(scene);
+
     const tracker = Tracker.create(world);
     tracker.attachControl(view);
 
-    const boxGeometry = world.createBoxGeometry({
-      halfExtents: vec3.fromValues(1, 1, 1),
+    const grid = world.createRenderable(gridEntity, Renderable.GRID, {
+      gridColor: [1, 0, 0, 1],
+      gridSize: 0.5,
     });
-    const material = world.createBasicMaterial().setUniform({
-      color: vec4.fromValues(1, 0, 0, 1),
-    });
-
-    world
-      .createRenderable(boxEntity)
-      .setGeometry(boxGeometry)
-      .setMaterial(material);
-    world.createRenderable(gridEntity, Renderable.GRID);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -79,11 +69,9 @@ const App = function Perspective() {
       if (stats) {
         stats.update();
       }
-
       if (resizeRendererToDisplaySize()) {
         camera.setAspect(canvas.clientWidth / canvas.clientHeight);
       }
-
       renderer.render(view);
       frameId = window.requestAnimationFrame(render);
     };
@@ -93,37 +81,22 @@ const App = function Perspective() {
     // GUI
     const gui = new dat.GUI({ autoPlace: false });
     $wrapper.appendChild(gui.domElement);
-    const cubeFolder = gui.addFolder('perspective projection');
-    const cubeConfig = {
-      near: 0.1,
-      far: 1000,
-      fov: 72,
+    const gridFolder = gui.addFolder('grid');
+    const gridConfig = {
+      gridColor: [255, 0, 0],
+      gridSize: 0.5,
     };
-    cubeFolder.add(cubeConfig, 'near', 0, 10).onChange((near) => {
-      camera.setPerspective(
-        near,
-        cubeConfig.far,
-        cubeConfig.fov,
-        canvas.width / canvas.height,
-      );
+    gridFolder.addColor(gridConfig, 'gridColor').onChange((color) => {
+      grid.setAttributes({
+        gridColor: [color[0] / 255, color[1] / 255, color[2] / 255, 1],
+      });
     });
-    cubeFolder.add(cubeConfig, 'far', 10, 1000).onChange((far) => {
-      camera.setPerspective(
-        cubeConfig.near,
-        far,
-        cubeConfig.fov,
-        canvas.width / canvas.height,
-      );
+    gridFolder.add(gridConfig, 'gridSize', 0, 2, 0.1).onChange((gridSize) => {
+      grid.setAttributes({
+        gridSize,
+      });
     });
-    cubeFolder.add(cubeConfig, 'fov', 0, 180).onChange((fov) => {
-      camera.setPerspective(
-        cubeConfig.near,
-        cubeConfig.far,
-        fov,
-        canvas.width / canvas.height,
-      );
-    });
-    cubeFolder.open();
+    gridFolder.open();
 
     window.gwebgpuClean = () => {
       window.cancelAnimationFrame(frameId);
@@ -131,7 +104,8 @@ const App = function Perspective() {
     };
 
     return () => {
-      window.gwebgpuClean();
+      window.cancelAnimationFrame(frameId);
+      world.destroy();
     };
   });
 
@@ -147,4 +121,4 @@ const App = function Perspective() {
   );
 };
 
-ReactDOM.render(<App />, document.getElementById('wrapper'));
+ReactDOM.render(<Grid />, $wrapper);

@@ -1,4 +1,4 @@
-import { World } from '@antv/g-webgpu';
+import { Renderable, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import * as dat from 'dat.gui';
 import React, { useEffect } from 'react';
@@ -28,6 +28,8 @@ const App = function Orthographic() {
     const scene = world.createScene();
     const boxEntity = world.createEntity();
     scene.addEntity(boxEntity);
+    const gridEntity = world.createEntity();
+    scene.addEntity(gridEntity);
 
     camera = world
       .createCamera()
@@ -52,6 +54,7 @@ const App = function Orthographic() {
       .createRenderable(boxEntity)
       .setGeometry(boxGeometry)
       .setMaterial(material);
+    world.createRenderable(gridEntity, Renderable.GRID);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;

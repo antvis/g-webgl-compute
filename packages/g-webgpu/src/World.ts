@@ -25,8 +25,9 @@ import * as WebGPUConstants from '@webgpu/types/dist/constants';
 import { Container, inject, injectable } from 'inversify';
 import { Camera } from './camera/Camera';
 import { Kernel } from './Kernel';
-import { Line } from './renderable/line/Line';
-import { Point } from './renderable/point/Point';
+import { Grid } from './renderable/grid';
+import { Line } from './renderable/line';
+import { Point } from './renderable/point';
 import { IRenderable, Renderable } from './renderable/Renderable';
 import { Renderer } from './Renderer';
 import { Scene } from './Scene';
@@ -64,6 +65,10 @@ export class World {
       .bind<IRenderable<unknown>>(IDENTIFIER.Renderable)
       .to(Line)
       .whenTargetNamed(Renderable.LINE);
+    worldContainer
+      .bind<IRenderable<unknown>>(IDENTIFIER.Renderable)
+      .to(Grid)
+      .whenTargetNamed(Renderable.GRID);
 
     const world = worldContainer.get(World);
     world.setContainer(worldContainer);
@@ -136,11 +141,15 @@ export class World {
     return this.container.get(View);
   }
 
-  public createRenderable(entity: Entity, type?: string, config?: unknown) {
+  // public createLight(type: string,) {
+  //   return this.container.getNamed(IDENTIFIER.Light, type)
+  // }
+
+  public createRenderable<T>(entity: Entity, type?: string, config?: T) {
     const renderable: Renderable = type
       ? this.container.getNamed(IDENTIFIER.Renderable, type)
       : this.container.get(Renderable);
-    renderable.setConfig(config);
+    renderable.setConfig(config || {});
     renderable.setEntity(entity);
     return renderable;
   }

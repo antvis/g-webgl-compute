@@ -51,4 +51,7 @@ export const IDENTIFIER = {
   ConfigService: Symbol('ConfigService'),
   InteractorService: Symbol('InteractorService'),
   IEventEmitter: Symbol('IEventEmitter'),
+
+  // Light
+  Light: Symbol('Light'),
 };

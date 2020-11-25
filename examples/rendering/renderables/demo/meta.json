@@ -7,12 +7,17 @@
     {
       "filename": "point.tsx",
       "title": "2D Point",
-      "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*UOGoTILse-0AAAAAAAAAAAAAARQnAQ"
     },
     {
       "filename": "line.tsx",
       "title": "2D Line",
       "screenshot": "https://gw.alipayobjects.com/os/s/prod/antv/assets/image/screenshot-placeholder-b8e70.png"
+    },
+    {
+      "filename": "grid.tsx",
+      "title": "Grid",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*dYVxQoW7gmIAAAAAAAAAAAAAARQnAQ"
     },
     {
       "filename": "cube.tsx",

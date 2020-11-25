@@ -1,7 +1,9 @@
 import {
+  BufferData,
   GeometrySystem,
   gl,
   IDENTIFIER,
+  IShaderModuleService,
   MaterialSystem,
 } from '@antv/g-webgpu-core';
 import { inject, injectable, named } from 'inversify';
@@ -16,7 +18,6 @@ interface ILineConfig {
   points: number[][];
   thickness: number;
   color: [number, number, number, number]; // sRGB
-  opacity: number;
   dashOffset: number;
   dashArray: number;
   dashRatio: number;
@@ -32,32 +33,102 @@ export class Line extends Renderable<Partial<ILineConfig>> {
   @named(IDENTIFIER.GeometrySystem)
   private readonly geometrySystem: GeometrySystem;
 
-  protected afterEntityCreated() {
-    const material = this.materialSystem.createShaderMaterial({
-      vertexShader: lineVert,
-      fragmentShader: lineFrag,
-    });
+  @inject(IDENTIFIER.ShaderModuleService)
+  private readonly shaderModuleService: IShaderModuleService;
 
-    material
-      .setCull({
-        enable: false,
-        face: gl.BACK,
-      })
-      .setUniform({
-        u_dash_array: this.config.dashArray || 0.02,
-        u_dash_offset: this.config.dashOffset || 0,
-        u_dash_ratio: this.config.dashRatio || 0,
-        u_thickness: this.config.thickness || 0.02,
-      });
+  private vertexCount: number;
+
+  protected onAttributeChanged({
+    name,
+    data,
+  }: {
+    name: string;
+    data: BufferData;
+  }) {
+    const mesh = this.getMeshComponent();
+    if (mesh && mesh.material) {
+      switch (name) {
+        case 'dashArray':
+          mesh.material.setUniform('u_dash_array', data);
+          break;
+        case 'dashOffset':
+          mesh.material.setUniform('u_dash_offset', data);
+          break;
+        case 'dashRatio':
+          mesh.material.setUniform('u_dash_ratio', data);
+          break;
+        case 'thickness':
+          mesh.material.setUniform('u_thickness', data);
+          break;
+        case 'color':
+          const colors = new Array(this.vertexCount)
+            .fill(undefined)
+            .map(() => data)
+            .reduce((prev, cur) => {
+              // @ts-ignore
+              return [...prev, ...cur];
+            }, []);
+          // @ts-ignore
+          mesh.geometry.setAttribute('a_color', Float32Array.from(colors), {
+            arrayStride: 4 * 4,
+            stepMode: 'vertex',
+            attributes: [
+              {
+                shaderLocation: 1,
+                offset: 0,
+                format: 'float4',
+              },
+            ],
+          });
+          break;
+      }
+    }
+  }
+
+  protected onEntityCreated() {
+    this.shaderModuleService.registerModule('line', {
+      vs: lineVert,
+      fs: lineFrag,
+    });
+    const {
+      vs,
+      fs,
+      uniforms: extractedUniforms,
+    } = this.shaderModuleService.getModule('line');
+
+    const material = this.materialSystem.createShaderMaterial({
+      vertexShader: vs,
+      fragmentShader: fs,
+    });
 
     const { normals, attrIndex, attrPos, attrCounters } = getNormals(
       this.config.points!,
       false,
     );
     const vertexCount = attrPos.length;
+    this.vertexCount = vertexCount;
     const geometry = this.geometrySystem.createBufferGeometry({
       vertexCount,
     });
+
+    this.setMaterial(material);
+    this.setGeometry(geometry);
+
+    material
+      .setCull({
+        enable: false,
+        face: gl.BACK,
+      })
+      // @ts-ignore
+      .setUniform(extractedUniforms);
+
+    this.setAttributes({
+      dashArray: this.config.dashArray,
+      dashOffset: this.config.dashOffset,
+      dashRatio: this.config.dashRatio,
+      thickness: this.config.thickness,
+    });
+
     const attrNormal: number[][] = [];
     const attrMiter: number[] = [];
 
@@ -157,8 +228,5 @@ export class Line extends Renderable<Partial<ILineConfig>> {
         },
       ],
     });
-
-    this.setMaterial(material);
-    this.setGeometry(geometry);
   }
 }

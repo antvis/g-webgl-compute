@@ -63,10 +63,10 @@ const App = function MultiWorld() {
       .setCamera(camera2)
       .setScene(scene2);
 
-    const tracker1 = Tracker.create(world1);
-    tracker1.attachControl(view1);
-    const tracker2 = Tracker.create(world2);
-    tracker2.attachControl(view2);
+    // const tracker1 = Tracker.create(world1);
+    // tracker1.attachControl(view1);
+    // const tracker2 = Tracker.create(world2);
+    // tracker2.attachControl(view2);
 
     const boxGeometry1 = world1.createBoxGeometry({
       halfExtents: vec3.fromValues(1, 1, 1),

@@ -7,7 +7,7 @@ attribute float size;
 uniform mat4 projectionMatrix;
 uniform mat4 modelViewMatrix;
 
-uniform float u_stroke_width;
+uniform float u_stroke_width : 0.01;
 uniform float u_device_pixel_ratio;
 uniform vec2 u_viewport;
 

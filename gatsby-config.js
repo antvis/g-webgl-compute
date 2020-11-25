@@ -1,3 +1,5 @@
+const { version, homepage, repository } = require('./package.json');
+
 module.exports = {
   plugins: [
     {
@@ -6,7 +8,6 @@ module.exports = {
         GATrackingId: 'UA-148148901-9'
       }
     },
-    // 'gatsby-plugin-workerize-loader',
   ],
   siteMetadata: {
     title: 'GWebGPU',
@@ -14,31 +15,33 @@ module.exports = {
     siteUrl: 'https://gwebgpu.antv.vision',
     // cname: false,
     // pathPrefix: '/GWebGPUEngine',
-    githubUrl: 'https://github.com/antvis/GWebGPUEngine',
+    githubUrl: repository.url,
+    showAPIDoc: true,
+    isAntVSite: false,
+    versions: {
+      [version]: 'https://gwebgpu.antv.vision',
+    },
     navs: [
       {
         slug: 'docs/api',
         title: {
           zh: '文档',
           en: 'Document'
-        },
-        redirect: 'docs/api/gpgpu/gwebgpu'
+        }
       },
       {
         slug: 'docs/tutorial',
         title: {
           zh: '教程',
           en: 'Tutorial'
-        },
-        redirect: 'docs/tutorial/gpgpu/quickstart'
+        }
       },
       {
         slug: 'examples',
         title: {
           zh: '示例',
           en: 'Examples'
-        },
-        redirect: 'examples/gpgpu/basic/add2vectors'
+        }
       }
     ],
     docs: [
@@ -77,15 +80,8 @@ module.exports = {
     ],
     examples: [
       {
-        slug: 'gpgpu',
-        title: {
-          zh: 'GPGPU',
-          en: 'GPGPU'
-        },
-        order: 0
-      },
-      {
         slug: 'gpgpu/basic',
+        icon: 'gallery',
         title: {
           zh: '基础算法',
           en: 'Basic Algorithms'
@@ -94,23 +90,32 @@ module.exports = {
       },
       {
         slug: 'gpgpu/graph',
+        icon: 'gallery',
         title: {
           zh: '图算法',
           en: 'Graph'
         },
-        order: 0
+        order: 1
       },
       {
         slug: 'rendering',
+        icon: 'gallery',
         title: {
           zh: '渲染',
           en: 'Rendering'
         },
-        order: 1
+        order: 2
       },
     ],
     playground: {
-      container: '<div style="min-height: 500px; justify-content: center;position: relative" id="wrapper"/>',
+      container: '<div style="justify-content: center;position: relative" id="wrapper"/>',
+      playgroundDidmount: `(function(history){
+        var pushState = history.pushState;
+        history.pushState = function(state) {
+          window.gwebgpuClean && window.gwebgpuClean();
+          return pushState.apply(history, arguments);
+        };
+      })(window.history);`,
       playgroundWillUnmount: 'window.gwebgpuClean && window.gwebgpuClean();',
       dependencies: {
         '@antv/g-webgpu': 'latest'

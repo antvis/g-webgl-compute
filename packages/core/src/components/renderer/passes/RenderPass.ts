@@ -227,7 +227,12 @@ export class RenderPass implements IRenderPass<RenderPassData> {
   }
 
   private async initMesh(meshEntity: Entity, view: IView) {
-    const mesh = this.mesh.getComponentByEntity(meshEntity)!;
+    const mesh = this.mesh.getComponentByEntity(meshEntity);
+
+    if (!mesh) {
+      return;
+    }
+
     const material = mesh.material;
     const geometry = mesh.geometry;
 

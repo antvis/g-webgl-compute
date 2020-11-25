@@ -6,7 +6,7 @@ attribute float a_counters;
 
 uniform mat4 projectionMatrix;
 uniform mat4 modelViewMatrix;
-uniform float u_thickness;
+uniform float u_thickness : 0.02;
 uniform vec2 u_viewport;
 
 varying vec4 v_color;
