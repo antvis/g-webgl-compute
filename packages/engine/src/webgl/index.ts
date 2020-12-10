@@ -95,7 +95,22 @@ export class WebGLEngine implements IRendererService {
 
   public createModel = async (
     options: IModelInitializationOptions,
-  ): Promise<IModel> => new ReglModel(this.gl, options);
+  ): Promise<IModel> => {
+    if (options.uniforms) {
+      await Promise.all(
+        Object.keys(options.uniforms).map(async (name) => {
+          // @ts-ignore
+          if (options.uniforms![name] && options.uniforms![name].load !== undefined) {
+            // @ts-ignore
+            const texture = await options.uniforms![name].load();
+            // @ts-ignore
+            options.uniforms[name] = texture;
+          }
+        }),
+      );
+    }
+    return new ReglModel(this.gl, options);
+  };
 
   public createAttribute = (
     options: IAttributeInitializationOptions,

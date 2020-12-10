@@ -7,13 +7,14 @@ import {
   Entity,
   GeometrySystem,
   // container,
-  IBoxGeometryParams,
   IConfig,
   IConfigService,
   IDENTIFIER,
   IInteractorService,
   IRendererService,
   ISystem,
+  ITexture2D,
+  ITexture2DInitializationOptions,
   KernelBundle,
   MaterialSystem,
   MeshComponent,
@@ -24,13 +25,22 @@ import { WebGLEngine, WebGPUEngine } from '@antv/g-webgpu-engine';
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
 import { Container, inject, injectable } from 'inversify';
 import { Camera } from './camera/Camera';
+import { Geometry, IGeometry } from './geometry';
+import { Box } from './geometry/Box';
+import { Merged } from './geometry/Merged';
+import { Plane } from './geometry/Plane';
+import { Sphere } from './geometry/Sphere';
 import { Kernel } from './Kernel';
+import { IMaterial, Material } from './material';
+import { Basic } from './material/basic';
 import { Grid } from './renderable/grid';
 import { Line } from './renderable/line';
 import { Point } from './renderable/point';
 import { IRenderable, Renderable } from './renderable/Renderable';
 import { Renderer } from './Renderer';
 import { Scene } from './Scene';
+import { TextureCache } from './texture/Cache';
+import { Texture2D } from './texture/Texture2D';
 import { createCanvas } from './utils/canvas';
 import { View } from './View';
 
@@ -56,7 +66,34 @@ export class World {
     worldContainer.bind(Camera).toSelf();
     worldContainer.bind(Scene).toSelf();
     worldContainer.bind(World).toSelf();
+    worldContainer.bind(TextureCache).toSelf();
+    worldContainer.bind(Texture2D).toSelf();
 
+    // bind geometries
+    worldContainer
+      .bind<IGeometry<unknown>>(IDENTIFIER.Geometry)
+      .to(Box)
+      .whenTargetNamed(Geometry.BOX);
+    worldContainer
+      .bind<IGeometry<unknown>>(IDENTIFIER.Geometry)
+      .to(Sphere)
+      .whenTargetNamed(Geometry.SPHERE);
+    worldContainer
+      .bind<IGeometry<unknown>>(IDENTIFIER.Geometry)
+      .to(Plane)
+      .whenTargetNamed(Geometry.PLANE);
+    worldContainer
+      .bind<IGeometry<unknown>>(IDENTIFIER.Geometry)
+      .to(Merged)
+      .whenTargetNamed(Geometry.MERGED);
+
+    // bind materials
+    worldContainer
+      .bind<IMaterial<unknown>>(IDENTIFIER.Material)
+      .to(Basic)
+      .whenTargetNamed(Material.BASIC);
+
+    // bind renderables
     worldContainer
       .bind<IRenderable<unknown>>(IDENTIFIER.Renderable)
       .to(Point)
@@ -145,21 +182,44 @@ export class World {
   //   return this.container.getNamed(IDENTIFIER.Light, type)
   // }
 
-  public createRenderable<T>(entity: Entity, type?: string, config?: T) {
+  public createRenderable<T>(type?: string, config?: T) {
     const renderable: Renderable = type
       ? this.container.getNamed(IDENTIFIER.Renderable, type)
       : this.container.get(Renderable);
+    const entity = createEntity();
     renderable.setConfig(config || {});
     renderable.setEntity(entity);
     return renderable;
   }
 
-  public createBoxGeometry(params: IBoxGeometryParams) {
-    const geometrySystem = this.container.getNamed<GeometrySystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.GeometrySystem,
+  public createGeometry<T>(type: string, config?: T) {
+    const geometry: Geometry = this.container.getNamed(
+      IDENTIFIER.Geometry,
+      type,
     );
-    return geometrySystem.createBox(params);
+    const entity = createEntity();
+    geometry.setConfig(config || {});
+    geometry.setEntity(entity);
+    return geometry.getComponent();
+  }
+
+  public createMaterial<T>(type: string, config?: T) {
+    const material: Material = this.container.getNamed(
+      IDENTIFIER.Material,
+      type,
+    );
+    const entity = createEntity();
+    material.setConfig(config || {});
+    material.setEntity(entity, type);
+    return material.getComponent();
+  }
+
+  public createTexture2D(
+    config: ITexture2DInitializationOptions & { url: string },
+  ) {
+    const texture = this.container.get(Texture2D);
+    texture.setConfig(config);
+    return texture;
   }
 
   public createBufferGeometry(params?: { vertexCount: number }) {
@@ -179,14 +239,6 @@ export class World {
       IDENTIFIER.GeometrySystem,
     );
     return geometrySystem.createInstancedBufferGeometry(params);
-  }
-
-  public createBasicMaterial() {
-    const materialSystem = this.container.getNamed<MaterialSystem>(
-      IDENTIFIER.Systems,
-      IDENTIFIER.MaterialSystem,
-    );
-    return materialSystem.createBasicMaterial();
   }
 
   public createShaderMaterial(params: {

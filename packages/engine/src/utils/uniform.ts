@@ -40,7 +40,8 @@ function extractUniformsRecursively(
     isTypedArray(uniformValue) || // u_A: Float32Array
     // @ts-ignore
     uniformValue === '' ||
-    'resize' in uniformValue
+    // @ts-ignore
+    uniformValue.resize !== undefined
   ) {
     uniforms[`${prefix && prefix + '.'}${uniformName}`] = uniformValue;
     return;

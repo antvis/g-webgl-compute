@@ -28,6 +28,8 @@ export class MeshComponent extends Component<MeshComponent> {
 
   public visible = true;
 
+  public children: Entity[] = [];
+
   constructor(data: Partial<NonFunctionProperties<MeshComponent>>) {
     super(data);
 

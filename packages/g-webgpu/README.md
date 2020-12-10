@@ -5,31 +5,49 @@ import { World } from '@antv/g-webgpu';
 
 const canvas = document.getElementById('application');
 
-// create a world
-const world = new World(canvas);
-
-// create a camera
-const camera = world.createCamera({
-  aspect: Math.abs(canvas.width / canvas.height),
-  angle: 72,
-  far: 100,
-  near: 1,
+const world = World.create({
+  canvas,
 });
-world.getCamera(camera).setPosition(0, 5, 5);
 
-// create a scene
-const scene = world.createScene({ camera });
+const renderer = world.createRenderer();
+const scene = world.createScene();
+const boxEntity = world.createEntity();
+scene.addEntity(boxEntity);
+
+const camera = world
+  .createCamera()
+  .setPosition(0, 0, 2)
+  .setPerspective(0.1, 5, 75, canvas.width / canvas.height);
+
+const view = world
+  .createView()
+  .setCamera(camera)
+  .setScene(scene)
+  .setViewport({
+    x: 0,
+    y: 0,
+    width: canvas.width,
+    height: canvas.height,
+  });
 
 // create geometry, material and attach them to mesh
-const boxGeometry = world.createBoxGeometry({
-  halfExtents: vec3.fromValues(1, 1, 1),
+const boxGeometry = world.createGeometry(Geometry.BOX, {
+  halfExtents: [0.5, 0.5, 0.5],
 });
-const material = world.createBasicMaterial();
-const mesh = world.createMesh({
-  geometry: boxGeometry,
-  material,
+const material = world.createMaterial(Material.BASIC).setUniform({
+  color: [1, 0, 0, 1],
 });
 
-// add meshes to current scene
-world.add(scene, mesh);
+world
+  .createRenderable(boxEntity)
+  .setGeometry(boxGeometry)
+  .setMaterial(material);
+
+// create a render loop
+const render = () => {
+  renderer.render(view);
+  frameId = window.requestAnimationFrame(render);
+};
+
+render();
 ```

@@ -5,9 +5,14 @@
   },
   "demos": [
     {
+      "filename": "solar-system.tsx",
+      "title": "Solar system",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*0d6WQa-BbUQAAAAAAAAAAAAAARQnAQ"
+    },
+    {
       "filename": "cubes.tsx",
       "title": "Attach cubes to a rotating group",
-      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*ByguS56BAO0AAAAAAAAAAAAAARQnAQ"
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*OEcdTJOyRQMAAAAAAAAAAAAAARQnAQ"
     }
   ]
 }

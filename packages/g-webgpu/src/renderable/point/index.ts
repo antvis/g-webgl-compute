@@ -54,8 +54,6 @@ interface IInstanceAttributes {
   instancedPickingColors: number[];
 }
 
-console.log();
-
 /**
  * Use SDF to draw 2D point with stroke.
  */
@@ -109,8 +107,8 @@ export class Point extends Renderable<
     } = this.shaderModuleService.getModule('grid');
 
     const material = this.materialSystem.createShaderMaterial({
-      vertexShader: vs,
-      fragmentShader: fs,
+      vertexShader: vs!,
+      fragmentShader: fs!,
       cull: {
         enable: false,
       },

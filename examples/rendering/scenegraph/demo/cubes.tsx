@@ -1,4 +1,4 @@
-import { World } from '@antv/g-webgpu';
+import { Geometry, Material, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import * as dat from 'dat.gui';
 import { quat } from 'gl-matrix';
@@ -6,7 +6,7 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import Stats from 'stats.js';
 
-const CUBE_NUM = 10;
+const CUBE_NUM = 300;
 
 function rand(min: number, max: number) {
   if (max === undefined) {
@@ -52,43 +52,37 @@ const App = function Group() {
     tracker.attachControl(view);
 
     // all cubes share the same geometry
-    const boxGeometry = world.createBoxGeometry({
+    const boxGeometry = world.createGeometry(Geometry.BOX, {
       halfExtents: [0.1, 0.1, 0.1],
     });
 
-    const cubeGroupEntity = world.createEntity();
-    const cubeGroup = world.createRenderable(cubeGroupEntity);
+    const cubeGroup = world.createRenderable();
 
-    let greenCubeEntity;
     for (let i = 0; i < CUBE_NUM; i++) {
-      const material = world.createBasicMaterial().setUniform({
+      const material = world.createMaterial(Material.BASIC).setUniform({
         color: i > 0 ? [1, 0, 0, 1] : [0, 1, 0, 1],
       });
 
-      const cubeEntity = world.createEntity();
-      if (i === 0) {
-        greenCubeEntity = cubeEntity;
-      }
       const cube = world
-        .createRenderable(cubeEntity)
+        .createRenderable()
         .setGeometry(boxGeometry)
         .setMaterial(material);
 
-      const randomScale = rand(1, 2);
+      const randomScale = rand(0.1, 0.5);
 
       cube
         .getTransformComponent()
         .translate([rand(-1.2, 1.2), rand(-1.2, 1.2), rand(-1.2, 1.2)])
-        .scale([randomScale, randomScale, randomScale]);
+        .setLocalScale([randomScale, randomScale, randomScale]);
 
       // attach every cube to group
       if (i > 0) {
         cube.attach(cubeGroup);
       }
-    }
 
-    scene.addEntity(greenCubeEntity);
-    scene.addEntity(cubeGroupEntity);
+      scene.addRenderable(cube);
+    }
+    scene.addRenderable(cubeGroup);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -133,12 +127,11 @@ const App = function Group() {
     const groupConfig = {
       scale: 1,
       addCube: () => {
-        const material = world.createBasicMaterial().setUniform({
+        const material = world.createMaterial(Material.BASIC).setUniform({
           color: [rand(0, 1), rand(0, 1), rand(0, 1), 1],
         });
-        const cubeEntity = world.createEntity();
         const cube = world
-          .createRenderable(cubeEntity)
+          .createRenderable()
           .setGeometry(boxGeometry)
           .setMaterial(material);
 
@@ -146,14 +139,16 @@ const App = function Group() {
         cube
           .getTransformComponent()
           .translate([rand(-1.2, 1.2), rand(-1.2, 1.2), rand(-1.2, 1.2)])
-          .scale([randomScale, randomScale, randomScale]);
+          .setLocalScale([randomScale, randomScale, randomScale]);
         cube.attach(cubeGroup);
+        scene.addRenderable(cube);
         cubes.push(cube);
       },
       removeCube: () => {
         const cube = cubes.pop();
         if (cube) {
           cube.detach();
+          scene.removeEntity(cube);
         }
       },
       toggleGroupVisible: () => {
@@ -161,8 +156,7 @@ const App = function Group() {
       },
     };
     groupFolder.add(groupConfig, 'scale', 0.1, 5.0).onChange((size) => {
-      cubeGroup.getTransformComponent().localScale = [1, 1, 1];
-      cubeGroup.getTransformComponent().scale([size, size, size]);
+      cubeGroup.getTransformComponent().setLocalScale([size, size, size]);
     });
     groupFolder.add(groupConfig, 'addCube').name('Add Cube');
     groupFolder.add(groupConfig, 'removeCube').name('Remove Cube');

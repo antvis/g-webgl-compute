@@ -29,7 +29,7 @@ export default class ShaderModuleService implements IShaderModuleService {
       return;
     }
 
-    const { vs, fs, uniforms: declaredUniforms } = moduleParams;
+    const { vs = '', fs = '', uniforms: declaredUniforms } = moduleParams;
     const { content: extractedVS, uniforms: vsUniforms } = extractUniforms(vs);
     const { content: extractedFS, uniforms: fsUniforms } = extractUniforms(fs);
 
@@ -52,8 +52,8 @@ export default class ShaderModuleService implements IShaderModuleService {
       return this.moduleCache[moduleName];
     }
 
-    const rawVS = this.rawContentCache[moduleName].vs;
-    const rawFS = this.rawContentCache[moduleName].fs;
+    const rawVS = this.rawContentCache[moduleName].vs || '';
+    const rawFS = this.rawContentCache[moduleName].fs || '';
 
     const { content: vs, includeList: vsIncludeList } = this.processModule(
       rawVS,
@@ -114,7 +114,7 @@ export default class ShaderModuleService implements IShaderModuleService {
       const txt = this.rawContentCache[includeName][type];
       includeList.push(includeName);
 
-      const { content } = this.processModule(txt, includeList, type);
+      const { content } = this.processModule(txt || '', includeList, type);
       return content;
     });
 

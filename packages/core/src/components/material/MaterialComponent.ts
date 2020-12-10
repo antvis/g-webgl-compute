@@ -1,4 +1,4 @@
-import { Component, gl } from '../..';
+import { Component, Entity, gl } from '../..';
 import { NonFunctionProperties } from '../../ComponentManager';
 import { IModelInitializationOptions } from '../renderer/IModel';
 import { BufferData } from '../renderer/IRendererService';
@@ -8,6 +8,9 @@ export class MaterialComponent extends Component<MaterialComponent> {
   public vertexShaderGLSL: string;
 
   public fragmentShaderGLSL: string;
+
+  // control flow in shaders, eg. USE_UV, USE_MAP...
+  public defines: Record<string, boolean | number> = {};
 
   public dirty = true;
 
@@ -24,10 +27,19 @@ export class MaterialComponent extends Component<MaterialComponent> {
 
   public blend: IModelInitializationOptions['blend'];
 
+  public entity: Entity;
+
+  public type: string;
+
   constructor(data: Partial<NonFunctionProperties<MaterialComponent>>) {
     super(data);
 
     Object.assign(this, data);
+  }
+
+  public setDefines(defines: Record<string, boolean | number>) {
+    this.defines = { ...this.defines, ...defines };
+    return this;
   }
 
   public setCull(cull: IModelInitializationOptions['cull']) {

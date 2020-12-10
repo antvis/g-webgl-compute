@@ -1,4 +1,4 @@
-import { Renderable, World } from '@antv/g-webgpu';
+import { Material, Geometry, Renderable, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import { Button } from 'antd';
 import { vec3, vec4 } from 'gl-matrix';
@@ -27,10 +27,6 @@ const App = function Landmark() {
 
     const renderer = world.createRenderer();
     const scene = world.createScene();
-    const boxEntity = world.createEntity();
-    scene.addEntity(boxEntity);
-    const gridEntity = world.createEntity();
-    scene.addEntity(gridEntity);
 
     camera = world
       .createCamera()
@@ -58,18 +54,21 @@ const App = function Landmark() {
     const tracker = Tracker.create(world);
     tracker.attachControl(view);
 
-    const boxGeometry = world.createBoxGeometry({
-      halfExtents: vec3.fromValues(1, 1, 1),
+    const boxGeometry = world.createGeometry(Geometry.BOX, {
+      halfExtents: [1, 1, 1],
     });
-    const material = world.createBasicMaterial().setUniform({
-      color: vec4.fromValues(1, 0, 0, 1),
+    const material = world.createMaterial(Material.BASIC).setUniform({
+      color: [1, 0, 0, 1],
     });
 
-    world
-      .createRenderable(boxEntity)
+    const box = world
+      .createRenderable()
       .setGeometry(boxGeometry)
       .setMaterial(material);
-    world.createRenderable(gridEntity, Renderable.GRID);
+    scene.addRenderable(box);
+
+    const grid = world.createRenderable(Renderable.GRID);
+    scene.addRenderable(grid);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;

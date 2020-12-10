@@ -99,6 +99,12 @@ export class Renderable<T = {}> implements IRenderable<T> {
 
   public setVisible(visible: boolean) {
     this.meshComponent.visible = visible;
+    this.meshComponent.children.forEach((childEntity) => {
+      const child = this.mesh.getComponentByEntity(childEntity);
+      if (child) {
+        child.visible = visible;
+      }
+    });
     return this;
   }
 

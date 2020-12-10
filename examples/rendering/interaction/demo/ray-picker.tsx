@@ -1,4 +1,4 @@
-import { World } from '@antv/g-webgpu';
+import { Geometry, Material, World } from '@antv/g-webgpu';
 import { RayPicker, Tracker } from '@antv/g-webgpu-interactor';
 import { quat } from 'gl-matrix';
 import React, { useEffect, useState } from 'react';
@@ -68,33 +68,31 @@ const App = function RayPickerDemo() {
     );
 
     // all cubes share the same geometry
-    const boxGeometry = world.createBoxGeometry({
+    const boxGeometry = world.createGeometry(Geometry.BOX, {
       halfExtents: [0.1, 0.1, 0.1],
     });
-
-    const cubeGroupEntity = world.createEntity();
-    const cubeGroup = world.createRenderable(cubeGroupEntity);
+    const cubeGroup = world.createRenderable();
 
     for (let i = 0; i < CUBE_NUM; i++) {
-      const material = world.createBasicMaterial().setUniform({
+      const material = world.createMaterial(Material.BASIC).setUniform({
         color: [1, 0, 0, 1],
       });
 
-      const cubeEntity = world.createEntity();
       const cube = world
-        .createRenderable(cubeEntity)
+        .createRenderable()
         .setGeometry(boxGeometry)
         .setMaterial(material);
 
       const randomScale = rand(1, 2);
       cube
         .getTransformComponent()
-        .translate([rand(-1.2, 1.2), rand(-1.2, 1.2), rand(-1.2, 1.2)])
-        .scale([randomScale, randomScale, randomScale]);
+        .translateLocal([rand(-1.2, 1.2), rand(-1.2, 1.2), rand(-1.2, 1.2)])
+        .setLocalScale([randomScale, randomScale, randomScale]);
 
       cube.attach(cubeGroup);
+      scene.addRenderable(cube);
     }
-    scene.addEntity(cubeGroupEntity);
+    scene.addRenderable(cubeGroup);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -120,7 +118,7 @@ const App = function RayPickerDemo() {
       }
       cubeGroup
         .getTransformComponent()
-        .rotate(quat.fromEuler(quat.create(), 0, 1, 0));
+        .rotateLocal(quat.fromEuler(quat.create(), 0, 1, 0));
 
       if (resizeRendererToDisplaySize()) {
         camera.setAspect(canvas.clientWidth / canvas.clientHeight);

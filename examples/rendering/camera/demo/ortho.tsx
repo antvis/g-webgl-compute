@@ -1,4 +1,4 @@
-import { Renderable, World } from '@antv/g-webgpu';
+import { Material, Geometry, Renderable, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import * as dat from 'dat.gui';
 import React, { useEffect } from 'react';
@@ -26,15 +26,11 @@ const App = function Orthographic() {
 
     const renderer = world.createRenderer();
     const scene = world.createScene();
-    const boxEntity = world.createEntity();
-    scene.addEntity(boxEntity);
-    const gridEntity = world.createEntity();
-    scene.addEntity(gridEntity);
 
     camera = world
       .createCamera()
       .setPosition(0, 0, 5)
-      .setOrthographic(-4, 4, 4, -4, 1, 600);
+      .setOrthographic(-4, 4, -4, 4, 1, 600);
 
     const view = world
       .createView()
@@ -43,18 +39,20 @@ const App = function Orthographic() {
     const tracker = Tracker.create(world);
     tracker.attachControl(view);
 
-    const boxGeometry = world.createBoxGeometry({
+    const boxGeometry = world.createGeometry(Geometry.BOX, {
       halfExtents: [1, 1, 1],
     });
-    const material = world.createBasicMaterial().setUniform({
+    const material = world.createMaterial(Material.BASIC).setUniform({
       color: [1, 0, 0, 1],
     });
 
-    world
-      .createRenderable(boxEntity)
+    const box = world
+      .createRenderable()
       .setGeometry(boxGeometry)
       .setMaterial(material);
-    world.createRenderable(gridEntity, Renderable.GRID);
+    const grid = world.createRenderable(Renderable.GRID);
+    scene.addRenderable(box);
+    scene.addRenderable(grid);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -99,8 +97,8 @@ const App = function Orthographic() {
       camera.setOrthographic(
         -left,
         left,
-        cubeConfig.top,
         -cubeConfig.top,
+        cubeConfig.top,
         1,
         600,
       );
@@ -109,8 +107,8 @@ const App = function Orthographic() {
       camera.setOrthographic(
         -cubeConfig.left,
         cubeConfig.left,
-        top,
         -top,
+        top,
         1,
         600,
       );

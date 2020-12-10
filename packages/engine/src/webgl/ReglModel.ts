@@ -36,6 +36,7 @@ export default class ReglModel implements IModel {
     const {
       vs,
       fs,
+      defines,
       attributes,
       uniforms,
       primitive,
@@ -63,6 +64,8 @@ export default class ReglModel implements IModel {
     Object.keys(attributes).forEach((name: string) => {
       reglAttributes[name] = (attributes[name] as ReglAttribute).get();
     });
+
+    const defineStmts = (defines && this.generateDefines(defines)) || '';
     const drawParams: regl.DrawConfig = {
       attributes: reglAttributes,
       frag: `#ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -70,9 +73,12 @@ export default class ReglModel implements IModel {
 #else
   precision mediump float;
 #endif
+${defineStmts}
 ${fs}`,
       uniforms: reglUniforms,
-      vert: vs,
+      vert: `
+${defineStmts}
+${vs}`,
       primitive:
         primitiveMap[primitive === undefined ? gl.TRIANGLES : primitive],
     };
@@ -142,6 +148,8 @@ ${fs}`,
           | number
           | number[]
           | boolean;
+      } else if (type === 'string') {
+        // TODO: image url
       } else {
         reglDrawProps[uniformName] = (uniforms[uniformName] as
           | ReglFramebuffer
@@ -262,5 +270,11 @@ ${fs}`,
         face: cullFaceMap[face],
       };
     }
+  }
+
+  private generateDefines(defines: Record<string, number | boolean>) {
+    return Object.keys(defines)
+      .map((name) => `#define ${name} ${Number(defines[name])}`)
+      .join('\n');
   }
 }

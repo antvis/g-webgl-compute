@@ -60,8 +60,8 @@ export class Grid extends Renderable<Partial<IGridConfig>> {
     } = this.shaderModuleService.getModule('grid');
 
     const material = this.materialSystem.createShaderMaterial({
-      vertexShader: vs,
-      fragmentShader: fs,
+      vertexShader: vs!,
+      fragmentShader: fs!,
     });
     this.setMaterial(material);
 

@@ -1,7 +1,6 @@
 import { Renderable, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import * as dat from 'dat.gui';
-import { vec3, vec4 } from 'gl-matrix';
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import Stats from 'stats.js';
@@ -26,8 +25,6 @@ const App = function Line() {
 
     const renderer = world.createRenderer();
     const scene = world.createScene();
-    const lineEntity = world.createEntity();
-    scene.addEntity(lineEntity);
 
     const camera = world
       .createCamera()
@@ -42,7 +39,7 @@ const App = function Line() {
     const tracker = Tracker.create(world);
     tracker.attachControl(view);
 
-    const line = world.createRenderable(lineEntity, Renderable.LINE, {
+    const line = world.createRenderable(Renderable.LINE, {
       points: [
         [0, 0],
         [1, 1],
@@ -56,8 +53,9 @@ const App = function Line() {
       dashOffset: 0,
       dashRatio: 0.5,
     });
-    const meshComponent = world.getMeshComponent(lineEntity);
-    const transformComponent = world.getTransformComponent(lineEntity);
+    scene.addRenderable(line);
+    const meshComponent = line.getMeshComponent();
+    const transformComponent = line.getTransformComponent();
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -103,8 +101,7 @@ const App = function Line() {
       dashRatio: 0.5,
     };
     lineFolder.add(lineConfig, 'scale', 0.1, 5.0).onChange((size) => {
-      transformComponent.localScale = vec3.fromValues(1, 1, 1);
-      transformComponent.scale(vec3.fromValues(size, size, size));
+      transformComponent.setLocalScale([size, size, size]);
     });
     lineFolder.addColor(lineConfig, 'color').onChange((color) => {
       line.setAttributes({

@@ -6,6 +6,10 @@ export class TransformComponent extends Component<TransformComponent> {
 
   public dirtyFlag: number;
 
+  public localDirtyFlag: number;
+
+  public parent: TransformComponent | null = null;
+
   /**
    * local space RTS
    */
@@ -14,7 +18,7 @@ export class TransformComponent extends Component<TransformComponent> {
    * XMFLOAT4X4._41
    * @see https://docs.microsoft.com/en-us/windows/win32/api/directxmath/nf-directxmath-xmfloat4x4-xmfloat4x4(constfloat)#remarks
    */
-  public localTranslation = vec3.fromValues(0, 0, 0);
+  public localPosition = vec3.fromValues(0, 0, 0);
   public localRotation = quat.fromValues(0, 0, 0, 1);
   public localScale = vec3.fromValues(1, 1, 1);
   public localTransform = mat4.create();
@@ -23,55 +27,19 @@ export class TransformComponent extends Component<TransformComponent> {
    * world space RTS
    */
 
-  // public position = vec3.fromValues(0, 0, 0);
-  // public rotation = quat.fromValues(0, 0, 0, 1);
+  public position = vec3.fromValues(0, 0, 0);
+  public rotation = quat.fromValues(0, 0, 0, 1);
+  public scaling = vec3.fromValues(1, 1, 1);
   public worldTransform = mat4.create();
 
   // 高阶函数，利用闭包重复利用临时变量
   // @see playcanvas graph node
-  public getRotation = (() => {
-    const rotation = quat.create();
-    return () => {
-      mat4.getRotation(rotation, this.worldTransform);
-      return rotation;
-    };
-  })();
-
-  public getScale = (() => {
-    const scaling = vec3.create();
-    return () => {
-      mat4.getScaling(scaling, this.worldTransform);
-      return scaling;
-    };
-  })();
-
-  public getPosition = (() => {
-    const translation = vec3.create();
-    return () => {
-      mat4.getTranslation(translation, this.worldTransform);
-      return translation;
-    };
-  })();
-
-  public getLocalMatrix = (() => {
-    const rts = mat4.create();
-    return () => {
-      mat4.fromRotationTranslationScale(
-        rts,
-        this.localRotation,
-        this.localTranslation,
-        this.localScale,
-      );
-      return rts;
-    };
-  })();
-
   public matrixTransform = (() => {
     const transformed = mat4.create();
     return (mat: mat4) => {
-      mat4.multiply(transformed, this.getLocalMatrix(), mat);
+      mat4.multiply(transformed, this.getLocalTransform(), mat);
       mat4.getScaling(this.localScale, transformed);
-      mat4.getTranslation(this.localTranslation, transformed);
+      mat4.getTranslation(this.localPosition, transformed);
       mat4.getRotation(this.localRotation, transformed);
     };
   })();
@@ -119,7 +87,103 @@ export class TransformComponent extends Component<TransformComponent> {
 
       vec3.lerp(this.localScale, aS, bS, t);
       quat.slerp(this.localRotation, aR, bR, t);
-      vec3.lerp(this.localTranslation, aT, bT, t);
+      vec3.lerp(this.localPosition, aT, bT, t);
+    };
+  })();
+
+  /**
+   * TODO: 支持以下两种：
+   * * translate(x, y, z)
+   * * translate(vec3(x, y, z))
+   */
+  public translate = (() => {
+    const tr = vec3.create();
+
+    return (translation: vec3) => {
+      vec3.add(tr, this.getPosition(), translation);
+      this.setPosition(tr);
+
+      this.setDirty(true);
+
+      return this;
+    };
+  })();
+
+  public translateLocal = (() => {
+    return (translation: vec3) => {
+      vec3.transformQuat(translation, translation, this.localRotation);
+      vec3.add(this.localPosition, this.localPosition, translation);
+
+      this.setLocalDirty(true);
+
+      return this;
+    };
+  })();
+
+  public setPosition = (() => {
+    const parentInvertMatrix = mat4.create();
+
+    return (position: vec3) => {
+      this.position = position;
+
+      this.setLocalDirty(true);
+
+      if (this.parent === null) {
+        vec3.copy(this.localPosition, position);
+      } else {
+        mat4.copy(parentInvertMatrix, this.parent.worldTransform);
+        mat4.invert(parentInvertMatrix, parentInvertMatrix);
+        vec3.transformMat4(this.localPosition, position, parentInvertMatrix);
+      }
+      return this;
+    };
+  })();
+
+  public rotate = (() => {
+    const parentInvertRotation = quat.create();
+    return (quaternion: quat) => {
+      if (this.parent === null) {
+        quat.multiply(this.localRotation, this.localRotation, quaternion);
+        quat.normalize(this.localRotation, this.localRotation);
+      } else {
+        const rot = this.getRotation();
+        const parentRot = this.parent.getRotation();
+
+        quat.copy(parentInvertRotation, parentRot);
+        quat.invert(parentInvertRotation, parentInvertRotation);
+        quat.multiply(parentInvertRotation, parentInvertRotation, quaternion);
+        quat.multiply(this.localRotation, quaternion, rot);
+        quat.normalize(this.localRotation, this.localRotation);
+      }
+      this.setLocalDirty();
+      return this;
+    };
+  })();
+
+  public rotateLocal = (() => {
+    return (quaternion: quat) => {
+      quat.multiply(this.localRotation, this.localRotation, quaternion);
+      quat.normalize(this.localRotation, this.localRotation);
+      this.setLocalDirty(true);
+      return this;
+    };
+  })();
+
+  public setRotation = (() => {
+    const invParentRot = quat.create();
+
+    return (rotation: quat) => {
+      if (this.parent === null) {
+        quat.copy(this.localRotation, rotation);
+      } else {
+        quat.copy(invParentRot, this.parent.getRotation());
+        quat.invert(invParentRot, invParentRot);
+        quat.copy(this.localRotation, invParentRot);
+        quat.mul(this.localRotation, this.localRotation, rotation);
+      }
+
+      this.setLocalDirty(true);
+      return this;
     };
   })();
 
@@ -161,7 +225,7 @@ export class TransformComponent extends Component<TransformComponent> {
   //     mat4.getTranslation(dT, d.worldTransform);
   //     mat4.getRotation(dR, d.worldTransform);
 
-  //     vec3.catmullRom(this.localTranslation, aT, bT, cT, dT, t);
+  //     vec3.catmullRom(this.localPosition, aT, bT, cT, dT, t);
   //     vec3.catmullRom(R, aR, bR, cR, dR, t);
   //     quat.normalize(this.localRotation, R);
   //     vec3.catmullRom(this.localScale, aS, bS, cS, dS, t);
@@ -170,6 +234,23 @@ export class TransformComponent extends Component<TransformComponent> {
 
   constructor(data?: Partial<NonFunctionProperties<TransformComponent>>) {
     super(data);
+  }
+
+  public setLocalPosition(position: vec3) {
+    vec3.copy(this.localPosition, position);
+    this.setLocalDirty(true);
+  }
+
+  public setLocalScale(scale: vec3) {
+    vec3.copy(this.localScale, scale);
+    this.setLocalDirty(true);
+  }
+
+  public setLocalRotation(rotation: quat) {
+    quat.copy(this.localRotation, rotation);
+
+    this.setLocalDirty(true);
+    return this;
   }
 
   public isDirty() {
@@ -184,18 +265,36 @@ export class TransformComponent extends Component<TransformComponent> {
     }
   }
 
+  public isLocalDirty() {
+    return this.localDirtyFlag;
+  }
+
+  public setLocalDirty(value = true) {
+    if (value) {
+      this.localDirtyFlag |= TransformComponent.DIRTY;
+      this.setDirty(true);
+    } else {
+      this.localDirtyFlag &= ~TransformComponent.DIRTY;
+    }
+  }
+
   public updateTransform() {
+    if (this.isLocalDirty()) {
+      this.getLocalTransform();
+    }
     if (this.isDirty()) {
-      this.setDirty(false);
-      mat4.copy(this.worldTransform, this.getLocalMatrix());
+      if (this.parent === null) {
+        mat4.copy(this.worldTransform, this.getLocalTransform());
+        this.setDirty(false);
+      }
     }
   }
 
   public updateTransformWithParent(parent: TransformComponent) {
     mat4.multiply(
       this.worldTransform,
-      this.getLocalMatrix(),
       parent.worldTransform,
+      this.getLocalTransform(),
     );
   }
 
@@ -203,38 +302,74 @@ export class TransformComponent extends Component<TransformComponent> {
     this.setDirty();
 
     mat4.getScaling(this.localScale, this.worldTransform);
-    mat4.getTranslation(this.localTranslation, this.worldTransform);
+    mat4.getTranslation(this.localPosition, this.worldTransform);
     mat4.getRotation(this.localRotation, this.worldTransform);
   }
 
   public clearTransform() {
     this.setDirty();
-    this.localTranslation = vec3.fromValues(0, 0, 0);
+    this.localPosition = vec3.fromValues(0, 0, 0);
     this.localRotation = quat.fromValues(0, 0, 0, 1);
     this.localScale = vec3.fromValues(1, 1, 1);
   }
 
-  /**
-   * TODO: 支持以下两种：
-   * * translate(x, y, z)
-   * * translate(vec3(x, y, z))
-   */
-  public translate(translation: vec3) {
-    this.setDirty();
-    vec3.add(this.localTranslation, this.localTranslation, translation);
-    return this;
-  }
-
-  public scale(scaling: vec3) {
-    this.setDirty();
+  public scaleLocal(scaling: vec3) {
+    this.setLocalDirty();
     vec3.multiply(this.localScale, this.localScale, scaling);
     return this;
   }
 
-  public rotate(quaternion: quat) {
-    this.setDirty();
-    quat.multiply(this.localRotation, this.localRotation, quaternion);
-    quat.normalize(this.localRotation, this.localRotation);
-    return this;
+  public getLocalPosition() {
+    return this.localPosition;
+  }
+
+  public getLocalRotation() {
+    return this.localRotation;
+  }
+
+  public getLocalScale() {
+    return this.localScale;
+  }
+
+  public getLocalTransform() {
+    if (this.localDirtyFlag) {
+      mat4.fromRotationTranslationScale(
+        this.localTransform,
+        this.localRotation,
+        this.localPosition,
+        this.localScale,
+      );
+      this.setLocalDirty(false);
+    }
+    return this.localTransform;
+  }
+
+  public getWorldTransform() {
+    if (!this.isLocalDirty() && !this.isDirty()) {
+      return this.worldTransform;
+    }
+
+    if (this.parent) {
+      this.parent.getWorldTransform();
+    }
+
+    this.updateTransform();
+
+    return this.worldTransform;
+  }
+
+  public getPosition() {
+    mat4.getTranslation(this.position, this.worldTransform);
+    return this.position;
+  }
+
+  public getRotation() {
+    mat4.getRotation(this.rotation, this.worldTransform);
+    return this.rotation;
+  }
+
+  public getScale() {
+    mat4.getScaling(this.scaling, this.worldTransform);
+    return this.scaling;
   }
 }

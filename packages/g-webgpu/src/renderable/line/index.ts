@@ -97,8 +97,8 @@ export class Line extends Renderable<Partial<ILineConfig>> {
     } = this.shaderModuleService.getModule('line');
 
     const material = this.materialSystem.createShaderMaterial({
-      vertexShader: vs,
-      fragmentShader: fs,
+      vertexShader: vs!,
+      fragmentShader: fs!,
     });
 
     const { normals, attrIndex, attrPos, attrCounters } = getNormals(

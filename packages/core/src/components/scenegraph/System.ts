@@ -1,6 +1,6 @@
 import { mat4 } from 'gl-matrix';
 import { inject, injectable } from 'inversify';
-import { Entity } from '../..';
+import { Component, Entity } from '../..';
 import { ComponentManager } from '../../ComponentManager';
 import { IDENTIFIER } from '../../identifier';
 import { ISystem } from '../../ISystem';
@@ -40,8 +40,8 @@ export class SceneGraphSystem implements ISystem {
   public runTransformUpdateSystem() {
     // 原版基于 JobSystem 实现
     this.transform.forEach((entity, transform) => {
-      if (transform.isDirty()) {
-        this.setMeshAABBDirty(entity);
+      if (transform.isDirty() || transform.isLocalDirty()) {
+        this.setMeshAABBDirty(this.mesh.getComponentByEntity(entity));
         transform.updateTransform();
       }
     });
@@ -71,9 +71,12 @@ export class SceneGraphSystem implements ISystem {
     this.hierarchy.create(entity, {
       parentID: parent,
     });
-
+    const mesh = this.mesh.getComponentByEntity(parent);
     // inform parent mesh to update its aabb
-    this.setMeshAABBDirty(parent);
+    this.setMeshAABBDirty(mesh);
+    if (mesh && mesh.children.indexOf(entity) === -1) {
+      mesh.children.push(entity);
+    }
 
     if (this.hierarchy.getCount() > 1) {
       for (let i = this.hierarchy.getCount() - 1; i > 0; --i) {
@@ -105,6 +108,9 @@ export class SceneGraphSystem implements ISystem {
       // after transforms.Create(), transform_parent pointer could have become invalidated!
       transformParent = this.transform.getComponentByEntity(parent);
     }
+
+    transformChild.parent = transformParent;
+
     if (!isChildAlreadyInLocalSpace && transformParent) {
       transformChild.matrixTransform(
         mat4.invert(mat4.create(), transformParent.worldTransform),
@@ -117,21 +123,31 @@ export class SceneGraphSystem implements ISystem {
   }
 
   public detach(entity: Entity) {
-    const parent = this.hierarchy.getComponentByEntity(entity);
-    if (parent !== null) {
+    const self = this.hierarchy.getComponentByEntity(entity);
+    if (self !== null) {
       const transform = this.transform.getComponentByEntity(entity);
       if (transform !== null) {
+        transform.parent = null;
         transform.applyTransform();
       }
 
       this.hierarchy.removeKeepSorted(entity);
 
       // inform parent mesh to update its aabb
-      this.setMeshAABBDirty(entity);
+      const mesh = this.mesh.getComponentByEntity(self.parentID);
+      if (mesh) {
+        const index = mesh.children.indexOf(entity);
+        mesh.children.splice(index, 1);
+      }
+      this.setMeshAABBDirty(mesh);
     }
   }
 
   public detachChildren(parent: Entity) {
+    const mesh = this.mesh.getComponentByEntity(parent);
+    if (mesh) {
+      mesh.children = [];
+    }
     for (let i = 0; i < this.hierarchy.getCount(); ) {
       if (this.hierarchy.getComponent(i)?.parentID === parent) {
         const entity = this.hierarchy.getEntity(i);
@@ -142,8 +158,9 @@ export class SceneGraphSystem implements ISystem {
     }
   }
 
-  private setMeshAABBDirty(entity: Entity) {
-    const mesh = this.mesh.getComponentByEntity(entity);
+  private setMeshAABBDirty(
+    mesh: (Component<MeshComponent> & MeshComponent) | null,
+  ) {
     if (mesh) {
       mesh.aabbDirty = true;
     }

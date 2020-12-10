@@ -1,0 +1,33 @@
+{
+  "title": {
+    "zh": "几何体",
+    "en": "Geometry"
+  },
+  "demos": [
+    {
+      "filename": "box.tsx",
+      "title": "Box",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*dV0gTafuRHsAAAAAAAAAAAAAARQnAQ"
+    },
+    {
+      "filename": "sphere.tsx",
+      "title": "Sphere",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*jQpbRrS6en0AAAAAAAAAAAAAARQnAQ"
+    },
+    {
+      "filename": "plane.tsx",
+      "title": "Plane",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*6zGmSbSJHgcAAAAAAAAAAAAAARQnAQ"
+    },
+    {
+      "filename": "merged.tsx",
+      "title": "Merged geometry",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*_fOKRJ18IcUAAAAAAAAAAAAAARQnAQ"
+    },
+    {
+      "filename": "world.tsx",
+      "title": "World",
+      "screenshot": "https://gw.alipayobjects.com/mdn/rms_6ae20b/afts/img/A*jQpbRrS6en0AAAAAAAAAAAAAARQnAQ"
+    }
+  ]
+}

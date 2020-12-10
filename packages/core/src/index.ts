@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { Component, ComponentManager } from './ComponentManager';
 import { FrameGraphSystem } from './components/framegraph/System';
 import { GeometryComponent } from './components/geometry/GeometryComponent';
-import { IBoxGeometryParams } from './components/geometry/interface';
 import { GeometrySystem } from './components/geometry/System';
 import { IUniformBinding } from './components/material/interface';
 import { MaterialComponent } from './components/material/MaterialComponent';
@@ -77,7 +76,10 @@ import {
 } from './services/interactor/IIteractorService';
 import { IShaderModuleService } from './services/shader-module/IShaderModuleService';
 import { Frustum } from './shape/Frustum';
+import { AABB } from './shape/AABB';
+import { Ray } from './shape/Ray';
 import { isSafari } from './utils/isSafari';
+import { generateAABBFromVertices } from './utils/aabb';
 
 type Entity = number;
 
@@ -295,7 +297,6 @@ export {
   ComponentManager,
   Entity,
   ISystem,
-  IBoxGeometryParams,
   IUniform,
   IMeshParams,
   IUniformBinding,
@@ -314,6 +315,7 @@ export {
   GeometryComponent,
   HierarchyComponent,
   isSafari,
+  generateAABBFromVertices,
   // renderer service
   gl,
   IAttribute,
@@ -351,7 +353,9 @@ export {
   Target,
   DefineValuePlaceholder,
   KernelBundle,
+  AABB,
   Frustum,
+  Ray,
   IView,
   IScene,
   IViewport,

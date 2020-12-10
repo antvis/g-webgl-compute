@@ -1,7 +1,6 @@
 import { Renderable, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import * as dat from 'dat.gui';
-import { vec3, vec4 } from 'gl-matrix';
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import Stats from 'stats.js';
@@ -38,24 +37,22 @@ const App = function Point() {
 
     const renderer = world.createRenderer();
     const scene = world.createScene();
-    const pointsEntity = world.createEntity();
-    scene.addEntity(pointsEntity);
 
     const camera = world
       .createCamera()
       .setPosition(0, 0, 2)
-      .setPerspective(0.1, 5, 75, canvas.width / canvas.height);
+      .setPerspective(0.1, 5, 75, canvas.width / canvas.height)
+      .setMinDistance(1)
+      .setMaxDistance(3);
 
     const view = world
       .createView()
       .setCamera(camera)
       .setScene(scene);
 
-    const tracker = Tracker.create(world);
-    tracker.attachControl(view);
+    const tracker = Tracker.create(world).attachControl(view);
 
     const points = world.createRenderable(
-      pointsEntity,
       Renderable.POINT,
       new Array(100).fill(undefined).map((_, i) => ({
         shape: shapes[Math.floor(Math.random() * 9)],
@@ -65,8 +62,9 @@ const App = function Point() {
         strokeWidth: 0.01,
       })),
     );
-    const meshComponent = world.getMeshComponent(pointsEntity);
-    const transformComponent = world.getTransformComponent(pointsEntity);
+    scene.addRenderable(points);
+    const meshComponent = points.getMeshComponent();
+    const transformComponent = points.getTransformComponent();
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -113,8 +111,7 @@ const App = function Point() {
       blur: 0,
     };
     pointFolder.add(pointConfig, 'scale', 0.1, 5.0).onChange((size) => {
-      transformComponent.localScale = vec3.fromValues(1, 1, 1);
-      transformComponent.scale(vec3.fromValues(size, size, size));
+      transformComponent.setLocalScale([size, size, size]);
     });
     pointFolder.add(pointConfig, 'opacity', 0, 1, 0.1).onChange((opacity) => {
       points.setAttributes({

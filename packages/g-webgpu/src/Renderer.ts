@@ -10,9 +10,15 @@ import {
 // tslint:disable-next-line:no-submodule-imports
 import * as WebGPUConstants from '@webgpu/types/dist/constants';
 import { Container, inject, injectable, multiInject } from 'inversify';
+import mapFragDeclaration from './material/shaders/map.frag.declaration.glsl';
+import mapFragMain from './material/shaders/map.frag.main.glsl';
+import uvFragDeclaration from './material/shaders/uv.frag.declaration.glsl';
+import uvVertDeclaration from './material/shaders/uv.vert.declaration.glsl';
+import uvVertMain from './material/shaders/uv.vert.main.glsl';
 
 @injectable()
 export class Renderer {
+  public container: Container;
   @inject(IDENTIFIER.RenderEngine)
   private readonly engine: IRendererService;
 
@@ -34,11 +40,24 @@ export class Renderer {
   private views: IView[] = [];
   private size: { width: number; height: number };
 
-  public container: Container;
-
   public async init() {
     // 模块化处理
     this.shaderModule.registerBuiltinModules();
+    this.shaderModule.registerModule('uv.vert.declaration', {
+      vs: uvVertDeclaration,
+    });
+    this.shaderModule.registerModule('uv.vert.main', {
+      vs: uvVertMain,
+    });
+    this.shaderModule.registerModule('uv.frag.declaration', {
+      fs: uvFragDeclaration,
+    });
+    this.shaderModule.registerModule('map.frag.declaration', {
+      fs: mapFragDeclaration,
+    });
+    this.shaderModule.registerModule('map.frag.main', {
+      fs: mapFragMain,
+    });
 
     const systems = this.container.getAll<ISystem>(IDENTIFIER.Systems);
 

@@ -26,8 +26,6 @@ function Grid() {
 
     const renderer = world.createRenderer();
     const scene = world.createScene();
-    const gridEntity = world.createEntity();
-    scene.addEntity(gridEntity);
 
     const camera = world
       .createCamera()
@@ -42,10 +40,11 @@ function Grid() {
     const tracker = Tracker.create(world);
     tracker.attachControl(view);
 
-    const grid = world.createRenderable(gridEntity, Renderable.GRID, {
+    const grid = world.createRenderable(Renderable.GRID, {
       gridColor: [1, 0, 0, 1],
       gridSize: 0.5,
     });
+    scene.addRenderable(grid);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -104,8 +103,7 @@ function Grid() {
     };
 
     return () => {
-      window.cancelAnimationFrame(frameId);
-      world.destroy();
+      window.gwebgpuClean();
     };
   });
 

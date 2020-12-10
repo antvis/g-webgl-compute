@@ -40,6 +40,10 @@ const RAD_2_DEG = 180 / Math.PI;
  */
 @injectable()
 export class Camera implements ICamera {
+  public static ProjectionMode = {
+    ORTHOGRAPHIC: 'ORTHOGRAPHIC',
+    PERSPECTIVE: 'PERSPECTIVE',
+  };
   /**
    * 相机矩阵
    */
@@ -97,6 +101,8 @@ export class Camera implements ICamera {
    * 沿 n 轴移动时，保证移动速度从快到慢
    */
   public dollyingStep = 0;
+  public maxDistance = Infinity;
+  public minDistance = -Infinity;
 
   /**
    * invert the horizontal coordinate system HCS
@@ -159,6 +165,10 @@ export class Camera implements ICamera {
     camera.setType(this.type, undefined);
     camera.interactor = this.interactor;
     return camera;
+  }
+
+  public getProjectionMode() {
+    return this.projectionMode;
   }
 
   public getPerspective() {
@@ -228,6 +238,10 @@ export class Camera implements ICamera {
    */
   public getViewTransform(): mat4 {
     return mat4.invert(mat4.create(), this.matrix)!;
+  }
+
+  public getWorldTransform(): mat4 {
+    return this.matrix;
   }
 
   /**
@@ -443,6 +457,16 @@ export class Camera implements ICamera {
     return this;
   }
 
+  public setMaxDistance(d: number) {
+    this.maxDistance = d;
+    return this;
+  }
+
+  public setMinDistance(d: number) {
+    this.minDistance = d;
+    return this;
+  }
+
   /**
    * Changes the initial azimuth of the camera
    */
@@ -614,7 +638,13 @@ export class Camera implements ICamera {
   public dolly(value: number) {
     const n = this.forward;
     const pos = vec3.clone(this.position);
-    const step = value * this.dollyingStep;
+    let step = value * this.dollyingStep;
+    const updatedDistance = this.distance + value * this.dollyingStep;
+
+    // 限制视点距离范围
+    step =
+      Math.max(Math.min(updatedDistance, this.maxDistance), this.minDistance) -
+      this.distance;
     pos[0] += step * n[0];
     pos[1] += step * n[1];
     pos[2] += step * n[2];

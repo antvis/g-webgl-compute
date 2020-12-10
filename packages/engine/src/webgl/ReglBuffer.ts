@@ -30,7 +30,7 @@ export default class ReglBuffer implements IBuffer {
   }
 
   public destroy() {
-    this.buffer.destroy();
+    // this.buffer.destroy();
   }
 
   public subData({ data, offset }: { data: BufferData; offset: number }) {

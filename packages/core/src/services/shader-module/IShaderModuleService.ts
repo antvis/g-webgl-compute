@@ -5,8 +5,8 @@ import { IUniform } from '../../components/renderer/IUniform';
  */
 
 export interface IModuleParams {
-  vs: string;
-  fs: string;
+  vs?: string;
+  fs?: string;
   uniforms?: {
     [key: string]: IUniform;
   };

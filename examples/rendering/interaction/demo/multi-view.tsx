@@ -1,4 +1,4 @@
-import { World } from '@antv/g-webgpu';
+import { Geometry, Material, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import { quat } from 'gl-matrix';
 import React, { useEffect } from 'react';
@@ -28,12 +28,7 @@ function MultiView() {
 
     const renderer = world.createRenderer();
     const scene1 = world.createScene();
-    const boxEntity1 = world.createEntity();
-    scene1.addEntity(boxEntity1);
-
     const scene2 = world.createScene();
-    const boxEntity2 = world.createEntity();
-    scene2.addEntity(boxEntity2);
 
     camera1 = world
       .createCamera()
@@ -56,25 +51,31 @@ function MultiView() {
     const tracker = Tracker.create(world);
     tracker.attachControl(view1, view2);
 
-    const boxGeometry = world.createBoxGeometry({
+    const boxGeometry = world.createGeometry(Geometry.BOX, {
       halfExtents: [1, 1, 1],
     });
-    const material = world.createBasicMaterial().setUniform({
+    const material1 = world.createMaterial(Material.BASIC).setUniform({
       color: [1, 0, 0, 1],
     });
+    const material2 = world.createMaterial(Material.BASIC).setUniform({
+      color: [0, 1, 0, 1],
+    });
 
-    world
-      .createRenderable(boxEntity1)
+    const box1 = world
+      .createRenderable()
       .setGeometry(boxGeometry)
-      .setMaterial(material);
-    const transformComponent1 = world.getTransformComponent(boxEntity1);
-    transformComponent1.translate([-1.2, 0, 0]);
-    world
-      .createRenderable(boxEntity2)
+      .setMaterial(material1);
+    scene1.addRenderable(box1);
+    const transformComponent1 = box1.getTransformComponent();
+    transformComponent1.translateLocal([-1.2, 0, 0]);
+
+    const box2 = world
+      .createRenderable()
       .setGeometry(boxGeometry)
-      .setMaterial(material);
-    const transformComponent2 = world.getTransformComponent(boxEntity2);
-    transformComponent2.translate([1.2, 0, 0]);
+      .setMaterial(material2);
+    scene2.addRenderable(box2);
+    const transformComponent2 = box2.getTransformComponent();
+    transformComponent2.translateLocal([1.2, 0, 0]);
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -100,13 +101,12 @@ function MultiView() {
     };
 
     const render = async () => {
-      console.log('render...');
       if (stats) {
         stats.update();
       }
 
-      transformComponent1.rotate(quat.fromEuler(quat.create(), 0, 1, 0));
-      transformComponent2.rotate(quat.fromEuler(quat.create(), 0, 1, 0));
+      transformComponent1.rotateLocal(quat.fromEuler(quat.create(), 0, 1, 0));
+      transformComponent2.rotateLocal(quat.fromEuler(quat.create(), 0, 1, 0));
 
       if (resizeRendererToDisplaySize()) {
         camera1.setAspect(canvas.clientWidth / canvas.clientHeight);
@@ -119,14 +119,13 @@ function MultiView() {
 
     render();
 
-    history.onpushstate = () => {
+    window.gwebgpuClean = () => {
       window.cancelAnimationFrame(frameId);
       world.destroy();
     };
 
     return () => {
-      window.cancelAnimationFrame(frameId);
-      world.destroy();
+      window.gwebgpuClean();
     };
   });
 

@@ -1,4 +1,4 @@
-import { World } from '@antv/g-webgpu';
+import { Material, World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
 import { quat, vec3, vec4 } from 'gl-matrix';
 import React, { useEffect, useState } from 'react';
@@ -47,7 +47,7 @@ const App = React.memo(function RotatingCube() {
     const boxGeometry = world.createBoxGeometry({
       halfExtents: vec3.fromValues(1, 1, 1),
     });
-    const material = world.createBasicMaterial();
+    const material = world.createMaterial(Material.BASIC);
     world.setUniform(material, 'color', vec4.fromValues(1, 0, 0, 1));
 
     const mesh = world.createMesh({
@@ -57,7 +57,7 @@ const App = React.memo(function RotatingCube() {
     meshTransform = world.getTransform(mesh);
     meshTransform.translate(vec3.fromValues(-2.5, 0, 0));
 
-    const material2 = world.createBasicMaterial();
+    const material2 = world.createMaterial(Material.BASIC);
     world.setUniform(material2, 'color', vec4.fromValues(0, 0, 0, 0));
 
     const mesh2 = world.createMesh({
@@ -81,8 +81,7 @@ const App = React.memo(function RotatingCube() {
       color: [255, 255, 255],
     };
     cubeFolder.add(cube, 'scale', 0.1, 5.0).onChange((size) => {
-      meshTransform.localScale = vec3.fromValues(1, 1, 1);
-      meshTransform.scale(vec3.fromValues(size, size, size));
+      meshTransform.setLocalScale(vec3.fromValues(size, size, size));
     });
     cubeFolder.addColor(cube, 'color').onChange((color) => {
       world.setUniform(

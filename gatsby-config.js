@@ -109,7 +109,7 @@ module.exports = {
     ],
     playground: {
       container: '<div style="justify-content: center;position: relative" id="wrapper"/>',
-      playgroundDidmount: `(function(history){
+      playgroundDidMount: `(function(history){
         var pushState = history.pushState;
         history.pushState = function(state) {
           window.gwebgpuClean && window.gwebgpuClean();

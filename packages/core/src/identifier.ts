@@ -23,10 +23,12 @@ export const IDENTIFIER = {
   CullableComponentManager: Symbol('CullableComponentManager'),
 
   // Geometry
+  Geometry: Symbol('Geometry'),
   GeometrySystem: Symbol('GeometrySystem'),
   GeometryComponentManager: Symbol('GeometryComponentManager'),
 
   // Material
+  Material: Symbol('Material'),
   MaterialSystem: Symbol('MaterialSystem'),
   MaterialComponentManager: Symbol('MaterialComponentManager'),
 

@@ -1,4 +1,4 @@
-import { World } from '@antv/g-webgpu';
+import { Material, Geometry, World } from '@antv/g-webgpu';
 import { Tracker } from '@antv/g-webgpu-interactor';
 import { Button } from 'antd';
 import { vec3, vec4 } from 'gl-matrix';
@@ -68,16 +68,16 @@ const App = function MultiWorld() {
     // const tracker2 = Tracker.create(world2);
     // tracker2.attachControl(view2);
 
-    const boxGeometry1 = world1.createBoxGeometry({
+    const boxGeometry1 = world1.createGeometry(Geometry.BOX, {
       halfExtents: vec3.fromValues(1, 1, 1),
     });
-    const material1 = world1.createBasicMaterial().setUniform({
+    const material1 = world1.createMaterial(Material.BASIC).setUniform({
       color: vec4.fromValues(1, 0, 0, 1),
     });
     const boxGeometry2 = world2.createBoxGeometry({
       halfExtents: vec3.fromValues(1, 1, 1),
     });
-    const material2 = world2.createBasicMaterial().setUniform({
+    const material2 = world2.createMaterial(Material.BASIC).setUniform({
       color: vec4.fromValues(1, 0, 0, 1),
     });
 

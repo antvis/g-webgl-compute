@@ -1,6 +1,6 @@
 import { mat4 } from 'gl-matrix';
 import { inject, injectable, named } from 'inversify';
-import { Entity } from '../../..';
+import { Entity, IModel } from '../../..';
 import { ComponentManager } from '../../../ComponentManager';
 import { IDENTIFIER } from '../../../identifier';
 import { FrameGraphHandle } from '../../framegraph/FrameGraphHandle';
@@ -56,6 +56,8 @@ export class RenderPass implements IRenderPass<RenderPassData> {
 
   @inject(IDENTIFIER.ResourcePool)
   private readonly resourcePool: ResourcePool;
+
+  private modelCache: Record<string, IModel> = {};
 
   public setup = (
     fg: FrameGraphSystem,
@@ -163,18 +165,11 @@ export class RenderPass implements IRenderPass<RenderPassData> {
       viewMatrix: mat4;
     },
   ) {
-    const mesh = this.mesh.getComponentByEntity(meshEntity)!;
+    const mesh = this.mesh.getComponentByEntity(meshEntity);
 
-    if (!mesh.visible) {
+    if (!mesh || !mesh.visible) {
       return;
     }
-
-    // render mesh's children recursively
-    this.hierarchy.forEach((entity, { parentID }) => {
-      if (parentID === meshEntity) {
-        this.renderMesh(entity, { camera, view, viewMatrix });
-      }
-    });
 
     // filter meshes with frustum culling
     // if (!this.cullable.getComponentByEntity(meshEntity)?.visible) {
@@ -236,18 +231,17 @@ export class RenderPass implements IRenderPass<RenderPassData> {
     const material = mesh.material;
     const geometry = mesh.geometry;
 
-    // render mesh's children recursively
-    await this.hierarchy.forEachAsync(async (entity, { parentID }) => {
-      if (parentID === meshEntity) {
-        await this.initMesh(entity, view);
-      }
-    });
-
     if (!geometry || geometry.dirty || !material) {
       return;
     }
 
     if (!mesh.model) {
+      const modelCacheKey = `m-${material.entity}-g-${geometry.entity}`;
+      if (this.modelCache[modelCacheKey]) {
+        mesh.model = this.modelCache[modelCacheKey];
+        return;
+      }
+
       material.setUniform({
         projectionMatrix: 1,
         modelViewMatrix: 1,
@@ -261,6 +255,7 @@ export class RenderPass implements IRenderPass<RenderPassData> {
       const modelInitializationOptions: IModelInitializationOptions = {
         vs: material.vertexShaderGLSL,
         fs: material.fragmentShaderGLSL,
+        defines: material.defines,
         attributes: geometry.attributes.reduce(
           (cur: { [key: string]: IAttribute }, prev) => {
             if (prev.data && prev.buffer) {
@@ -283,7 +278,6 @@ export class RenderPass implements IRenderPass<RenderPassData> {
           },
           {},
         ),
-        // viewport: () => view.getViewport(),
         scissor: {
           enable: true,
           // @ts-ignore
@@ -311,6 +305,7 @@ export class RenderPass implements IRenderPass<RenderPassData> {
       }
 
       mesh.model = await createModel(modelInitializationOptions);
+      this.modelCache[modelCacheKey] = mesh.model;
     }
   }
 

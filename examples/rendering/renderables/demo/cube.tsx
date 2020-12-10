@@ -1,6 +1,6 @@
-import { World } from '@antv/g-webgpu';
+import { Geometry, Material, World } from '@antv/g-webgpu';
 import * as dat from 'dat.gui';
-import { quat, vec3, vec4 } from 'gl-matrix';
+import { quat } from 'gl-matrix';
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import Stats from 'stats.js';
@@ -25,8 +25,6 @@ const App = function RotatingCube() {
 
     const renderer = world.createRenderer();
     const scene = world.createScene();
-    const boxEntity = world.createEntity();
-    scene.addEntity(boxEntity);
 
     const camera = world
       .createCamera()
@@ -45,19 +43,20 @@ const App = function RotatingCube() {
       });
 
     // create geometry, material and attach them to mesh
-    const boxGeometry = world.createBoxGeometry({
+    const boxGeometry = world.createGeometry(Geometry.BOX, {
       halfExtents: [0.5, 0.5, 0.5],
     });
-    const material = world.createBasicMaterial().setUniform({
+    const material = world.createMaterial(Material.BASIC).setUniform({
       color: [1, 0, 0, 1],
     });
 
-    world
-      .createRenderable(boxEntity)
+    const box = world
+      .createRenderable()
       .setGeometry(boxGeometry)
       .setMaterial(material);
+    scene.addRenderable(box);
 
-    const transformComponent = world.getTransformComponent(boxEntity);
+    const transformComponent = box.getTransformComponent();
 
     const resizeRendererToDisplaySize = () => {
       const dpr = window.devicePixelRatio;
@@ -100,17 +99,11 @@ const App = function RotatingCube() {
       color: [255, 255, 255],
     };
     cubeFolder.add(cubeConfig, 'scale', 0.1, 5.0).onChange((size) => {
-      transformComponent.localScale = vec3.fromValues(1, 1, 1);
-      transformComponent.scale(vec3.fromValues(size, size, size));
+      transformComponent.setLocalScale([size, size, size]);
     });
     cubeFolder.addColor(cubeConfig, 'color').onChange((color) => {
       material.setUniform({
-        color: vec4.fromValues(
-          color[0] / 255,
-          color[1] / 255,
-          color[2] / 255,
-          1,
-        ),
+        color: [color[0] / 255, color[1] / 255, color[2] / 255, 1],
       });
     });
     cubeFolder.open();

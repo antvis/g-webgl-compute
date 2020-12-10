@@ -15,8 +15,10 @@ import { ITexture2D, ITexture2DInitializationOptions } from './ITexture2D';
 export interface ICamera {
   getFrustum(): Frustum;
   getViewTransform(): mat4;
+  getWorldTransform(): mat4;
   getPerspective(): mat4;
   getPosition(): vec3;
+  getProjectionMode(): string;
   rotate(azimuth: number, elevation: number, roll: number): void;
   pan(tx: number, ty: number): void;
   dolly(value: number): void;
@@ -26,7 +28,6 @@ export interface ICamera {
 
 export interface IScene {
   getEntities(): Entity[];
-  addEntity(entity: Entity): IScene;
 }
 
 export interface IViewport {
@@ -131,7 +132,9 @@ export interface IRendererService {
   createAttribute(options: IAttributeInitializationOptions): IAttribute;
   createBuffer(options: IBufferInitializationOptions): IBuffer;
   createElements(options: IElementsInitializationOptions): IElements;
-  createTexture2D(options: ITexture2DInitializationOptions): ITexture2D;
+  createTexture2D(
+    options: ITexture2DInitializationOptions | HTMLImageElement,
+  ): ITexture2D;
   createFramebuffer(options: IFramebufferInitializationOptions): IFramebuffer;
   useFramebuffer(
     framebuffer: IFramebuffer | null,
