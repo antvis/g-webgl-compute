@@ -3,11 +3,11 @@ import { Component, ComponentManager } from './ComponentManager';
 import { FrameGraphSystem } from './components/framegraph/System';
 import { GeometryComponent } from './components/geometry/GeometryComponent';
 import { GeometrySystem } from './components/geometry/System';
-import { IUniformBinding } from './components/material/interface';
+import type { IUniformBinding } from './components/material/interface';
 import { MaterialComponent } from './components/material/MaterialComponent';
 import { MaterialSystem } from './components/material/System';
 import { CullableComponent } from './components/mesh/CullableComponent';
-import { IMeshParams } from './components/mesh/interface';
+import type { IMeshParams } from './components/mesh/interface';
 import { MeshComponent } from './components/mesh/MeshComponent';
 import { MeshSystem } from './components/mesh/System';
 import { RendererSystem } from './components/renderer/System';
@@ -16,33 +16,33 @@ import { SceneGraphSystem } from './components/scenegraph/System';
 import { TransformComponent } from './components/scenegraph/TransformComponent';
 
 import { gl } from './components/renderer/gl';
-import {
+import type {
   IAttribute,
   IAttributeInitializationOptions,
 } from './components/renderer/IAttribute';
-import {
+import type {
   IBuffer,
   IBufferInitializationOptions,
 } from './components/renderer/IBuffer';
-import { IComputeModel } from './components/renderer/IComputeModel';
-import {
+import type { IComputeModel } from './components/renderer/IComputeModel';
+import type {
   IElements,
   IElementsInitializationOptions,
 } from './components/renderer/IElements';
-import {
+import type {
   IFramebuffer,
   IFramebufferInitializationOptions,
 } from './components/renderer/IFramebuffer';
-import {
+import type {
   IModel,
   IModelDrawOptions,
   IModelInitializationOptions,
 } from './components/renderer/IModel';
-import {
+import type {
   IRenderbuffer,
   IRenderbufferInitializationOptions,
 } from './components/renderer/IRenderbuffer';
-import {
+import type {
   BufferData,
   ICamera,
   IClearOptions,
@@ -53,11 +53,11 @@ import {
   IView,
   IViewport,
 } from './components/renderer/IRendererService';
-import {
+import type {
   ITexture2D,
   ITexture2DInitializationOptions,
 } from './components/renderer/ITexture2D';
-import { IUniform } from './components/renderer/IUniform';
+import type { IUniform } from './components/renderer/IUniform';
 
 import { PixelPickingPass } from './components/renderer/passes/PixelPickingPass';
 import { createEntity } from './Entity';
@@ -68,13 +68,15 @@ import {
   lazyInject,
   lazyMultiInject,
 } from './inversify.config';
-import { ISystem } from './ISystem';
-import { IConfig, IConfigService } from './services/config/IConfigService';
-import {
+import type { ISystem } from './ISystem';
+import type { IConfig, IConfigService } from './services/config/IConfigService';
+import type {
   IInteractorEvent,
+} from './services/interactor/IIteractorService';
+import type {
   IInteractorService,
 } from './services/interactor/IIteractorService';
-import { IShaderModuleService } from './services/shader-module/IShaderModuleService';
+import type { IShaderModuleService } from './services/shader-module/IShaderModuleService';
 import { Frustum } from './shape/Frustum';
 import { AABB } from './shape/AABB';
 import { Ray } from './shape/Ray';
@@ -295,11 +297,6 @@ export {
   createEntity,
   Component,
   ComponentManager,
-  Entity,
-  ISystem,
-  IUniform,
-  IMeshParams,
-  IUniformBinding,
   IDENTIFIER,
   FrameGraphSystem,
   GeometrySystem,
@@ -318,6 +315,22 @@ export {
   generateAABBFromVertices,
   // renderer service
   gl,
+  PixelPickingPass,
+  AST_TOKEN_TYPES,
+  AST_NODE_TYPES,
+  STORAGE_CLASS,
+  Target,
+  DefineValuePlaceholder,
+  AABB,
+  Frustum,
+  Ray,
+};
+
+export type {
+  ISystem,
+  IUniform,
+  IMeshParams,
+  IUniformBinding,
   IAttribute,
   IAttributeInitializationOptions,
   IBuffer,
@@ -338,26 +351,18 @@ export {
   ITexture2D,
   ITexture2DInitializationOptions,
   IComputeModel,
-  BufferData,
   IShaderModuleService,
   IConfigService,
   IInteractorService,
   IInteractorEvent,
   IConfig,
-  PixelPickingPass,
-  AST_TOKEN_TYPES,
-  AST_NODE_TYPES,
-  STORAGE_CLASS,
-  GLSLContext,
-  DataType,
-  Target,
-  DefineValuePlaceholder,
-  KernelBundle,
-  AABB,
-  Frustum,
-  Ray,
   IView,
   IScene,
   IViewport,
   ICamera,
-};
+  BufferData, // type
+  DataType, // type
+  Entity, // type
+  GLSLContext, // interface
+  KernelBundle, // interface
+}
