@@ -13,7 +13,7 @@
       "es2016",
       "es2017"
     ],
-    "types": ["reflect-metadata", "jest"],
+    "types": ["reflect-metadata", "jest", "@webgpu/types"],
     "module": "esnext",
     "moduleResolution": "node",
     "esModuleInterop": true,
