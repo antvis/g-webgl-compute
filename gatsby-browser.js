@@ -1,4 +1,3 @@
-
 // @ts-ignore
 // import FruchtermanWorker from './examples/tutorial/fruchterman/worker/main.worker.ts';
 
@@ -7,9 +6,6 @@ window.gCanvas = require('@antv/g-canvas');
 window.g6 = require('@antv/g6');
 window.gWebgpu = require('@antv/g-webgpu');
 window.gWebgpuCompiler = require('@antv/g-webgpu-compiler');
-window.gWebgpuInteractor = require('@antv/g-webgpu-interactor');
-window.gWebgpuUnitchart = require('@antv/g-webgpu-unitchart');
-window.gWebgpuRaytracer = require('@antv/g-webgpu-raytracer');
 window.antd = require('antd');
 window.react = require('react');
 window.reactDom = require('react-dom');

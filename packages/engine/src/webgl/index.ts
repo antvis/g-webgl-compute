@@ -23,7 +23,6 @@ import {
   ITexture2D,
   ITexture2DInitializationOptions,
 } from '@antv/g-webgpu-core';
-import { injectable } from 'inversify';
 import regl from 'regl';
 import ReglAttribute from './ReglAttribute';
 import ReglBuffer from './ReglBuffer';
@@ -36,7 +35,6 @@ import ReglTexture2D from './ReglTexture2D';
 /**
  * regl renderer
  */
-@injectable()
 export class WebGLEngine implements IRendererService {
   public supportWebGPU = false;
   public useWGSL = false;
@@ -99,8 +97,11 @@ export class WebGLEngine implements IRendererService {
     if (options.uniforms) {
       await Promise.all(
         Object.keys(options.uniforms).map(async (name) => {
-          // @ts-ignore
-          if (options.uniforms![name] && options.uniforms![name].load !== undefined) {
+          if (
+            options.uniforms![name] &&
+            // @ts-ignore
+            options.uniforms![name].load !== undefined
+          ) {
             // @ts-ignore
             const texture = await options.uniforms![name].load();
             // @ts-ignore

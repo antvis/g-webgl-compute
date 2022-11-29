@@ -24,13 +24,6 @@ export interface IAttributeInitializationOptions {
    * gl.vertexAttribDivisorANGLE，自动开启 ANGLE_instanced_arrays 扩展
    */
   divisor?: number;
-
-  /**
-   * WebGPU
-   */
-  arrayStride?: number;
-  stepMode?: GPUInputStepMode;
-  attributes?: Iterable<GPUVertexAttributeDescriptor>;
 }
 
 export interface IAttribute {

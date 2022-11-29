@@ -67,16 +67,18 @@ export function getScopeByIdentifierName(
   node: ShaderBaseNode,
   idName: string,
   isFunction: boolean = false,
-): {
-  id: Identifier;
-  alias: string[];
-  isFunction: boolean;
-} | undefined {
+):
+  | {
+      id: Identifier;
+      alias: string[];
+      isFunction: boolean;
+    }
+  | undefined {
   return traverseUpwards<{
     id: Identifier;
     alias: string[];
     isFunction: boolean;
-}>(node, (currentNode) => {
+  }>(node, (currentNode) => {
     const existed = currentNode.scope?.find(
       (v) =>
         (v.id.name === idName || v.alias.includes(idName)) &&

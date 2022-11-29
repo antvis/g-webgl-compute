@@ -48,6 +48,7 @@ export default class ReglModel implements IModel {
       cull,
       instances,
       scissor,
+      // @ts-ignore
       viewport,
     } = options;
     const reglUniforms: { [key: string]: IUniform } = {};

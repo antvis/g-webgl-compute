@@ -73,6 +73,7 @@ export default class ReglComputeModel implements IComputeModel {
             }
           }
         } else {
+          // @ts-ignore
           this.textureCache[name] = {
             data: undefined,
           };

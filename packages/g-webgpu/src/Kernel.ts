@@ -1,33 +1,17 @@
 import {
   AST_TOKEN_TYPES,
   DefineValuePlaceholder,
-  GLSLContext,
   IComputeModel,
   IConfigService,
-  IDENTIFIER,
   IRendererService,
-  IShaderModuleService,
-  ISystem,
   KernelBundle,
   STORAGE_CLASS,
   Target,
-  createEntity,
 } from '@antv/g-webgpu-core';
-// tslint:disable-next-line:no-submodule-imports
-import * as WebGPUConstants from '@webgpu/types/dist/constants';
-import { inject, injectable } from 'inversify';
-import { isArray, isNil, isNumber, isTypedArray } from 'lodash';
+import { isArray, isNumber, isTypedArray } from 'lodash';
 import { createCanvas } from './utils/canvas';
 
-@injectable()
 export class Kernel {
-  @inject(IDENTIFIER.RenderEngine)
-  private readonly engine: IRendererService;
-
-  @inject(IDENTIFIER.ConfigService)
-  private readonly configService: IConfigService;
-
-  private entity = createEntity();
 
   private model: IComputeModel;
 
@@ -36,13 +20,17 @@ export class Kernel {
   private compiledBundle: KernelBundle;
 
   private initPromise: Promise<void>;
+  constructor(
+    private readonly engine: IRendererService,
+    private readonly configService: IConfigService,
+  ) {}
 
   public init() {
     const { canvas, engineOptions } = this.configService.get();
 
     this.initPromise = this.engine.init({
       canvas: canvas || createCanvas(),
-      swapChainFormat: WebGPUConstants.TextureFormat.BGRA8Unorm,
+      // swapChainFormat: WebGPUConstants.TextureFormat.BGRA8Unorm,
       antialiasing: false,
       ...engineOptions,
     });

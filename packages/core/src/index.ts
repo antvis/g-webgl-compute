@@ -1,19 +1,4 @@
-import 'reflect-metadata';
 import { Component, ComponentManager } from './ComponentManager';
-import { FrameGraphSystem } from './components/framegraph/System';
-import { GeometryComponent } from './components/geometry/GeometryComponent';
-import { GeometrySystem } from './components/geometry/System';
-import { IUniformBinding } from './components/material/interface';
-import { MaterialComponent } from './components/material/MaterialComponent';
-import { MaterialSystem } from './components/material/System';
-import { CullableComponent } from './components/mesh/CullableComponent';
-import { IMeshParams } from './components/mesh/interface';
-import { MeshComponent } from './components/mesh/MeshComponent';
-import { MeshSystem } from './components/mesh/System';
-import { RendererSystem } from './components/renderer/System';
-import { HierarchyComponent } from './components/scenegraph/HierarchyComponent';
-import { SceneGraphSystem } from './components/scenegraph/System';
-import { TransformComponent } from './components/scenegraph/TransformComponent';
 
 import { gl } from './components/renderer/gl';
 import {
@@ -44,13 +29,10 @@ import {
 } from './components/renderer/IRenderbuffer';
 import {
   BufferData,
-  ICamera,
   IClearOptions,
   IReadPixelsOptions,
   IRendererConfig,
   IRendererService,
-  IScene,
-  IView,
   IViewport,
 } from './components/renderer/IRendererService';
 import {
@@ -59,27 +41,11 @@ import {
 } from './components/renderer/ITexture2D';
 import { IUniform } from './components/renderer/IUniform';
 
-import { PixelPickingPass } from './components/renderer/passes/PixelPickingPass';
 import { createEntity } from './Entity';
-import { IDENTIFIER } from './identifier';
-import {
-  container,
-  createWorldContainer,
-  lazyInject,
-  lazyMultiInject,
-} from './inversify.config';
-import { ISystem } from './ISystem';
+import { ConfigService } from './services/config/ConfigService';
 import { IConfig, IConfigService } from './services/config/IConfigService';
-import {
-  IInteractorEvent,
-  IInteractorService,
-} from './services/interactor/IIteractorService';
 import { IShaderModuleService } from './services/shader-module/IShaderModuleService';
-import { Frustum } from './shape/Frustum';
-import { AABB } from './shape/AABB';
-import { Ray } from './shape/Ray';
 import { isSafari } from './utils/isSafari';
-import { generateAABBFromVertices } from './utils/aabb';
 
 type Entity = number;
 
@@ -221,7 +187,7 @@ interface GLSLContext {
     textureSize?: [number, number];
     length?: number;
     typedArrayConstructor?: TypedArrayConstructor;
-    gpuBuffer?: GPUBuffer;
+    gpuBuffer?: any;
     outputElementsPerTexel?: number;
   };
   /**
@@ -288,34 +254,12 @@ interface KernelBundle {
 }
 
 export {
-  container,
-  createWorldContainer,
-  lazyInject,
-  lazyMultiInject,
   createEntity,
   Component,
   ComponentManager,
   Entity,
-  ISystem,
   IUniform,
-  IMeshParams,
-  IUniformBinding,
-  IDENTIFIER,
-  FrameGraphSystem,
-  GeometrySystem,
-  RendererSystem,
-  // InteractionSystem,
-  MaterialSystem,
-  MeshSystem,
-  SceneGraphSystem,
-  CullableComponent,
-  MeshComponent,
-  TransformComponent,
-  MaterialComponent,
-  GeometryComponent,
-  HierarchyComponent,
   isSafari,
-  generateAABBFromVertices,
   // renderer service
   gl,
   IAttribute,
@@ -341,10 +285,8 @@ export {
   BufferData,
   IShaderModuleService,
   IConfigService,
-  IInteractorService,
-  IInteractorEvent,
+  ConfigService,
   IConfig,
-  PixelPickingPass,
   AST_TOKEN_TYPES,
   AST_NODE_TYPES,
   STORAGE_CLASS,
@@ -353,11 +295,5 @@ export {
   Target,
   DefineValuePlaceholder,
   KernelBundle,
-  AABB,
-  Frustum,
-  Ray,
-  IView,
-  IScene,
   IViewport,
-  ICamera,
 };
