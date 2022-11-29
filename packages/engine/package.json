@@ -1,6 +1,6 @@
 {
   "name": "@antv/g-webgpu-engine",
-  "version": "0.5.1",
+  "version": "0.7.0",
   "description": "",
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -23,20 +23,12 @@
   "license": "ISC",
   "dependencies": {
     "@antv/g-webgpu-core": "^0.5.1",
-    "@webgpu/glslang": "^0.0.15",
-    "@webgpu/types": "^0.0.31",
     "gl-matrix": "^3.1.0",
-    "hammerjs": "^2.0.8",
-    "inversify": "^5.0.1",
-    "inversify-inject-decorators": "^3.1.0",
     "lodash": "^4.17.15",
-    "probe.gl": "^3.1.1",
-    "reflect-metadata": "^0.1.13",
     "regl": "^1.3.11"
   },
   "devDependencies": {
     "@types/gl-matrix": "^2.4.5",
-    "@types/hammerjs": "^2.0.36",
     "@types/lodash": "^4.14.138"
   },
   "publishConfig": {

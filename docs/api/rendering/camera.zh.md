@@ -4,9 +4,10 @@ order: 3
 ---
 
 相机（Camera）描述了我们观察世界的角度。
-* 支持两种投影模式：正交投影（Orthographic）和透视投影（Perspective），默认使用后者。
-* 支持两种相机移动模式：固定摄像机（Tracking）和固定视点（Orbiting），默认使用后者。
-* 支持自定义相机动画，创建/保存当前相机状态作为一个 Landmark，可在多个 Landmark 间平滑切换。
+
+- 支持两种投影模式：正交投影（Orthographic）和透视投影（Perspective），默认使用后者。
+- 支持两种相机移动模式：固定摄像机（Tracking）和固定视点（Orbiting），默认使用后者。
+- 支持自定义相机动画，创建/保存当前相机状态作为一个 Landmark，可在多个 Landmark 间平滑切换。
 
 ### 投影模式
 
@@ -37,6 +38,6 @@ order: 3
 
 ```ts
 const camera = world
-    .createCamera()
-    .setPerspective(0.1, 5, 75, canvas.width / canvas.height);
+  .createCamera()
+  .setPerspective(0.1, 5, 75, canvas.width / canvas.height);
 ```

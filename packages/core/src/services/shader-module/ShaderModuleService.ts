@@ -1,26 +1,18 @@
-import { injectable } from 'inversify';
 import { uniq } from 'lodash';
 import { extractUniforms } from '../../utils/shader-module';
 import { IModuleParams, IShaderModuleService } from './IShaderModuleService';
-
-import pickingFrag from './shaders/webgl.picking.frag.glsl';
-import pickingVert from './shaders/webgl.picking.vert.glsl';
-import sdf2dFrag from './shaders/webgl.sdf2d.frag.glsl';
 
 const precisionRegExp = /precision\s+(high|low|medium)p\s+float/;
 const globalDefaultprecision =
   '#ifdef GL_FRAGMENT_PRECISION_HIGH\n precision highp float;\n #else\n precision mediump float;\n#endif\n';
 const includeRegExp = /#pragma include (["^+"]?["\ "[a-zA-Z_0-9](.*)"]*?)/g;
 
-@injectable()
 export default class ShaderModuleService implements IShaderModuleService {
   private moduleCache: { [key: string]: IModuleParams } = {};
   private rawContentCache: { [key: string]: IModuleParams } = {};
 
   public registerBuiltinModules() {
     this.destroy();
-    this.registerModule('picking', { vs: pickingVert, fs: pickingFrag });
-    this.registerModule('sdf2d', { vs: '', fs: sdf2dFrag });
   }
 
   public registerModule(moduleName: string, moduleParams: IModuleParams) {

@@ -70,7 +70,7 @@ const view = world.createView();
 
 ```ts
 const boxGeometry = world.createGeometry(Geometry.BOX, {
-    halfExtents: [1, 1, 1],
+  halfExtents: [1, 1, 1],
 });
 ```
 

@@ -121,7 +121,8 @@ export class Compiler {
 
   public compileBundle(
     gCode: string,
-    targets: Target[] = [Target.WGSL, Target.GLSL450, Target.GLSL100],
+    // targets: Target[] = [Target.WGSL, Target.GLSL450, Target.GLSL100],
+    targets: Target[] = [Target.GLSL100],
   ): KernelBundle {
     const bundle = {
       shaders: {

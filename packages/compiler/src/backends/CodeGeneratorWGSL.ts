@@ -148,7 +148,6 @@ entry_point compute as "main" = main;
         if (declarator.storageClass === STORAGE_CLASS.UniformConstant) {
           // @see https://gpuweb.github.io/gpuweb/wgsl.html#module-constants
           // eg. const golden : f32 = 1.61803398875;
-
           // const define = this.context?.defines.find(
           //   (d) => d.name === declarator.id.name,
           // );
@@ -160,7 +159,6 @@ entry_point compute as "main" = main;
           //     ? placeHolder
           //     : this.generateExpression(declarator.init)
           // };`;
-
           // TODO: v-0022 Global variables must have a storage class
           // https://gpuweb.github.io/gpuweb/wgsl.html#validation
         } else if (

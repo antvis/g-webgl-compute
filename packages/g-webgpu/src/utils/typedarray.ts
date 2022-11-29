@@ -21,6 +21,7 @@ export function merge(a: Float32Array, b: Float32Array) {
     );
   }
 
+  // @ts-ignore
   const c = new a.constructor(a.length + b.length);
   c.set(a);
   c.set(b, a.length);

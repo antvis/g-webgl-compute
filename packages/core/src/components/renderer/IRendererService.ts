@@ -1,5 +1,4 @@
-import { mat4, vec3 } from 'gl-matrix';
-import { Entity, Frustum, GLSLContext } from '../..';
+import { Entity, GLSLContext } from '../..';
 import { IAttribute, IAttributeInitializationOptions } from './IAttribute';
 import { IBuffer, IBufferInitializationOptions } from './IBuffer';
 import { IComputeModel } from './IComputeModel';
@@ -12,20 +11,6 @@ import { IModel, IModelInitializationOptions } from './IModel';
 import { IPass } from './IMultiPassRenderer';
 import { ITexture2D, ITexture2DInitializationOptions } from './ITexture2D';
 
-export interface ICamera {
-  getFrustum(): Frustum;
-  getViewTransform(): mat4;
-  getWorldTransform(): mat4;
-  getPerspective(): mat4;
-  getPosition(): vec3;
-  getProjectionMode(): string;
-  rotate(azimuth: number, elevation: number, roll: number): void;
-  pan(tx: number, ty: number): void;
-  dolly(value: number): void;
-  changeAzimuth(az: number): void;
-  changeElevation(el: number): void;
-}
-
 export interface IScene {
   getEntities(): Entity[];
 }
@@ -35,18 +20,6 @@ export interface IViewport {
   y: number;
   width: number;
   height: number;
-}
-
-export interface IView {
-  getCamera(): ICamera;
-  getScene(): IScene;
-  getViewport(): IViewport;
-  getClearColor(): [number, number, number, number];
-  setCamera(camera: ICamera): IView;
-  setScene(scene: IScene): IView;
-  setViewport(viewport: IViewport): IView;
-  setClearColor(clearColor: [number, number, number, number]): IView;
-  pick(position: { x: number; y: number }, view: IView): number | undefined;
 }
 
 export interface IRendererConfig {
@@ -64,21 +37,6 @@ export interface IRendererConfig {
   passes?: Array<IPass<unknown>>;
   antialias?: boolean;
   preserveDrawingBuffer?: boolean;
-  /**
-   * Defines the category of adapter to use.
-   * Is it the discrete or integrated device.
-   */
-  powerPreference?: GPUPowerPreference;
-
-  /**
-   * Defines the device descriptor used to create a device.
-   */
-  deviceDescriptor?: GPUDeviceDescriptor;
-
-  /**
-   * Defines the requested Swap Chain Format.
-   */
-  swapChainFormat?: GPUTextureFormat;
 
   /**
    * Defines wether MSAA is enabled on the canvas.
