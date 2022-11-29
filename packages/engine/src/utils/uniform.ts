@@ -1,4 +1,4 @@
-import { IUniform } from '@antv/g-webgpu-core';
+import type { IUniform } from '@antv/g-webgpu-core';
 import { isPlainObject, isTypedArray } from 'lodash';
 
 /**

@@ -1,4 +1,4 @@
-import { IUniform } from '../../components/renderer/IUniform';
+import type{ IUniform } from '../../components/renderer/IUniform';
 
 /**
  * 提供 ShaderModule 管理服务

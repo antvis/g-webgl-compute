@@ -10,7 +10,6 @@
     "site:deploy": "yarn run site:build && gh-pages -d public",
     "site:publish": "gh-pages -d public",
     "lint:fix": "prettier --write docs/api/**/*.md packages/**/*.{spec,story}.ts{,x} stories/**/**/*.tsx  *.md",
-    "prebuild": "yarn lint",
     "build": "yarn clean && lerna run build",
     "postbuild": "yarn build:declarations",
     "build:declarations": "lerna run tsc",

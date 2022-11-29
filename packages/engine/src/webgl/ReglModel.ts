@@ -1,5 +1,7 @@
 import {
   gl,
+} from '@antv/g-webgpu-core';
+import type {
   IModel,
   IModelDrawOptions,
   IModelInitializationOptions,

@@ -1,7 +1,7 @@
 import { gl } from './gl';
-import { IAttribute } from './IAttribute';
-import { IElements } from './IElements';
-import { IUniform } from './IUniform';
+import type { IAttribute } from './IAttribute';
+import type { IElements } from './IElements';
+import type { IUniform } from './IUniform';
 
 export interface IBlendOptions {
   // gl.enable(gl.BLEND)

@@ -1,6 +1,6 @@
 {
   "name": "@antv/g-webgpu-engine",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "",
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -22,7 +22,7 @@
   "author": "xiaoiver",
   "license": "ISC",
   "dependencies": {
-    "@antv/g-webgpu-core": "^0.7.1",
+    "@antv/g-webgpu-core": "^0.7.2",
     "gl-matrix": "^3.1.0",
     "lodash": "^4.17.15",
     "regl": "^1.3.11"

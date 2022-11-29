@@ -1,33 +1,32 @@
 import { Component, ComponentManager } from './ComponentManager';
-
 import { gl } from './components/renderer/gl';
-import {
+export type {
   IAttribute,
   IAttributeInitializationOptions,
 } from './components/renderer/IAttribute';
-import {
+export type {
   IBuffer,
   IBufferInitializationOptions,
 } from './components/renderer/IBuffer';
-import { IComputeModel } from './components/renderer/IComputeModel';
-import {
+export type { IComputeModel } from './components/renderer/IComputeModel';
+export type  {
   IElements,
   IElementsInitializationOptions,
 } from './components/renderer/IElements';
-import {
+export type  {
   IFramebuffer,
   IFramebufferInitializationOptions,
 } from './components/renderer/IFramebuffer';
-import {
+export type  {
   IModel,
   IModelDrawOptions,
   IModelInitializationOptions,
 } from './components/renderer/IModel';
-import {
+export type  {
   IRenderbuffer,
   IRenderbufferInitializationOptions,
 } from './components/renderer/IRenderbuffer';
-import {
+export type {
   BufferData,
   IClearOptions,
   IReadPixelsOptions,
@@ -35,16 +34,16 @@ import {
   IRendererService,
   IViewport,
 } from './components/renderer/IRendererService';
-import {
+export type  {
   ITexture2D,
   ITexture2DInitializationOptions,
 } from './components/renderer/ITexture2D';
-import { IUniform } from './components/renderer/IUniform';
+export type { IUniform } from './components/renderer/IUniform';
 
 import { createEntity } from './Entity';
 import { ConfigService } from './services/config/ConfigService';
-import { IConfig, IConfigService } from './services/config/IConfigService';
-import { IShaderModuleService } from './services/shader-module/IShaderModuleService';
+export type { IConfig, IConfigService } from './services/config/IConfigService';
+export type { IShaderModuleService } from './services/shader-module/IShaderModuleService';
 import { isSafari } from './utils/isSafari';
 
 type Entity = number;
@@ -258,35 +257,10 @@ export {
   Component,
   ComponentManager,
   Entity,
-  IUniform,
   isSafari,
   // renderer service
   gl,
-  IAttribute,
-  IAttributeInitializationOptions,
-  IBuffer,
-  IBufferInitializationOptions,
-  IClearOptions,
-  IElements,
-  IElementsInitializationOptions,
-  IFramebuffer,
-  IFramebufferInitializationOptions,
-  IRenderbuffer,
-  IRenderbufferInitializationOptions,
-  IModel,
-  IModelInitializationOptions,
-  IModelDrawOptions,
-  IReadPixelsOptions,
-  IRendererConfig,
-  IRendererService,
-  ITexture2D,
-  ITexture2DInitializationOptions,
-  IComputeModel,
-  BufferData,
-  IShaderModuleService,
-  IConfigService,
   ConfigService,
-  IConfig,
   AST_TOKEN_TYPES,
   AST_NODE_TYPES,
   STORAGE_CLASS,
@@ -295,5 +269,4 @@ export {
   Target,
   DefineValuePlaceholder,
   KernelBundle,
-  IViewport,
 };
