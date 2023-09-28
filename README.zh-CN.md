@@ -1,4 +1,4 @@
-# GWebGPUEngine
+# @antv/g-webgl-compute
 
 [![travis ci](https://travis-ci.com/antvis/GWebGPUEngine.svg?branch=master)](https://travis-ci.com/antvis/GWebGPUEngine) [![](https://flat.badgen.net/npm/v/@antv/g-webgpu?icon=npm)](https://www.npmjs.com/package/@antv/g-webgpu) ![最近提交](https://badgen.net/github/last-commit/antvis/GWebGPUEngine)
 A WebGPU Engine for real-time rendering and GPGPU.
@@ -8,9 +8,11 @@ https://gwebgpu.antv.vision/zh/docs/api/gwebgpu
 ## GPGPU
 
 对于一些可并行的计算密集型任务，例如布局计算和粒子运动特效，可以使用 GPGPU 技术完成。
-我们提供了一些内置的计算模型，你可以使用任何渲染技术对于计算结果进行展示（当然也可以用我们的渲染 API）。
+我们提供了一些内置的计算模型，你可以使用任何渲染技术对于计算结果进行展示。
 
 ```typescript
+import { World } from '@antv/g-webgl-compute';
+
 const world = new World({
   engineOptions: {
     supportCompute: true,

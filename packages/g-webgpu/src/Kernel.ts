@@ -12,7 +12,6 @@ import { isArray, isNumber, isTypedArray } from 'lodash';
 import { createCanvas } from './utils/canvas';
 
 export class Kernel {
-
   private model: IComputeModel;
 
   private dirty: boolean = true;

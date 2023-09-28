@@ -1,6 +1,6 @@
 {
-  "name": "@antv/g-webgpu",
-  "version": "0.7.2",
+  "name": "@antv/g-webgl-compute",
+  "version": "0.0.1",
   "description": "",
   "main": "lib/index.js",
   "module": "es/index.js",

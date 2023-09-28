@@ -1,10 +1,8 @@
-# [WIP] GWebGPUEngine
+# @antv/g-webgl-compute
 
 [![travis ci](https://travis-ci.com/antvis/GWebGPUEngine.svg?branch=master)](https://travis-ci.com/antvis/GWebGPUEngine) [![](https://flat.badgen.net/npm/v/@antv/g-webgpu?icon=npm)](https://www.npmjs.com/package/@antv/g-webgpu) ![最近提交](https://badgen.net/github/last-commit/antvis/GWebGPUEngine)
 
-A WebGPU Engine for real-time rendering and GPGPU. [中文](./README.zh-CN.md)
-
-https://gwebgpu.antv.vision/zh/docs/api/gwebgpu
+A GPGPU implematation based on WebGL. [中文](./README.zh-CN.md)
 
 ## GPGPU
 
@@ -12,6 +10,8 @@ You can try to solve some compute-intensive tasks like layout & particle effects
 Use any rendering techniques(d3, g, Three.js or ours' rendering API if you like) when calculation is completed.
 
 ```typescript
+import { World } from '@antv/g-webgl-compute';
+
 const world = new World({
   engineOptions: {
     supportCompute: true,

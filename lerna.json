@@ -3,19 +3,12 @@
     "packages/compiler",
     "packages/core",
     "packages/engine",
-    "packages/g-webgpu",
-    "packages/interactor",
-    "packages/unitchart"
+    "packages/g-webgpu"
   ],
   "command": {
     "publish": {
-      "ignoreChanges": [
-        "*.md"
-      ],
-      "allowBranch": [
-        "master",
-        "next"
-      ],
+      "ignoreChanges": ["*.md"],
+      "allowBranch": ["master", "next"],
       "message": "chore: publish"
     }
   },

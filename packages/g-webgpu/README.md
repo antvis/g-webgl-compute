@@ -1,7 +1,7 @@
-# @antv/g-webgpu
+# @antv/g-webgl-compute
 
 ```typescript
-import { World } from '@antv/g-webgpu';
+import { World } from '@antv/g-webgl-compute';
 
 const world = new World({
   engineOptions: {
